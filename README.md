@@ -1,0 +1,2 @@
+# Personalized-Learning-Pathway-Generation-and-Academic-Resource-Management-Platform
+The system integrates syllabus analysis, concept dependency mapping, topic prioritization, and timeline-based roadmap generation to recommend what students should learn, in what order, and how much time to allocate to each topic. It incorporates academic resources such as lecture notes, syllabi, and previous question papers, alongside quiz-based progress tracking to identify learning gaps and recommend targeted revision.
