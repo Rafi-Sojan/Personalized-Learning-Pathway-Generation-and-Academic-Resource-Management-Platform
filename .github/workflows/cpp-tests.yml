@@ -1,0 +1,33 @@
+name: C++ scoring engine
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'scoring-engine/**'
+      - '.github/workflows/cpp-tests.yml'
+  pull_request:
+    paths:
+      - 'scoring-engine/**'
+      - '.github/workflows/cpp-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: cmake -S scoring-engine -B scoring-engine/build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build scoring engine
+        run: cmake --build scoring-engine/build --config Release --parallel
+
+      - name: Run native tests
+        run: ctest --test-dir scoring-engine/build --build-config Release --output-on-failure
