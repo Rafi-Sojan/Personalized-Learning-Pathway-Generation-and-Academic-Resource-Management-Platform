@@ -17,6 +17,8 @@
 
 A release candidate shall identify the source revision, Python and Node versions, dependency lockfiles, container base image digests or versions, database migration state, and configuration template. Runtime secrets must be supplied outside the repository.
 
+The standard backend image intentionally excludes the optional OCR stack. OCR releases must use `backend/Dockerfile.ocr`, scan both images, and verify the installed Tesseract/PyMuPDF versions separately.
+
 ## 3. Release gates
 
 The following checks are required before a release is approved:
@@ -26,7 +28,7 @@ The following checks are required before a release is approved:
 3. C++ tests pass using the supported compiler/toolchain.
 4. Database migrations apply cleanly to an empty database and are reversible or have a documented forward-only recovery plan.
 5. API authentication, ownership, upload validation, and rate limiting are tested.
-6. Container images are scanned and an SBOM is produced.
+6. Container images are scanned and an SBOM is produced by the security workflow.
 7. Secrets, demo accounts, default credentials, and development fallbacks are removed or overridden.
 8. A rollback revision and database recovery plan are recorded.
 
@@ -37,7 +39,7 @@ The following checks are required before a release is approved:
 3. Provision secrets and private network connectivity.
 4. Apply database migrations using a controlled deployment identity.
 5. Deploy backend, worker components if enabled, Redis, and frontend.
-6. Run health checks and a smoke test against the deployed API.
+6. Run health checks, image verification, and a smoke test against the deployed API.
 7. Confirm logs, metrics, rate limiting, and backup jobs.
 8. Record the release revision and verification evidence.
 

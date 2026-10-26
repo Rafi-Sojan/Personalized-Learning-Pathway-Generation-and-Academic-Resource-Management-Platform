@@ -22,3 +22,7 @@ Acceptance requires authenticated route coverage, ownership isolation, upload va
 ## 3. Evaluation controls
 
 Evaluation data must be versioned, de-identified where possible, and separated from production learner records. Metrics must be reported with dataset scope, baseline comparison, confidence or error bounds where meaningful, and known limitations. A model or heuristic change requires a before/after comparison and rollback decision.
+
+## 4. Reproducible benchmark harness
+
+`python scripts/evaluate_learning.py <benchmark.json>` evaluates a JSON array of cases. Each case may contain `mapping`, `roadmap`, and `ranking` sections. The harness reports average mapping precision, roadmap completion rate, ranking hit rate, and case count. It is intentionally deterministic and is suitable for CI regression fixtures once a reviewed, de-identified benchmark set is supplied.

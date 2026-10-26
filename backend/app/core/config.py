@@ -15,10 +15,17 @@ class Settings:
     upload_dir: str = os.getenv("UPLOAD_DIR", "storage/uploads")
     processed_dir: str = os.getenv("PROCESSED_DIR", "storage/processed")
     max_upload_size_mb: int = int(os.getenv("MAX_UPLOAD_SIZE_MB", "10"))
+    max_pdf_pages: int = int(os.getenv("MAX_PDF_PAGES", "100"))
+    max_extracted_text_chars: int = int(os.getenv("MAX_EXTRACTED_TEXT_CHARS", "500000"))
+    worker_timeout_seconds: int = int(os.getenv("DOCUMENT_WORKER_TIMEOUT_SECONDS", "120"))
+    ocr_enabled: bool = os.getenv("OCR_ENABLED", "false").lower() in {"1", "true", "yes"}
+    scoring_engine_path: str = os.getenv("SCORING_ENGINE_PATH", "")
 
     def __post_init__(self) -> None:
         if self.environment.lower() == "production" and self.secret_key == "development-only-change-me":
             raise ValueError("SECRET_KEY must be explicitly configured in production")
+        if self.max_pdf_pages < 1 or self.max_extracted_text_chars < 1:
+            raise ValueError("PDF processing limits must be positive")
 
     @property
     def cors_origins(self) -> list[str]:

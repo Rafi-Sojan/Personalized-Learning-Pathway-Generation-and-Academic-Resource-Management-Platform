@@ -29,7 +29,7 @@ Users own their courses and associated concepts, resources, progress, and study 
 
 ## 4. Retention and deletion
 
-The current repository does not yet implement a user-facing retention or deletion workflow. Before production use, the owner must define retention periods for accounts, learning records, uploaded resources, extracted text, logs, and backups, and implement verified deletion or anonymization procedures.
+The API now provides authenticated data export and email-confirmed account deletion. Account deletion removes owned database records and associated private upload/processed files. Before production use, the owner must still define retention periods for accounts, learning records, uploaded resources, extracted text, logs, and backups, and verify deletion across backups and object storage.
 
 ## 5. Privacy requirements
 

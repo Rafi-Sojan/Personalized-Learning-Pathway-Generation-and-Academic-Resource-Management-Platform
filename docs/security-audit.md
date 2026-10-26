@@ -31,6 +31,7 @@ The baseline contains meaningful development controls, but it is not production-
 - Upload size is bounded by `MAX_UPLOAD_SIZE_MB`.
 - Storage filenames are generated UUIDs rather than client filenames.
 - SHA-256 checksums are recorded.
+- Queued processing verifies the stored file checksum before extraction.
 - PDF extraction writes derived text to a private processed directory.
 - Uploads are not exposed as public static files.
 
@@ -52,17 +53,17 @@ The development machine was observed using Node `v24.11.1` and npm `11.6.2`. Nod
 - [Node.js 24.22.1 security fixes](https://nodejs.org/en/blog/release/v24.22.1)
 - [npm CLI 11.21.1 release](https://github.com/npm/cli/releases/tag/v11.21.1)
 
-The frontend Dockerfile is pinned to Node `22.23.4`, but the CI workflow should remain synchronized with that patched toolchain. Keep npm itself pinned or explicitly upgraded in CI rather than relying on the runner image default.
+The frontend Dockerfile and CI workflow are pinned to Node `24.22.1` with npm `11.21.1`. Keep npm explicitly upgraded in CI and container builds rather than relying on the runner image default.
 
 ## Residual risks
 
 - The Compose development secret must not be reused outside local development.
 - JWT revocation/logout is not server-managed; short expiry and secret rotation are the available controls.
-- PDF processing is synchronous and should move to a resource-limited worker for hostile or high-volume input.
-- OCR is not enabled and must be isolated before being added.
-- GitHub Actions are referenced by major tags rather than immutable commit SHAs.
-- Container image scanning and SBOM publication are not yet part of CI.
-- No external penetration test, DAST scan, or production database backup drill has been performed.
+- PDF processing is queued and has a worker path, but production deployments still need job-level timeouts, retry metrics, and external object storage.
+- OCR is optional and isolated behind bounded page/text limits; the Tesseract binary must be patched and monitored in production.
+- GitHub Actions are pinned to immutable commit SHAs with release comments; Dependabot is configured to propose updates.
+- Container image scanning and SBOM publication are now part of the security workflow; action references still require immutable SHA pinning as a supply-chain hardening follow-up.
+- Request audit logging with request IDs is now emitted without credentials or document contents; centralized log retention, external penetration testing, DAST scanning, and a production database backup drill remain outstanding.
 
 ## Release checklist
 
@@ -75,4 +76,4 @@ Before deployment:
 5. Replace the demo account and Compose credentials.
 6. Restrict CORS to the deployed frontend origin.
 7. Keep Redis and PostgreSQL on private networks.
-8. Add image scanning, SBOM generation, backups, monitoring, and alerting.
+8. Review image scan results, retain SBOM artifacts, and verify backups, monitoring, and alerting.

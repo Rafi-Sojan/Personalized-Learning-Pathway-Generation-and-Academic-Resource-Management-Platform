@@ -17,3 +17,4 @@ The development API uses short-lived signed JWTs, Argon2 password hashing, owner
 - Pin container and action dependencies and scan images before release.
 - Add centralized audit logging, monitoring, alerting, backup, and restore verification.
 - Define privacy retention, deletion, and export procedures for learner records.
+- Run the production process only after migrations have been applied; production startup does not create schema or seed demo data.

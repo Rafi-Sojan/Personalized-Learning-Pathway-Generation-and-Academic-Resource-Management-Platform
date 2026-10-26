@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: learning
       POSTGRES_USER: learning
-      POSTGRES_PASSWORD: learning-dev-only
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -28,18 +28,44 @@ services:
       retries: 10
 
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       FRONTEND_ORIGIN: http://localhost:5173
-      DATABASE_URL: postgresql+psycopg://learning:learning-dev-only@postgres:5432/learning
+      DATABASE_URL: postgresql+psycopg://learning:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/learning
       REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: local-compose-secret-change-before-deployment
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      OCR_ENABLED: ${OCR_ENABLED:-false}
       UPLOAD_DIR: /app/storage/uploads
       PROCESSED_DIR: /app/storage/processed
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - ./ml:/app/ml:ro
+      - ./storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["python", "scripts/process_documents.py", "--loop"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://learning:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/learning
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      OCR_ENABLED: ${OCR_ENABLED:-false}
+      UPLOAD_DIR: /app/storage/uploads
+      PROCESSED_DIR: /app/storage/processed
+    volumes:
       - ./storage:/app/storage
     depends_on:
       postgres:
@@ -48,18 +74,15 @@ services:
         condition: service_healthy
 
   frontend:
-    build: ./frontend
-    environment:
-      VITE_API_URL: http://localhost:8000/api/v1
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000/api/v1
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
     depends_on:
       - backend
 
 volumes:
   postgres_data:
   redis_data:
-  frontend_node_modules:

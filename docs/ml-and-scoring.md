@@ -48,9 +48,9 @@ Each recommendation should be attributable to available evidence such as prerequ
 
 - Text cleaning, topic extraction, graph ordering, scheduling, and metric primitives are implemented and tested.
 - PDF text extraction is supported through the backend processing path.
-- OCR is represented as an extension point and is not a production-ready worker pipeline.
+- OCR is integrated as an optional Tesseract/PyMuPDF provider and is invoked only for image-only documents when enabled. Its dependencies are deliberately excluded from the base API image and must be supplied by a dedicated OCR-enabled image/provider with binary patching and worker metrics.
 - Semantic matching is deterministic and suitable for a baseline; it is not a validated domain model.
-- The C++ scorer is independently testable. The backend currently uses a Python integration/fallback boundary rather than a deployed native service.
+- The C++ scorer is independently testable and exposes a line-oriented stdin contract. The backend uses the native executable when `SCORING_ENGINE_PATH` is configured and falls back to the Python contract when it is unavailable.
 - Background processing, model serving, feature storage, and model monitoring remain planned.
 
 ## 6. Safety and quality constraints

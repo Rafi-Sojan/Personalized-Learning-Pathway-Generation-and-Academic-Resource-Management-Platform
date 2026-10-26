@@ -43,10 +43,11 @@ Services:
 |---|---|---|
 | `frontend` | Vite development UI | `http://localhost:5173` |
 | `backend` | FastAPI API | `http://localhost:8000` |
+| `worker` | Queued PDF processing worker | internal |
 | `postgres` | Persistent relational database | `localhost:5432` |
 | `redis` | Rate-limit/cache service | `localhost:6379` |
 
-The database and Redis volumes are named `postgres_data` and `redis_data`. Uploads and processed text are mounted from the repository `storage/` directory.
+The database and Redis volumes are named `postgres_data` and `redis_data`. Uploads and processed text are mounted from the repository `storage/` directory. The worker retries queued documents independently of the API process. OCR dependencies in `backend/requirements-ocr.txt` are optional; build `backend/Dockerfile.ocr` from the repository root when an OCR-enabled image is required.
 
 ## Configuration
 
@@ -65,7 +66,7 @@ Never commit `.env` or real credentials.
 
 ## Database lifecycle
 
-Development startup creates missing tables automatically. Production should run the checked-in migration:
+Development startup creates missing tables automatically. Production does not create tables or seed the demo account; run the checked-in migration first:
 
 ```bash
 alembic -c backend/alembic.ini upgrade head
@@ -73,9 +74,20 @@ alembic -c backend/alembic.ini upgrade head
 
 PostgreSQL remains authoritative. Redis may be flushed or unavailable without destroying progress, quiz, or roadmap records.
 
+Create and restore logical PostgreSQL backups with the repository scripts:
+
+```bash
+python scripts/backup_database.py
+python scripts/restore_database.py backups/learning-<timestamp>.dump
+```
+
+The restore script requires explicit `RESTORE` confirmation. Backup files are ignored by Git and must be encrypted and stored according to the production retention policy.
+
 ## Health verification
 
 After startup, verify that the API responds, the interactive documentation loads, the frontend can reach the configured API origin, database migrations are current, and Redis connectivity is either healthy or intentionally operating in fallback mode. Perform an authenticated smoke test for login, a private read, a progress update, and roadmap generation.
+
+The readiness endpoint is `GET /health/ready`; it confirms database connectivity and reports whether Redis is available or the process-local fallback is active.
 
 ## Verification commands
 

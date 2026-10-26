@@ -2,7 +2,7 @@ import hashlib
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,8 +10,9 @@ from app.core.config import settings
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.infrastructure.rate_limiter import enforce_rate_limit, expensive_limiter
-from app.models import Concept, Course, Resource as ResourceModel, User
-from app.schemas.learning import Resource
+from app.models import Concept, Course, Resource as ResourceModel, ResourceConceptMapping, User
+from app.schemas.learning import Resource, ResourceMappingRequest, ResourceMappingResponse
+from app.services.document_processing import process_resource_by_id
 
 router = APIRouter()
 
@@ -40,8 +41,11 @@ async def upload_resource(request: Request, file: UploadFile = File(...), course
     key = f"{uuid.uuid4()}.pdf"
     upload_path = Path(settings.upload_dir)
     upload_path.mkdir(parents=True, exist_ok=True)
+    if not data.startswith(b"%PDF-"):
+        raise HTTPException(status_code=415, detail="Uploaded content is not a valid PDF")
     (upload_path / key).write_bytes(data)
-    resource = ResourceModel(title=file.filename or "uploaded.pdf", kind="pdf", course_id=course_id, concept_id=concept_id, storage_key=key, checksum=hashlib.sha256(data).hexdigest(), duration_minutes=0, processing_status="uploaded")
+    safe_title = Path(file.filename or "uploaded.pdf").name[:240]
+    resource = ResourceModel(title=safe_title, kind="pdf", course_id=course_id, concept_id=concept_id, storage_key=key, checksum=hashlib.sha256(data).hexdigest(), duration_minutes=0, processing_status="uploaded")
     db.add(resource)
     db.commit()
     db.refresh(resource)
@@ -49,7 +53,7 @@ async def upload_resource(request: Request, file: UploadFile = File(...), course
 
 
 @router.post("/{resource_id}/process", response_model=Resource)
-def process_resource(resource_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Resource:
+def process_resource(resource_id: str, background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Resource:
     resource = db.scalar(select(ResourceModel).join(Course, Course.id == ResourceModel.course_id, isouter=True).where(ResourceModel.id == resource_id, (ResourceModel.course_id.is_(None)) | (Course.owner_id == current_user.id)))
     if resource is None:
         raise HTTPException(status_code=404, detail="Resource not found")
@@ -57,17 +61,42 @@ def process_resource(resource_id: str, current_user: User = Depends(get_current_
         resource.processing_status = "ready"
         db.commit()
         return Resource.model_validate(resource)
-    try:
-        from pypdf import PdfReader
-        path = Path(settings.upload_dir) / resource.storage_key
-        reader = PdfReader(str(path))
-        extracted_text = "\n".join(page.extract_text() or "" for page in reader.pages)
-        processed_path = Path(settings.processed_dir)
-        processed_path.mkdir(parents=True, exist_ok=True)
-        (processed_path / f"{resource.id}.txt").write_text(extracted_text, encoding="utf-8")
-        resource.processing_status = "processed"
-    except Exception:
-        resource.processing_status = "failed"
+    resource.processing_status = "queued"
     db.commit()
     db.refresh(resource)
+    background_tasks.add_task(_process_resource_in_background, resource.id)
     return Resource.model_validate(resource)
+
+
+def _process_resource_in_background(resource_id: str) -> None:
+    process_resource_by_id(resource_id)
+
+
+@router.get("/{resource_id}/mappings", response_model=list[ResourceMappingResponse])
+def get_resource_mappings(resource_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[ResourceMappingResponse]:
+    resource = db.scalar(select(ResourceModel).join(Course, Course.id == ResourceModel.course_id, isouter=True).where(ResourceModel.id == resource_id, (ResourceModel.course_id.is_(None)) | (Course.owner_id == current_user.id)))
+    if resource is None:
+        raise HTTPException(status_code=404, detail="Resource not found")
+    mappings = db.scalars(select(ResourceConceptMapping).where(ResourceConceptMapping.resource_id == resource_id)).all()
+    return [ResourceMappingResponse.model_validate(item, from_attributes=True) for item in mappings]
+
+
+@router.post("/{resource_id}/mappings", response_model=ResourceMappingResponse, status_code=201)
+def create_resource_mapping(resource_id: str, payload: ResourceMappingRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ResourceMappingResponse:
+    resource = db.scalar(select(ResourceModel).join(Course, Course.id == ResourceModel.course_id, isouter=True).where(ResourceModel.id == resource_id, (ResourceModel.course_id.is_(None)) | (Course.owner_id == current_user.id)))
+    if resource is None:
+        raise HTTPException(status_code=404, detail="Resource not found")
+    concept = db.scalar(select(Concept).where(Concept.id == payload.concept_id, Concept.course_id == resource.course_id))
+    if concept is None:
+        raise HTTPException(status_code=404, detail="Concept not found")
+    mapping = db.scalar(select(ResourceConceptMapping).where(ResourceConceptMapping.resource_id == resource_id, ResourceConceptMapping.concept_id == payload.concept_id))
+    if mapping is None:
+        mapping = ResourceConceptMapping(resource_id=resource_id, concept_id=payload.concept_id)
+        db.add(mapping)
+    mapping.confidence = payload.confidence
+    mapping.status = payload.status
+    mapping.source = payload.source
+    mapping.reviewed_by = current_user.id if payload.status in {"accepted", "rejected"} else None
+    db.commit()
+    db.refresh(mapping)
+    return ResourceMappingResponse.model_validate(mapping, from_attributes=True)

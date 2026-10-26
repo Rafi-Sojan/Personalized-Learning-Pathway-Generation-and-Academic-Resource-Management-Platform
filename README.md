@@ -36,7 +36,7 @@ This repository provides a functional development slice with signed authenticati
 ## 4. Prerequisites
 
 - Python 3.11 or newer
-- Node.js 20 or newer
+- Node.js 24.22.1 or newer and npm 11.21.1 or newer
 - A C++17 compiler for the scoring engine
 - CMake 3.20 or newer for the native build
 
@@ -63,15 +63,17 @@ In a second terminal, start the frontend:
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
 The dashboard is available at `http://localhost:5173`. Interactive API documentation is available at `http://localhost:8000/docs`.
 
-For the full local stack, including PostgreSQL, Redis, private upload storage, and the containerized frontend/backend, run:
+For the full local stack, including PostgreSQL, Redis, private upload storage, the API worker, and the containerized frontend/backend, copy `.env.example` to `.env`, replace the development placeholders, and run:
 
 ```bash
+copy .env.example .env  # Windows
+# cp .env.example .env  # macOS/Linux
 docker compose up --build
 ```
 
@@ -118,11 +120,15 @@ The API is mounted under `/api/v1`:
 | Method | Endpoint | Description |
 | --- | --- | --- |
 | `POST` | `/auth/login` | Issue a development access token |
+| `GET` | `/auth/export` | Export authenticated account data |
+| `POST` | `/auth/delete` | Delete authenticated account after email confirmation |
 | `GET` | `/courses` | List or create courses |
 | `GET` | `/concepts` | List concepts and prerequisites |
 | `POST` | `/syllabus/analyze` | Extract topics from syllabus text |
 | `GET` | `/roadmap` | Generate a dated study plan |
+| `GET` | `/roadmap/history` | List roadmap revisions |
 | `GET` | `/resources` | List learning resources |
+| `GET`, `POST` | `/resources/{id}/mappings` | Review resource-to-concept mappings |
 | `GET`, `POST` | `/progress` | Read or record learner progress |
 | `GET` | `/quizzes/{concept_id}` | Retrieve a concept quiz |
 | `GET` | `/rankings` | Retrieve the development leaderboard |

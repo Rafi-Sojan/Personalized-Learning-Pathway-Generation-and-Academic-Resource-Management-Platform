@@ -11,7 +11,7 @@ The relational contract is represented by SQLAlchemy models, `database/init.sql`
 
 ## 2. Ownership and relationships
 
-Users own courses. Courses own concepts and resources. Prerequisite edges connect concepts within a course. Progress, quiz attempts, and study plans are scoped to users. Roadmap items are persisted derived data and can be regenerated from progress, availability, deadlines, and dependencies.
+Users own courses. Courses own concepts and resources. Prerequisite edges connect concepts within a course. Progress, quiz attempts, and study plans are scoped to users. Roadmap items are persisted derived data and can be regenerated from progress, availability, deadlines, and dependencies. Study plan revisions preserve generated snapshots, and resource-concept mappings preserve review state, confidence, source, and reviewer.
 
 ## 3. Integrity requirements
 
@@ -21,6 +21,8 @@ Users own courses. Courses own concepts and resources. Prerequisite edges connec
 - Progress values shall be validated within their schema ranges.
 - Stored filenames shall be generated identifiers, never raw client filenames.
 - Schema changes shall be introduced through reviewed migrations rather than ad hoc production table creation.
+- Roadmap regeneration shall supersede the prior active plan and create a revision snapshot.
+- Resource mappings shall be unique per resource/concept pair and use explicit proposed, accepted, or rejected states.
 
 ## 4. File data
 

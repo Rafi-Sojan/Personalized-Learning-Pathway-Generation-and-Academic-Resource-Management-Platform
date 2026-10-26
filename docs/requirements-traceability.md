@@ -20,8 +20,8 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Text-based syllabus analysis | Implemented | `POST /api/v1/syllabus/analyze` with bounded input |
 | Digital PDF uploads | Implemented | Validated private uploads under `storage/uploads` |
 | PDF text extraction | Implemented | PyPDF processing endpoint and processed text output |
-| OCR for scanned PDFs | Planned | Extension point; Tesseract/OpenCV are not installed or wired |
-| Resource-to-topic mapping | Partial | Deterministic ML utilities exist; persistent mapping review workflow is pending |
+| OCR for scanned PDFs | Implemented | Optional Tesseract/PyMuPDF provider is integrated for image-only PDFs, bounded by configured page/text limits, and packaged in `backend/Dockerfile.ocr` |
+| Resource-to-topic mapping | Implemented | Resource-to-concept mapping records support proposed, accepted, and rejected review states |
 | Concept prerequisites | Implemented | Prerequisite table, API mutation, and cycle detection |
 | Concept graph visualization | Implemented | React Flow concept map |
 | Deadline-aware roadmap generation | Implemented | Persisted study plans with target date and daily capacity |
@@ -29,8 +29,10 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Roadmap explanations | Implemented | Items include transparent prioritization explanations |
 | Quiz attempts | Implemented | Concept quiz endpoint and attempt submission |
 | Progress adaptation | Implemented | Quiz/progress updates modify topic mastery state |
-| Roadmap revision history | Planned | Study plans are persisted; revision audit records are not yet modeled |
-| Historical exam ranking | Partial | C++ scorer and ranking endpoint are present; real question-paper ingestion is pending |
+| Account data export and deletion | Implemented | Authenticated export and email-confirmed deletion endpoints plus frontend account screen |
+| Roadmap revision history | Implemented | Generated plans create revision snapshots and supersede prior active plans |
+| Historical exam ranking | Partial | C++ scorer now has a backend-consumable stdin contract; real question-paper ingestion and historical benchmark data are pending |
+| Reproducible learning evaluation | Implemented | JSON benchmark harness reports mapping precision, roadmap completion, and ranking hit rate |
 
 ## Platform requirements
 
@@ -47,13 +49,13 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Non-root backend container | Implemented | Backend image runs as `appuser` |
 | Alembic migrations | Implemented | Configured environment and initial migration |
 | CI tests and quality checks | Implemented | Python tests, Ruff, mypy, frontend build/audit, C++ tests |
-| Container vulnerability scanning | Planned | CI does not yet publish or scan built images |
+| Container vulnerability scanning | Implemented | CI audits Python/npm dependencies, builds both images, scans high/critical findings, and publishes SPDX SBOM artifacts |
 
 ## Known development limitations
 
 - The seeded demo account is for local development only.
-- The default secret is rejected in production mode, but Compose still contains a development secret fallback.
-- OCR, asynchronous document workers, object storage, revision audit records, and complete resource-mapping review are not production-complete.
-- The frontend bundle currently emits a chunk-size warning because React Flow and Recharts are loaded in the main bundle.
+- Production rejects the development secret and Compose requires `SECRET_KEY` and `POSTGRES_PASSWORD` from `.env`.
+- Object storage and long-term revision audit retention are not production-complete; queued document processing, OCR, and resource-mapping review are implemented.
+- Frontend routes are lazy-loaded; the largest remaining chunk is the concept/progress visualization dependency group.
 - Docker runtime validation was not performed on the development machine because Docker was unavailable.
 - `npm audit` validates repository dependencies, not the globally installed npm CLI or Node runtime.

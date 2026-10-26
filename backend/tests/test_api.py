@@ -30,3 +30,22 @@ def test_courses_and_roadmap() -> None:
 def test_syllabus_analysis() -> None:
     response = client.post("/api/v1/syllabus/analyze", headers=auth_headers(), json={"text": "# Variables\n- Functions"})
     assert response.json()["count"] == 2
+
+
+def test_account_export_and_roadmap_history() -> None:
+    headers = auth_headers()
+    exported = client.get("/api/v1/auth/export", headers=headers)
+    assert exported.status_code == 200
+    assert {"user", "courses", "progress", "study_plans"}.issubset(exported.json())
+    course_id = client.get("/api/v1/courses", headers=headers).json()[0]["id"]
+    generated = client.post("/api/v1/roadmap/generate", headers=headers, json={"course_id": course_id, "target_date": "2099-01-01", "daily_minutes": 60})
+    assert generated.status_code == 201
+    history = client.get("/api/v1/roadmap/history", headers=headers)
+    assert history.status_code == 200
+    assert history.json()
+
+
+def test_upload_rejects_pdf_with_invalid_magic_bytes() -> None:
+    course_id = client.get("/api/v1/courses", headers=auth_headers()).json()[0]["id"]
+    response = client.post("/api/v1/resources/upload", headers=auth_headers(), params={"course_id": course_id}, files={"file": ("document.pdf", b"not-a-pdf", "application/pdf")})
+    assert response.status_code == 415

@@ -1,13 +1,14 @@
+import json
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
 from app.db.session import get_db
-from app.models import Concept, ConceptPrerequisite, Course, StudyPlan, StudyPlanItem, TopicProgress, User
-from app.schemas.learning import RoadmapItem, RoadmapRequest, StudyPlanResponse
+from app.models import Concept, ConceptPrerequisite, Course, StudyPlan, StudyPlanItem, StudyPlanRevision, TopicProgress, User
+from app.schemas.learning import RoadmapItem, RoadmapRequest, StudyPlanResponse, StudyPlanRevisionResponse
 
 router = APIRouter()
 
@@ -28,13 +29,32 @@ def generate_roadmap(payload: RoadmapRequest, current_user: User = Depends(get_c
     if payload.target_date < date.today():
         raise HTTPException(status_code=422, detail="Target date must be today or later")
     items = generate_items(db, current_user, course.id, payload.target_date, payload.daily_minutes, payload.revision_minutes)
+    db.execute(update(StudyPlan).where(StudyPlan.user_id == current_user.id, StudyPlan.course_id == course.id, StudyPlan.status == "active").values(status="superseded"))
     plan = StudyPlan(user_id=current_user.id, course_id=course.id, target_date=payload.target_date, daily_minutes=payload.daily_minutes)
     db.add(plan)
     db.flush()
     for item in items:
         db.add(StudyPlanItem(plan_id=plan.id, concept_id=item.concept_id, scheduled_date=item.scheduled_date, minutes=item.minutes, sequence=int(item.id.split("-")[-1]) if item.id.split("-")[-1].isdigit() else 0, explanation=item.reason))
+    db.flush()
+    previous_revisions = db.scalars(select(StudyPlanRevision).join(StudyPlan, StudyPlan.id == StudyPlanRevision.plan_id).where(StudyPlan.user_id == current_user.id, StudyPlan.course_id == course.id)).all()
+    revision = StudyPlanRevision(
+        plan_id=plan.id,
+        revision_number=len(previous_revisions) + 1,
+        event="generated",
+        snapshot=json.dumps([item.model_dump(mode="json") for item in items], sort_keys=True),
+    )
+    db.add(revision)
     db.commit()
     return StudyPlanResponse(id=plan.id, course_id=plan.course_id, target_date=plan.target_date, daily_minutes=plan.daily_minutes, items=items)
+
+
+@router.get("/history", response_model=list[StudyPlanRevisionResponse])
+def roadmap_history(course_id: str | None = Query(default=None), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[StudyPlanRevisionResponse]:
+    query = select(StudyPlanRevision).join(StudyPlan, StudyPlan.id == StudyPlanRevision.plan_id).where(StudyPlan.user_id == current_user.id)
+    if course_id:
+        query = query.where(StudyPlan.course_id == course_id)
+    revisions = db.scalars(query.order_by(StudyPlanRevision.created_at.desc())).all()
+    return [StudyPlanRevisionResponse(id=item.id, plan_id=item.plan_id, revision_number=item.revision_number, event=item.event, created_at=item.created_at.isoformat()) for item in revisions]
 
 
 def generate_items(db: Session, user: User, course_id: str, target_date: date, daily_minutes: int, revision_minutes: int = 0) -> list[RoadmapItem]:

@@ -1,0 +1,17 @@
+[
+  {
+    "mapping": {
+      "predicted": ["functions"],
+      "expected": ["functions"]
+    },
+    "roadmap": {
+      "completed": 3,
+      "planned": 4
+    },
+    "ranking": {
+      "recommended": ["functions", "control-flow"],
+      "relevant": ["functions"],
+      "k": 5
+    }
+  }
+]

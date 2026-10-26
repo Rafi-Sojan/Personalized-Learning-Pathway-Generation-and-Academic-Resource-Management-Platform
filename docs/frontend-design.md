@@ -43,8 +43,8 @@ The frontend is a React, Vite, and TypeScript single-page application. It provid
 
 The production build is generated with `npm run build` and served from the frontend container. The Docker image uses a multi-stage Node build and a static web server runtime. CI performs dependency installation from `package-lock.json` and runs the production build.
 
-The frontend bundle currently has a development-size warning for large chunks. Code splitting and route-level lazy loading are recommended before production deployment.
+Route-level lazy loading is implemented to reduce the initial bundle. The concept map and progress visualization chunks remain the largest page-specific assets and should be monitored in production.
 
 ## 6. Accessibility and usability backlog
 
-The baseline requires a formal accessibility review covering keyboard navigation, focus order, color contrast, form labels, screen-reader names, responsive behavior, and error announcements. This review is not represented as completed by the current automated checks.
+The baseline adds labeled navigation, icon-button names, semantic status/error announcements, and account form labels. A formal accessibility review covering keyboard navigation, focus order, color contrast, responsive behavior, and screen-reader behavior is still required.

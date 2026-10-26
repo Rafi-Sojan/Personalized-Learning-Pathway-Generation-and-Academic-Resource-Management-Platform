@@ -67,3 +67,4 @@ Thumbs.db
 *.log
 tmp/
 temp/
+backups/

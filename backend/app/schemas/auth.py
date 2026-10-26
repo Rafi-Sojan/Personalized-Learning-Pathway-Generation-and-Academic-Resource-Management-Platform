@@ -20,6 +20,10 @@ class User(BaseModel):
     role: str = "student"
 
 
+class DeleteAccountRequest(BaseModel):
+    confirm_email: EmailStr
+
+
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

@@ -23,6 +23,23 @@ class Resource(BaseModel):
     processing_status: str = "ready"
 
 
+class ResourceMappingRequest(BaseModel):
+    concept_id: str
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    status: str = Field(default="proposed", pattern="^(proposed|accepted|rejected)$")
+    source: str = Field(default="manual", max_length=32)
+
+
+class ResourceMappingResponse(BaseModel):
+    id: str
+    resource_id: str
+    concept_id: str
+    confidence: float | None
+    status: str
+    source: str
+    reviewed_by: str | None
+
+
 class RoadmapItem(BaseModel):
     id: str
     concept_id: str
@@ -46,6 +63,14 @@ class StudyPlanResponse(BaseModel):
     target_date: date
     daily_minutes: int
     items: list[RoadmapItem]
+
+
+class StudyPlanRevisionResponse(BaseModel):
+    id: str
+    plan_id: str
+    revision_number: int
+    event: str
+    created_at: str
 
 
 class ProgressUpdate(BaseModel):

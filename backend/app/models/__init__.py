@@ -76,6 +76,19 @@ class Resource(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class ResourceConceptMapping(Base):
+    __tablename__ = "resource_concept_mappings"
+    __table_args__ = (UniqueConstraint("resource_id", "concept_id", name="uq_resource_concept_mapping"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    resource_id: Mapped[str] = mapped_column(ForeignKey("academic_resources.id"), index=True)
+    concept_id: Mapped[str] = mapped_column(ForeignKey("concepts.id"), index=True)
+    confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    status: Mapped[str] = mapped_column(String(24), default="proposed")
+    source: Mapped[str] = mapped_column(String(32), default="manual")
+    reviewed_by: Mapped[Optional[str]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
 class TopicProgress(Base):
     __tablename__ = "topic_progress"
     __table_args__ = (UniqueConstraint("user_id", "concept_id", name="uq_progress_user_concept"),)
@@ -120,3 +133,13 @@ class StudyPlanItem(Base):
     sequence: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(32), default="planned")
     explanation: Mapped[str] = mapped_column(Text, default="")
+
+
+class StudyPlanRevision(Base):
+    __tablename__ = "study_plan_revisions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    plan_id: Mapped[str] = mapped_column(ForeignKey("study_plans.id"), index=True)
+    revision_number: Mapped[int] = mapped_column(Integer)
+    event: Mapped[str] = mapped_column(String(32), default="generated")
+    snapshot: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

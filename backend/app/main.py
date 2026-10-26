@@ -1,19 +1,27 @@
+import logging
+import time
+import uuid
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pathlib import Path
+from redis import Redis
+from sqlalchemy import select, text
 
 from app.api.v1 import router
 from app.core.config import settings
+from app.core.logging import configure_logging
+from app.core.security import hash_password
 from app.db.base import Base
 from app.db.session import engine, SessionLocal
 from app.models import Concept, ConceptPrerequisite, Course, Resource, TopicProgress, User
-from app.core.security import hash_password
-from sqlalchemy import select
 
 
 def init_database() -> None:
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.processed_dir).mkdir(parents=True, exist_ok=True)
+    if settings.environment.lower() == "production":
+        return
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
@@ -43,6 +51,9 @@ def init_database() -> None:
 
 init_database()
 
+configure_logging()
+audit_logger = logging.getLogger("audit")
+
 app = FastAPI(title=settings.app_name, version="0.1.0", description="Learning roadmap API")
 app.add_middleware(
     CORSMiddleware,
@@ -56,13 +67,31 @@ app.include_router(router, prefix=settings.api_prefix)
 
 @app.middleware("http")
 async def security_headers(request, call_next):
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    started = time.perf_counter()
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; connect-src 'self' http://localhost:8000 http://localhost:5173; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    response.headers["X-Request-ID"] = request_id
+    audit_logger.info("request_id=%s method=%s path=%s status=%s duration_ms=%.2f", request_id, request.method, request.url.path, response.status_code, (time.perf_counter() - started) * 1000)
     return response
 
 
 @app.get("/health", tags=["system"])
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "learning-roadmap-api"}
+
+
+@app.get("/health/ready", tags=["system"])
+def readiness() -> dict[str, str]:
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
+    status = "ready"
+    try:
+        Redis.from_url(settings.redis_url, socket_connect_timeout=0.5, socket_timeout=0.5).ping()
+    except Exception:
+        status = "ready-with-redis-fallback"
+    return {"status": status, "service": "learning-roadmap-api"}

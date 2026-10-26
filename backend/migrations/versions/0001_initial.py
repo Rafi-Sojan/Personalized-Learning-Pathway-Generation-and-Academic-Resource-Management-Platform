@@ -15,7 +15,11 @@ depends_on = None
 
 
 def upgrade() -> None:
-    Base.metadata.create_all(bind=op.get_bind())
+    historical_tables = [
+        table for table in Base.metadata.sorted_tables
+        if table.name not in {"study_plan_revisions", "resource_concept_mappings"}
+    ]
+    Base.metadata.create_all(bind=op.get_bind(), tables=historical_tables)
 
 
 def downgrade() -> None:
