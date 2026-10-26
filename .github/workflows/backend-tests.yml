@@ -46,6 +46,17 @@ jobs:
           PYTHONPATH: backend
         run: python -m pytest backend/tests ml/tests tests --junitxml=test-results.xml
 
+      - name: Run Ruff checks
+        run: python -m ruff check backend ml tests --output-format=github
+
+      - name: Run mypy checks
+        run: python -m mypy backend/app --ignore-missing-imports
+
+      - name: Audit Python dependencies
+        run: |
+          python -m pip install pip-audit
+          python -m pip_audit -r backend/requirements.txt -r ml/requirements.txt
+
       - name: Publish test report
         if: always()
         uses: actions/upload-artifact@v4

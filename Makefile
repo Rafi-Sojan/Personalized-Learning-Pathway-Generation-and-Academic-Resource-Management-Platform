@@ -11,6 +11,15 @@ backend:
 frontend:
 	cd frontend && npm install && npm run dev
 
+compose-up:
+	docker compose up --build
+
+compose-down:
+	docker compose down
+
+migrate:
+	alembic -c backend/alembic.ini upgrade head
+
 test:
 	pytest backend/tests ml/tests tests
 

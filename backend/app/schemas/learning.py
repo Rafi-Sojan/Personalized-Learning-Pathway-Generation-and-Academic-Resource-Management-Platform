@@ -1,8 +1,9 @@
 from datetime import date
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Concept(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str
     name: str
     course_id: str
@@ -12,12 +13,14 @@ class Concept(BaseModel):
 
 
 class Resource(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str
     title: str
     kind: str
     url: str
     concept_id: str | None = None
     duration_minutes: int = Field(ge=0)
+    processing_status: str = "ready"
 
 
 class RoadmapItem(BaseModel):
@@ -28,6 +31,21 @@ class RoadmapItem(BaseModel):
     minutes: int = Field(gt=0)
     status: str
     reason: str
+
+
+class RoadmapRequest(BaseModel):
+    course_id: str
+    target_date: date
+    daily_minutes: int = Field(gt=0, le=1440)
+    revision_minutes: int = Field(default=30, ge=0, le=480)
+
+
+class StudyPlanResponse(BaseModel):
+    id: str
+    course_id: str
+    target_date: date
+    daily_minutes: int
+    items: list[RoadmapItem]
 
 
 class ProgressUpdate(BaseModel):
@@ -41,3 +59,13 @@ class QuizQuestion(BaseModel):
     prompt: str
     options: list[str]
     answer_index: int = Field(ge=0)
+
+
+class QuizAttemptRequest(BaseModel):
+    answer_index: int = Field(ge=0)
+
+
+class QuizAttemptResponse(BaseModel):
+    attempt_id: str
+    correct: bool
+    score: float

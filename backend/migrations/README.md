@@ -1,3 +1,3 @@
 # Migrations
 
-Alembic migrations will live here when the application switches from the development in-memory repository to a relational database. Keep migration files backwards-compatible with the API schemas.
+The application creates the development schema automatically for SQLite. Production deployments should use Alembic migrations against PostgreSQL before starting the API. The model contract is defined in `backend/app/models/__init__.py` and the initial relational contract remains documented in `database/init.sql`.

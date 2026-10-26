@@ -1,3 +1,31 @@
-# Database design
+# Database Design Specification
 
-The initial relational contract is in `database/init.sql`. Courses own concepts, concepts own resources and progress records reference both users and concepts. Roadmap items are derived data and can be regenerated from progress and dependencies.
+**Document ID:** ILR-DB-001
+**Version:** 1.0
+**Status:** Development baseline
+**Last reviewed:** 2026-10-27
+
+## 1. Authority and persistence
+
+The relational contract is represented by SQLAlchemy models, `database/init.sql`, and the Alembic migration under `backend/migrations/versions`. Alembic is authoritative for deployed schema evolution. SQLite is used for zero-service development; PostgreSQL is the Compose and intended production database.
+
+## 2. Ownership and relationships
+
+Users own courses. Courses own concepts and resources. Prerequisite edges connect concepts within a course. Progress, quiz attempts, and study plans are scoped to users. Roadmap items are persisted derived data and can be regenerated from progress, availability, deadlines, and dependencies.
+
+## 3. Integrity requirements
+
+- Foreign keys shall preserve parent-child ownership relationships.
+- Prerequisite mutations shall reject cycles before persistence.
+- Unique constraints shall prevent duplicate identity and relationship records where defined by the model.
+- Progress values shall be validated within their schema ranges.
+- Stored filenames shall be generated identifiers, never raw client filenames.
+- Schema changes shall be introduced through reviewed migrations rather than ad hoc production table creation.
+
+## 4. File data
+
+Private uploads are stored under `storage/uploads` using generated UUID filenames. Metadata and checksums are stored in the database; extracted text is written to `storage/processed` after validated PDF processing. These directories are not public frontend assets and must use encrypted, access-controlled storage in production.
+
+## 5. Recovery requirements
+
+Production must define database backup frequency, retention, encryption, restore testing, and recovery objectives. Redis data is non-authoritative and may be rebuilt; database and private file storage are authoritative and must be backed up consistently.

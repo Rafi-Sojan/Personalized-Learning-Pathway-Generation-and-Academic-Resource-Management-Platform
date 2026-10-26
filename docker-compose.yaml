@@ -1,17 +1,54 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: learning
+      POSTGRES_USER: learning
+      POSTGRES_PASSWORD: learning-dev-only
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U learning -d learning"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   backend:
     build: ./backend
     environment:
       FRONTEND_ORIGIN: http://localhost:5173
+      DATABASE_URL: postgresql+psycopg://learning:learning-dev-only@postgres:5432/learning
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: local-compose-secret-change-before-deployment
+      UPLOAD_DIR: /app/storage/uploads
+      PROCESSED_DIR: /app/storage/processed
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - ./storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   frontend:
-    image: node:22-alpine
-    working_dir: /app
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    build: ./frontend
     environment:
       VITE_API_URL: http://localhost:8000/api/v1
     ports:
@@ -23,4 +60,6 @@ services:
       - backend
 
 volumes:
+  postgres_data:
+  redis_data:
   frontend_node_modules:

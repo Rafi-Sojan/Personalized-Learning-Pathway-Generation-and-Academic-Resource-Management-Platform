@@ -40,3 +40,5 @@ export type Progress = {
   total_concepts: number
   updates: Record<string, { completed: boolean; score?: number | null }>
 }
+
+export type User = { id: string; email: string; name: string; role: string }
