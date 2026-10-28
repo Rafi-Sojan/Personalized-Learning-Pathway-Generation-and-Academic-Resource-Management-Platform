@@ -13,7 +13,7 @@ Testing shall verify functional behavior, authorization boundaries, data validat
 
 The baseline verification record includes:
 
-- 15 Python tests across backend, ML, and cross-module flows, including numbered-question parsing, role enforcement, historical exam import, and the reproducible evaluation benchmark.
+- 16 Python tests across backend, ML, and cross-module flows, including token revocation, metrics, numbered-question parsing, role enforcement, historical exam import, and the reproducible evaluation benchmark.
 - CI executes Ruff static checks and Mypy checks across the backend source tree.
 - Frontend `npm ci` followed by a successful TypeScript/Vite production build.
 - `npm audit --offline --audit-level=high` reported zero project dependency vulnerabilities during this verification pass.
@@ -43,7 +43,8 @@ The dependency-free load smoke test can be run against a local API with `python 
 - PostgreSQL and Redis integration tests require service containers and are run by CI.
 - OCR execution requires the optional OCR image and an installed Tesseract binary.
 - External penetration testing remains an operational acceptance activity; the repository includes DAST automation and bounded malformed-input checks.
-- Browser-level tests require the Playwright package and browser binaries; the two checked-in Playwright smoke tests passed after Chromium provisioning, and CI provisions Chromium explicitly.
+- Browser-level tests require the Playwright package and browser binaries; the checked-in Playwright smoke and accessibility tests run in CI with Chromium provisioning.
+- Lighthouse accessibility and performance thresholds are enforced by `.github/workflows/frontend-a11y-performance.yml`; the local shell has not executed the CI-only Lighthouse audit.
 
 The Playwright smoke suite is located in `frontend/e2e/`, is invoked with `npm run test:e2e`, and is part of the frontend CI workflow. CI installs the Chromium browser before execution.
 - CMake is exercised by the C++ workflow; direct `g++` compilation remains a local fallback.

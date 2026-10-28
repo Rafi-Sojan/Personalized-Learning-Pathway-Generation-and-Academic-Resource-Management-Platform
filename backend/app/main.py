@@ -3,7 +3,7 @@ import time
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from redis import Redis
 from sqlalchemy import select, text
@@ -11,6 +11,7 @@ from sqlalchemy import select, text
 from app.api.v1 import router
 from app.core.config import settings
 from app.core.logging import configure_logging
+from app.core.metrics import metrics
 from app.core.security import hash_password
 from app.db.base import Base
 from app.db.session import engine, SessionLocal
@@ -83,6 +84,7 @@ async def security_headers(request, call_next):
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Content-Security-Policy"] = "default-src 'self'; connect-src 'self' http://localhost:8000 http://localhost:5173; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
     response.headers["X-Request-ID"] = request_id
+    metrics.observe_request(request.method, request.url.path, response.status_code)
     audit_logger.info("request_id=%s method=%s path=%s status=%s duration_ms=%.2f", request_id, request.method, request.url.path, response.status_code, (time.perf_counter() - started) * 1000)
     return response
 
@@ -102,3 +104,8 @@ def readiness() -> dict[str, str]:
     except Exception:
         status = "ready-with-redis-fallback"
     return {"status": status, "service": "learning-roadmap-api"}
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics_endpoint() -> Response:
+    return Response(content=metrics.render_prometheus(), media_type="text/plain; version=0.0.4")

@@ -47,7 +47,7 @@ SQLite is the zero-service development default. Docker Compose provisions Postgr
 | Decision | Rationale | Consequence |
 |---|---|---|
 | Modular monolith | Keeps development and deployment simple | Requires discipline around module boundaries |
-| Signed short-lived JWTs | Stateless API authentication | Revocation requires expiry or key rotation |
+| Signed short-lived JWTs | Stateless API authentication | Per-user token versions provide logout/revocation; expiry and key rotation remain defense in depth |
 | SQLAlchemy plus Alembic | Portable persistence and controlled schema changes | Migrations must be run in deployment |
 | Deterministic learning utilities | Explainability and repeatable tests | Less semantic coverage than a validated ML model |
 | Redis fallback | Local development remains usable without Redis | Distributed rate-limit consistency requires Redis |

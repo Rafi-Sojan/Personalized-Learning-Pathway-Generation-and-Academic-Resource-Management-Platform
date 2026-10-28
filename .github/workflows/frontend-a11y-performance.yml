@@ -1,0 +1,47 @@
+name: Frontend accessibility and performance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-a11y-performance.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  a11y-performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48 # v4.4.0
+        with:
+          node-version: '24.22.1'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm install --global npm@11.21.1
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm run test:e2e
+      - name: Start preview server
+        run: npm run preview -- --host 127.0.0.1 > preview.log 2>&1 &
+      - name: Run Lighthouse accessibility audit
+        run: |
+          for attempt in {1..20}; do curl --fail --silent http://127.0.0.1:4173/login && break || sleep 2; done
+          npx --yes lighthouse@12.4.0 http://127.0.0.1:4173/login --only-categories=accessibility,performance --output=json --output-path=./lighthouse-report.json --chrome-flags="--headless --no-sandbox"
+      - name: Enforce Lighthouse thresholds
+        run: node -e "const r=require('./lighthouse-report.json'); const a=r.categories.accessibility.score; const p=r.categories.performance.score; if(a < .90 || p < .70) { console.error({accessibility:a,performance:p}); process.exit(1) } console.log({accessibility:a,performance:p})"
+      - name: Upload audit artifacts
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.6.2
+        with:
+          name: frontend-a11y-performance
+          path: |
+            frontend/lighthouse-report.json
+            frontend/preview.log

@@ -10,7 +10,8 @@ export async function login(email: string, password: string): Promise<AuthRespon
   return result
 }
 
-export function logout() {
+export async function logout() {
+  try { await api<void>('/auth/logout', { method: 'POST' }) } catch { /* revoke locally when the API is unavailable */ }
   localStorage.removeItem('access_token')
   localStorage.removeItem('user')
 }

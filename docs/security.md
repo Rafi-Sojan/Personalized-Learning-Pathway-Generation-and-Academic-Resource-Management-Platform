@@ -20,3 +20,4 @@ The development API uses short-lived signed JWTs, Argon2 password hashing, owner
 - Run the production process only after migrations have been applied; production startup does not create schema or seed demo data.
 - Enforce student, instructor, and administrator roles server-side; never trust a browser-supplied role.
 - Use the S3-compatible storage backend for durable private document storage when local volumes are not acceptable.
+- Protect `/metrics` behind the internal network or authenticated monitoring gateway; it is intentionally excluded from the public OpenAPI contract.

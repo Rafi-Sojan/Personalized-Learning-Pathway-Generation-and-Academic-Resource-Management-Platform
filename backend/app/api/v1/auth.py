@@ -21,7 +21,7 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
     user = db.scalar(select(UserModel).where(UserModel.email == str(payload.email).lower()))
     if user is None or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    return LoginResponse(access_token=create_access_token(user.id), user=User.model_validate(user))
+    return LoginResponse(access_token=create_access_token(user.id, user.token_version), user=User.model_validate(user))
 
 
 @router.post("/register", response_model=LoginResponse, status_code=201)
@@ -34,12 +34,19 @@ def register(payload: RegisterRequest, request: Request, db: Session = Depends(g
     db.add(user)
     db.commit()
     db.refresh(user)
-    return LoginResponse(access_token=create_access_token(user.id), user=User.model_validate(user))
+    return LoginResponse(access_token=create_access_token(user.id, user.token_version), user=User.model_validate(user))
 
 
 @router.get("/me", response_model=User)
 def me(current_user: UserModel = Depends(get_current_user)) -> User:
     return User.model_validate(current_user)
+
+
+@router.post("/logout", status_code=204)
+def logout(current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)) -> None:
+    current_user.token_version += 1
+    record_event(db, "logout", current_user.id)
+    db.commit()
 
 
 @router.get("/export")

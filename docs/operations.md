@@ -90,7 +90,7 @@ The restore script requires explicit `RESTORE` confirmation. Backup files are ig
 
 After startup, verify that the API responds, the interactive documentation loads, the frontend can reach the configured API origin, database migrations are current, and Redis connectivity is either healthy or intentionally operating in fallback mode. Perform an authenticated smoke test for login, a private read, a progress update, and roadmap generation.
 
-The readiness endpoint is `GET /health/ready`; it confirms database connectivity and reports whether Redis is available or the process-local fallback is active.
+The readiness endpoint is `GET /health/ready`; it confirms database connectivity and reports whether Redis is available or the process-local fallback is active. `GET /metrics` exposes request/status counters for an internal Prometheus scraper and must not be published directly to the internet.
 
 ## Roles and administration
 
@@ -120,12 +120,14 @@ cmake --build build --config Release
 ctest --test-dir build --build-config Release --output-on-failure
 
 python scripts/purge_audit_events.py
+
+# The scheduled CI backup/restore drill is defined in .github/workflows/backup-restore.yml.
 ```
 
 ## Incident response basics
 
 1. Rotate `SECRET_KEY` to invalidate existing JWTs.
-2. Rotate PostgreSQL, Redis, registry, and object-storage credentials.
+2. Use authenticated logout/token-version rotation, then rotate PostgreSQL, Redis, registry, and object-storage credentials when compromise is suspected.
 3. Preserve application, reverse-proxy, and database audit logs.
 4. Disable uploads or expensive processing if resource exhaustion is suspected.
 5. Rebuild from a clean checkout with fresh dependency audits.

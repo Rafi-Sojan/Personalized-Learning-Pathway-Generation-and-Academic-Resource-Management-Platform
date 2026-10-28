@@ -1,0 +1,13 @@
+import { useEffect, useState } from 'react'
+import { createManagedUser, getManagedUsers } from '../services/admin'
+import type { ManagedUser } from '../types'
+
+export function Admin() {
+  const [users, setUsers] = useState<ManagedUser[]>([])
+  const [form, setForm] = useState({ email: '', name: '', password: '', role: 'instructor' })
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => { getManagedUsers().then(setUsers).catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to load users')) }, [])
+  async function submit(event: React.FormEvent) { event.preventDefault(); setError(null); setMessage(null); try { const user = await createManagedUser(form); setUsers((current) => [...current, user]); setForm({ email: '', name: '', password: '', role: 'instructor' }); setMessage('User created.') } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to create user') } }
+  return <main><div className="eyebrow">Platform governance</div><h1>Administration</h1><p className="lede">Manage instructors and administrators with server-enforced roles.</p><section className="dashboard-grid"><div className="panel"><div className="panel-heading"><div><span className="section-kicker">Provisioning</span><h2>Create managed user</h2></div></div><form className="form-grid" onSubmit={submit}><label>Name<input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label><label>Email<input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></label><label>Password<input required minLength={8} type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label><label>Role<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}><option value="student">Student</option><option value="instructor">Instructor</option><option value="admin">Administrator</option></select></label><button className="primary" type="submit">Create user</button></form></div><div className="panel"><div className="panel-heading"><div><span className="section-kicker">Directory</span><h2>Users</h2></div></div>{users.map((user) => <div className="course-mini" key={user.id}><div className="course-icon">{user.role.slice(0, 2).toUpperCase()}</div><div className="course-copy"><strong>{user.name}</strong><small>{user.email} · {user.role}</small></div></div>)}</div></section>{message && <p role="status">{message}</p>}{error && <p className="form-error" role="alert">{error}</p>}</main>
+}

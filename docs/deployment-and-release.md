@@ -32,6 +32,16 @@ The following checks are required before a release is approved:
 7. Secrets, demo accounts, default credentials, and development fallbacks are removed or overridden.
 8. A rollback revision, database recovery plan, DAST report, and audit-retention policy are recorded.
 
+## 6. Automated acceptance workflows
+
+- `backend-tests.yml` runs backend/ML quality checks and PostgreSQL/Redis integration checks.
+- `frontend-checks.yml` runs the locked frontend build, browser smoke tests, and dependency audit.
+- `frontend-a11y-performance.yml` runs Playwright accessibility checks, the bundle budget, and Lighthouse accessibility/performance thresholds.
+- `security-scan.yml` audits dependencies, scans images, and publishes SBOMs.
+- `compose-smoke.yml` starts the integrated stack and verifies liveness/readiness.
+- `dast.yml` runs the scheduled/manual OWASP ZAP baseline scan and retains the report artifact.
+- `backup-restore.yml` performs a scheduled/manual PostgreSQL logical backup and restores it into a fresh database.
+
 ## 4. Deployment procedure
 
 1. Build immutable images from the approved revision.

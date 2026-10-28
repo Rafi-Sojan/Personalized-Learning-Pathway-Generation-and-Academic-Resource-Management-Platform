@@ -127,6 +127,7 @@ The API is mounted under `/api/v1`:
 | `POST` | `/auth/login` | Issue a development access token |
 | `GET` | `/auth/export` | Export authenticated account data |
 | `POST` | `/auth/delete` | Delete authenticated account after email confirmation |
+| `POST` | `/auth/logout` | Revoke the authenticated user's existing tokens |
 | `GET` | `/courses` | List or create courses |
 | `GET` | `/concepts` | List concepts and prerequisites |
 | `POST` | `/syllabus/analyze` | Extract topics from syllabus text |
@@ -141,6 +142,7 @@ The API is mounted under `/api/v1`:
 | `POST` | `/exams/import` | Import numbered or paragraph-separated question paper text |
 | `GET` | `/exams/rankings` | Rank concepts by historical question evidence |
 | `GET`, `POST` | `/admin/users` | Admin-only user and role management |
+| `GET` | `/metrics` | Internal Prometheus-compatible request/status metrics |
 
 ## 8. Configuration
 
@@ -166,6 +168,8 @@ The following documents form the formal project record. Statuses and gaps are co
 | [operations.md](docs/operations.md) | Setup, configuration, health checks, and incident response |
 | [testing.md](docs/testing.md) | Verification strategy, evidence, and test gaps |
 | [evaluation.md](docs/evaluation.md) | Learning-quality metrics and acceptance criteria |
+| [privacy-impact-assessment.md](docs/privacy-impact-assessment.md) | Personal-data flows, privacy risks, rights, and approvals |
+| [service-level-objectives.md](docs/service-level-objectives.md) | Reliability objectives, observability, and alerting |
 
 The existing `database/diagrams/er-diagram.md` and `scoring-engine/README.md` provide component-specific supporting records.
 

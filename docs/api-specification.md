@@ -20,6 +20,7 @@ Successful responses use the route-specific JSON schema. Validation and authoriz
 | POST | `/auth/register` | No | Register a student |
 | POST | `/auth/login` | No | Issue a signed access token |
 | GET | `/auth/me` | Yes | Read the authenticated user |
+| POST | `/auth/logout` | Yes | Revoke all issued tokens for the authenticated user |
 | GET | `/auth/export` | Yes | Export the authenticated user's data |
 | POST | `/auth/delete` | Yes | Permanently delete the authenticated user's data after email confirmation |
 | GET/POST | `/courses` | Yes | List or create owned courses |
@@ -37,6 +38,7 @@ Successful responses use the route-specific JSON schema. Validation and authoriz
 | POST | `/quizzes/{concept_id}/attempts` | Yes | Submit a quiz attempt |
 | GET | `/rankings` | Yes | Read the development leaderboard |
 | GET | `/rankings/concepts` | Yes | Rank owned concepts using native scoring when configured |
+| GET | `/metrics` | No | Prometheus-compatible request/status counters; deployment access should be network-restricted |
 | GET/POST | `/exams/questions` | Yes; POST instructor/admin | List or create historical exam question records |
 | POST | `/exams/import` | Instructor/admin | Import numbered or paragraph-separated question paper text |
 | GET | `/exams/rankings` | Yes | Rank concepts by historical question frequency and difficulty |

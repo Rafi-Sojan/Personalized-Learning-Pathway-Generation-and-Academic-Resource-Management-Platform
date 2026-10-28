@@ -58,7 +58,7 @@ The frontend Dockerfile and CI workflow are pinned to Node `24.22.1` with npm `1
 ## Residual risks
 
 - The Compose development secret must not be reused outside local development.
-- JWT revocation/logout is not server-managed; short expiry and secret rotation are the available controls.
+- Logout increments a per-user token version, revoking all previously issued tokens for that account; short expiry and secret rotation remain additional controls.
 - PDF processing is queued and has a worker path; production deployments still need operator-configured job-level monitoring, retry alerting, and an S3-compatible bucket if local storage is not appropriate.
 - OCR is optional and isolated behind bounded page/text limits; the Tesseract binary must be patched and monitored in production.
 - GitHub Actions are pinned to immutable commit SHAs with release comments; Dependabot is configured to propose updates.

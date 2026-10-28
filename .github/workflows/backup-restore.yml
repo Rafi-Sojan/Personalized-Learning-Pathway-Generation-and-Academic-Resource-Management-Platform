@@ -1,0 +1,51 @@
+name: PostgreSQL backup and restore drill
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 3 * * 4'
+
+permissions:
+  contents: read
+
+jobs:
+  backup-restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: learning
+          POSTGRES_USER: learning
+          POSTGRES_PASSWORD: backup-ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U learning -d learning"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.6.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: python -m pip install -r backend/requirements.txt
+      - name: Apply migrations
+        env:
+          DATABASE_URL: postgresql+psycopg://learning:backup-ci-password@localhost:5432/learning
+        run: alembic -c backend/alembic.ini upgrade head
+      - name: Create logical backup
+        env:
+          DATABASE_URL: postgresql+psycopg://learning:backup-ci-password@localhost:5432/learning
+        run: python scripts/backup_database.py backups/learning-ci.dump
+      - name: Restore into a fresh database
+        env:
+          PGPASSWORD: backup-ci-password
+        run: |
+          psql -h localhost -U learning -d postgres -c 'CREATE DATABASE learning_restore'
+          pg_restore --dbname postgresql://learning@localhost:5432/learning_restore backups/learning-ci.dump
+          psql -h localhost -U learning -d learning_restore -c 'SELECT COUNT(*) FROM users'

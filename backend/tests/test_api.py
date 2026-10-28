@@ -24,6 +24,16 @@ def test_private_routes_require_authentication() -> None:
     assert client.post("/api/v1/auth/login", json={"email": "demo@example.com", "password": "wrong-password"}).status_code == 401
 
 
+def test_logout_revokes_existing_token_and_metrics_are_exposed() -> None:
+    headers = auth_headers()
+    assert client.get("/api/v1/auth/me", headers=headers).status_code == 200
+    assert client.post("/api/v1/auth/logout", headers=headers).status_code == 204
+    assert client.get("/api/v1/auth/me", headers=headers).status_code == 401
+    metrics = client.get("/metrics")
+    assert metrics.status_code == 200
+    assert "roadmap_http_requests_total" in metrics.text
+
+
 def test_courses_and_roadmap() -> None:
     headers = auth_headers()
     assert client.get("/api/v1/courses", headers=headers).status_code == 200

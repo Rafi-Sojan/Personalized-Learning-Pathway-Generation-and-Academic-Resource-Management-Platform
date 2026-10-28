@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { deleteAccount, exportAccount } from '../services/account'
+import { logout } from '../services/auth'
 
 export function Account() {
   const [email, setEmail] = useState('')
@@ -31,6 +32,11 @@ export function Account() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to delete account') }
   }
 
+  async function signOut() {
+    await logout()
+    window.location.assign('/login')
+  }
+
   return <main>
     <div className="eyebrow">Account and privacy</div>
     <h1>Account settings</h1>
@@ -46,6 +52,11 @@ export function Account() {
       <label htmlFor="confirm-email">Account email</label>
       <input id="confirm-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
       <button className="secondary" type="button" onClick={removeAccount} disabled={!email}>Delete account</button>
+    </section>
+    <section className="panel" aria-labelledby="logout-heading">
+      <div className="panel-heading"><div><span className="section-kicker">Session security</span><h2 id="logout-heading">Sign out everywhere</h2></div></div>
+      <p>Revoke the current token and remove the local session from this browser.</p>
+      <button className="secondary" type="button" onClick={signOut}>Sign out</button>
     </section>
     {message && <p role="status">{message}</p>}
     {error && <p className="form-error" role="alert">{error}</p>}

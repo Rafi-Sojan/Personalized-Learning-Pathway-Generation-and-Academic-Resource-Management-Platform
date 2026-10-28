@@ -30,6 +30,8 @@ The repository is an implementation-complete development baseline. A production 
 | Operations | ILR-OPS-001 | Runtime and incident procedures |
 | Testing | ILR-TST-001 | Verification strategy and evidence |
 | Evaluation | ILR-EVAL-001 | Quality and learning-outcome measures |
+| Privacy impact assessment | ILR-PIA-001 | Personal-data flows, risks, rights, and approvals |
+| Service-level objectives | ILR-SLO-001 | Reliability targets, metrics, and alert conditions |
 
 ## 3. Status definitions
 

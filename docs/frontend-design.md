@@ -1,9 +1,9 @@
 # Frontend Design Specification
 
 **Document ID:** ILR-FE-001
-**Version:** 1.0
-**Status:** Development baseline
-**Last reviewed:** 2026-10-27
+**Version:** 2.0
+**Status:** Implementation-complete development baseline
+**Last reviewed:** 2026-10-28
 
 ## 1. Scope
 
@@ -29,6 +29,8 @@ The frontend is a React, Vite, and TypeScript single-page application. It provid
 4. The learner navigates to a course, reviews concepts and prerequisite relationships, and opens resources or quizzes.
 5. The learner requests or reviews a dated study roadmap.
 6. Progress updates are submitted to the authenticated API and reflected in progress views.
+7. Instructors can import historical exam questions and review document/resource mappings.
+8. Administrators can provision users with server-enforced roles.
 
 ## 4. Client behavior requirements
 
@@ -47,4 +49,4 @@ Route-level lazy loading is implemented to reduce the initial bundle. The concep
 
 ## 6. Accessibility and usability backlog
 
-The baseline adds labeled navigation, icon-button names, semantic status/error announcements, and account form labels. A formal accessibility review covering keyboard navigation, focus order, color contrast, responsive behavior, and screen-reader behavior is still required.
+The baseline adds labeled navigation, icon-button names, semantic status/error announcements, account form labels, keyboard smoke coverage, and a CI Lighthouse accessibility audit. The release owner must review focus order, color contrast, responsive behavior, and screen-reader behavior on the deployed theme.

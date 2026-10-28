@@ -40,6 +40,7 @@ An item is marked **Implemented** only when the repository contains the behavior
 |---|---|---|
 | Maintained password hashing | Implemented | Argon2 through `pwdlib` |
 | Signed short-lived access tokens | Implemented | HS256 JWTs with configurable expiry |
+| Token revocation/logout | Implemented | Per-user token version, authenticated logout endpoint, and frontend session control |
 | Object ownership checks | Implemented | Course, concept, resource, progress, quiz, and roadmap queries are user-scoped |
 | PostgreSQL persistence | Implemented | SQLAlchemy URL configurable; Compose provisions PostgreSQL |
 | SQLite no-service development | Implemented | Default local database URL |
@@ -55,6 +56,9 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Audit retention | Implemented | Durable audit-event records, account deletion cleanup, configurable retention, and purge utility |
 | Runtime smoke verification | Implemented | Compose health/readiness workflow runs the full service stack in CI |
 | DAST baseline | Implemented | Scheduled/manual OWASP ZAP workflow and local PowerShell runner produce retained reports |
+| Monitoring and alerting contract | Implemented | Health/readiness endpoints, Prometheus-compatible metrics, SLO document, and alert conditions |
+| Accessibility/performance gates | Implemented | Playwright accessibility checks, Lighthouse workflow, and frontend JavaScript bundle budget |
+| Backup and restore verification | Implemented | PostgreSQL backup/restore scripts and scheduled CI drill restoring into a fresh database |
 
 ## Known development limitations
 
@@ -63,4 +67,5 @@ An item is marked **Implemented** only when the repository contains the behavior
 - S3-compatible storage, Tesseract OCR, external penetration testing, and production alerting still require operator infrastructure and credentials; implementation hooks and CI procedures are present.
 - Historical exam ranking depends on the quality and concept coverage of imported question papers; the repository provides deterministic ingestion and ranking, not a licensed corpus.
 - Docker runtime validation is reproducible in `.github/workflows/compose-smoke.yml`; local Docker execution depends on the developer machine.
+- External penetration testing, production SLO approval, and privacy/legal approval remain operator or release-owner acceptance activities.
 - `npm audit` validates repository dependencies, not the globally installed npm CLI or Node runtime.
