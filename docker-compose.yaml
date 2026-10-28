@@ -38,12 +38,24 @@ services:
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       OCR_ENABLED: ${OCR_ENABLED:-false}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-}
+      STORAGE_PREFIX: ${STORAGE_PREFIX:-learning-roadmap}
+      STORAGE_ENDPOINT_URL: ${STORAGE_ENDPOINT_URL:-}
+      AUDIT_RETENTION_DAYS: ${AUDIT_RETENTION_DAYS:-3650}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       UPLOAD_DIR: /app/storage/uploads
       PROCESSED_DIR: /app/storage/processed
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - ./backend/app:/app/app
+      - ./backend/migrations:/app/migrations
+      - ./scripts:/app/scripts
       - ./ml:/app/ml:ro
       - ./storage:/app/storage
     depends_on:
@@ -63,9 +75,18 @@ services:
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       OCR_ENABLED: ${OCR_ENABLED:-false}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-}
+      STORAGE_PREFIX: ${STORAGE_PREFIX:-learning-roadmap}
+      STORAGE_ENDPOINT_URL: ${STORAGE_ENDPOINT_URL:-}
+      AUDIT_RETENTION_DAYS: ${AUDIT_RETENTION_DAYS:-3650}
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       UPLOAD_DIR: /app/storage/uploads
       PROCESSED_DIR: /app/storage/processed
     volumes:
+      - ./scripts:/app/scripts
       - ./storage:/app/storage
     depends_on:
       postgres:

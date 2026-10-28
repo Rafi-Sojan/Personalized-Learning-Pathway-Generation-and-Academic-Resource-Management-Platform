@@ -7,4 +7,4 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
 }
 
 $workspace = (Get-Location).Path
-docker run --rm -t --mount "type=bind,source=$workspace,target=/zap/wrk" owasp/zap2docker-stable zap-baseline.py -t $BaseUrl -r /zap/wrk/zap-report.html
+docker run --rm -t --user 0 --mount "type=bind,source=$workspace,target=/zap/wrk" ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t $BaseUrl -r /zap/wrk/zap-report.html -J /zap/wrk/zap-report.json

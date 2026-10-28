@@ -44,6 +44,13 @@ def init_database() -> None:
             db.add(ConceptPrerequisite(concept_id="functions", prerequisite_id="control-flow"))
             db.add(TopicProgress(user_id=user.id, concept_id="variables", completed=True, score=100))
             db.add(Resource(course_id=course.id, concept_id="control-flow", title="Python control flow guide", kind="article", url="https://docs.python.org/3/tutorial/controlflow.html", duration_minutes=25))
+        if settings.initial_admin_email and settings.initial_admin_password:
+            admin_email = settings.initial_admin_email.lower()
+            admin = db.scalar(select(User).where(User.email == admin_email))
+            if admin is None:
+                db.add(User(email=admin_email, name="Platform Administrator", password_hash=hash_password(settings.initial_admin_password), role="admin"))
+            elif admin.role != "admin":
+                admin.role = "admin"
         db.commit()
     finally:
         db.close()

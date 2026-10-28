@@ -23,6 +23,42 @@ class Resource(BaseModel):
     processing_status: str = "ready"
 
 
+class HistoricalExamQuestionCreate(BaseModel):
+    course_id: str
+    source: str = Field(min_length=1, max_length=240)
+    exam_year: int = Field(ge=1900, le=2100)
+    prompt: str = Field(min_length=5, max_length=20000)
+    concept_id: str | None = None
+    difficulty: int = Field(default=1, ge=1, le=5)
+
+
+class HistoricalExamImportRequest(BaseModel):
+    course_id: str
+    source: str = Field(min_length=1, max_length=240)
+    exam_year: int = Field(ge=1900, le=2100)
+    text: str = Field(min_length=5, max_length=500000)
+
+
+class HistoricalExamQuestionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    course_id: str
+    source: str
+    exam_year: int
+    prompt: str
+    concept_id: str | None
+    topic_label: str
+    difficulty: int
+
+
+class HistoricalExamRanking(BaseModel):
+    concept_id: str
+    concept_name: str
+    question_count: int
+    average_difficulty: float
+    score: float
+
+
 class ResourceMappingRequest(BaseModel):
     concept_id: str
     confidence: float | None = Field(default=None, ge=0, le=1)

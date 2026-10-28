@@ -9,6 +9,7 @@ from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models import Concept, ConceptPrerequisite, Course, StudyPlan, StudyPlanItem, StudyPlanRevision, TopicProgress, User
 from app.schemas.learning import RoadmapItem, RoadmapRequest, StudyPlanResponse, StudyPlanRevisionResponse
+from app.services.audit import record_event
 
 router = APIRouter()
 
@@ -44,6 +45,7 @@ def generate_roadmap(payload: RoadmapRequest, current_user: User = Depends(get_c
         snapshot=json.dumps([item.model_dump(mode="json") for item in items], sort_keys=True),
     )
     db.add(revision)
+    record_event(db, "roadmap_generated", current_user.id, metadata={"course_id": course.id, "plan_id": plan.id, "revision": revision.revision_number})
     db.commit()
     return StudyPlanResponse(id=plan.id, course_id=plan.course_id, target_date=plan.target_date, daily_minutes=plan.daily_minutes, items=items)
 

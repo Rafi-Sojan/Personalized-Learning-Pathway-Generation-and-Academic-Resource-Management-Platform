@@ -13,6 +13,7 @@ def evaluate_cases(cases: Iterable[dict]) -> dict[str, float]:
     mapping_scores: list[float] = []
     roadmap_scores: list[float] = []
     ranking_scores: list[float] = []
+    historical_ranking_scores: list[float] = []
     for case in case_list:
         mapping = case.get("mapping")
         if mapping:
@@ -23,9 +24,13 @@ def evaluate_cases(cases: Iterable[dict]) -> dict[str, float]:
         ranking = case.get("ranking")
         if ranking:
             ranking_scores.append(hit_rate(list(ranking.get("recommended", [])), set(ranking.get("relevant", [])), int(ranking.get("k", 5))))
+        historical = case.get("historical_ranking")
+        if historical:
+            historical_ranking_scores.append(hit_rate(list(historical.get("recommended", [])), set(historical.get("relevant", [])), int(historical.get("k", 5))))
     return {
         "mapping_precision": sum(mapping_scores) / len(mapping_scores) if mapping_scores else 0.0,
         "roadmap_completion_rate": sum(roadmap_scores) / len(roadmap_scores) if roadmap_scores else 0.0,
         "ranking_hit_rate": sum(ranking_scores) / len(ranking_scores) if ranking_scores else 0.0,
+        "historical_ranking_hit_rate": sum(historical_ranking_scores) / len(historical_ranking_scores) if historical_ranking_scores else 0.0,
         "cases": float(len(case_list)),
     }

@@ -20,6 +20,13 @@ class User(BaseModel):
     role: str = "student"
 
 
+class ManagedUserCreate(BaseModel):
+    email: EmailStr
+    name: str = Field(min_length=2, max_length=120)
+    password: str = Field(min_length=8, max_length=128)
+    role: str = Field(pattern="^(student|instructor|admin)$")
+
+
 class DeleteAccountRequest(BaseModel):
     confirm_email: EmailStr
 

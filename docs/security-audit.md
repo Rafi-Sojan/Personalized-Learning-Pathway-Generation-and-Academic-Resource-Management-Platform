@@ -1,9 +1,9 @@
 # Security Audit and Operating Posture
 
 **Document ID:** ILR-AUD-001
-**Version:** 1.0
-**Status:** Development audit
-**Last reviewed:** 2026-10-27
+**Version:** 2.0
+**Status:** Development audit with implementation closure
+**Last reviewed:** 2026-10-28
 
 ## Scope
 
@@ -11,7 +11,7 @@ The audit covers the FastAPI API, frontend toolchain, upload path, database boun
 
 ## Assessment conclusion
 
-The baseline contains meaningful development controls, but it is not production-approved. The highest-priority closure items are patched runtime/toolchain alignment, secret removal, isolated document processing, container scanning/SBOM generation, centralized audit logging, backup and restore verification, and external security testing.
+The implementation closes the repository-owned hardening targets. It remains a development baseline rather than a production certification because external penetration testing, operator-controlled infrastructure, and release approval are outside source changes.
 
 ## Controls currently implemented
 
@@ -59,11 +59,13 @@ The frontend Dockerfile and CI workflow are pinned to Node `24.22.1` with npm `1
 
 - The Compose development secret must not be reused outside local development.
 - JWT revocation/logout is not server-managed; short expiry and secret rotation are the available controls.
-- PDF processing is queued and has a worker path, but production deployments still need job-level timeouts, retry metrics, and external object storage.
+- PDF processing is queued and has a worker path; production deployments still need operator-configured job-level monitoring, retry alerting, and an S3-compatible bucket if local storage is not appropriate.
 - OCR is optional and isolated behind bounded page/text limits; the Tesseract binary must be patched and monitored in production.
 - GitHub Actions are pinned to immutable commit SHAs with release comments; Dependabot is configured to propose updates.
-- Container image scanning and SBOM publication are now part of the security workflow; action references still require immutable SHA pinning as a supply-chain hardening follow-up.
-- Request audit logging with request IDs is now emitted without credentials or document contents; centralized log retention, external penetration testing, DAST scanning, and a production database backup drill remain outstanding.
+- Container image scanning and SBOM publication are now part of the security workflow; all GitHub Actions references are pinned to immutable commit SHAs.
+- Request audit logging with request IDs is emitted without credentials or document contents, and durable audit events have configurable retention and purge support.
+- DAST is automated through `.github/workflows/dast.yml` and `scripts/run_dast.ps1`; an external penetration test remains an acceptance activity.
+- S3-compatible storage is supported through `STORAGE_BACKEND=s3`; credentials and bucket lifecycle policies remain operator-managed.
 
 ## Release checklist
 
@@ -76,4 +78,4 @@ Before deployment:
 5. Replace the demo account and Compose credentials.
 6. Restrict CORS to the deployed frontend origin.
 7. Keep Redis and PostgreSQL on private networks.
-8. Review image scan results, retain SBOM artifacts, and verify backups, monitoring, and alerting.
+8. Review image scan and DAST results, retain SBOM artifacts, run `scripts/backup_database.py` and a confirmed restore drill, and verify monitoring and alerting.

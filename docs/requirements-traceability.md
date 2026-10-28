@@ -1,9 +1,9 @@
 # Requirements Traceability Matrix
 
 **Document ID:** ILR-REQ-001
-**Version:** 1.0
-**Status:** Development baseline
-**Last reviewed:** 2026-10-27
+**Version:** 2.0
+**Status:** Implementation-complete development baseline
+**Last reviewed:** 2026-10-28
 
 This document maps the attached project specification to the current implementation. Statuses are intentionally explicit so the repository does not imply production readiness where a development implementation remains.
 
@@ -31,7 +31,7 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Progress adaptation | Implemented | Quiz/progress updates modify topic mastery state |
 | Account data export and deletion | Implemented | Authenticated export and email-confirmed deletion endpoints plus frontend account screen |
 | Roadmap revision history | Implemented | Generated plans create revision snapshots and supersede prior active plans |
-| Historical exam ranking | Partial | C++ scorer now has a backend-consumable stdin contract; real question-paper ingestion and historical benchmark data are pending |
+| Historical exam ranking | Implemented | Historical question records, numbered-text import, concept matching, frequency/difficulty ranking, C++ scorer contract, and benchmark harness |
 | Reproducible learning evaluation | Implemented | JSON benchmark harness reports mapping precision, roadmap completion, and ranking hit rate |
 
 ## Platform requirements
@@ -43,19 +43,24 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Object ownership checks | Implemented | Course, concept, resource, progress, quiz, and roadmap queries are user-scoped |
 | PostgreSQL persistence | Implemented | SQLAlchemy URL configurable; Compose provisions PostgreSQL |
 | SQLite no-service development | Implemented | Default local database URL |
-| Redis caching/rate limiting | Partial | Redis-backed rate limiting with process-local fallback; broad result caching remains limited |
+| Redis caching/rate limiting | Implemented | Redis-backed rate limiting plus JSON response caching for courses and concepts, with invalidation on writes and process-local fallback |
 | Private file storage | Implemented | UUID filenames, non-public storage paths, checksum metadata |
-| Docker Compose | Implemented | Frontend, backend, PostgreSQL, and Redis services |
+| Docker Compose | Implemented | Frontend, backend, worker, PostgreSQL, Redis, configurable storage, health checks, and corrected development mounts |
 | Non-root backend container | Implemented | Backend image runs as `appuser` |
-| Alembic migrations | Implemented | Configured environment and initial migration |
+| Alembic migrations | Implemented | Configured environment plus lifecycle, resource mapping, exam, storage metadata, and audit-event migrations |
 | CI tests and quality checks | Implemented | Python tests, Ruff, mypy, frontend build/audit, C++ tests |
 | Container vulnerability scanning | Implemented | CI audits Python/npm dependencies, builds both images, scans high/critical findings, and publishes SPDX SBOM artifacts |
+| Role-based administration | Implemented | Server-side student, instructor, and admin roles; protected admin user-management endpoints; environment-backed initial admin provisioning |
+| Object storage | Implemented | Local private storage and optional S3-compatible backend with upload, materialization, processed-output, and deletion support |
+| Audit retention | Implemented | Durable audit-event records, account deletion cleanup, configurable retention, and purge utility |
+| Runtime smoke verification | Implemented | Compose health/readiness workflow runs the full service stack in CI |
+| DAST baseline | Implemented | Scheduled/manual OWASP ZAP workflow and local PowerShell runner produce retained reports |
 
 ## Known development limitations
 
 - The seeded demo account is for local development only.
 - Production rejects the development secret and Compose requires `SECRET_KEY` and `POSTGRES_PASSWORD` from `.env`.
-- Object storage and long-term revision audit retention are not production-complete; queued document processing, OCR, and resource-mapping review are implemented.
-- Frontend routes are lazy-loaded; the largest remaining chunk is the concept/progress visualization dependency group.
-- Docker runtime validation was not performed on the development machine because Docker was unavailable.
+- S3-compatible storage, Tesseract OCR, external penetration testing, and production alerting still require operator infrastructure and credentials; implementation hooks and CI procedures are present.
+- Historical exam ranking depends on the quality and concept coverage of imported question papers; the repository provides deterministic ingestion and ranking, not a licensed corpus.
+- Docker runtime validation is reproducible in `.github/workflows/compose-smoke.yml`; local Docker execution depends on the developer machine.
 - `npm audit` validates repository dependencies, not the globally installed npm CLI or Node runtime.

@@ -1,9 +1,9 @@
 # Evaluation and Acceptance Plan
 
 **Document ID:** ILR-EVAL-001
-**Version:** 1.0
-**Status:** Development baseline
-**Last reviewed:** 2026-10-27
+**Version:** 2.0
+**Status:** Implementation-complete development baseline
+**Last reviewed:** 2026-10-28
 
 ## 1. Learning quality
 
@@ -17,7 +17,7 @@
 
 ## 2. Product acceptance
 
-Acceptance requires authenticated route coverage, ownership isolation, upload validation, migration verification, frontend production build, ML unit tests, native scorer tests, and documented operational procedures. Security, privacy, accessibility, and performance acceptance criteria remain to be defined before production approval.
+Acceptance requires authenticated route coverage, ownership isolation, upload validation, migration verification, frontend production build, ML unit tests, native scorer tests, historical-question import checks, role checks, privacy workflows, and documented operational procedures. Security, privacy, accessibility, and performance acceptance still require release-owner approval and environment-specific evidence before production deployment.
 
 ## 3. Evaluation controls
 
@@ -25,4 +25,4 @@ Evaluation data must be versioned, de-identified where possible, and separated f
 
 ## 4. Reproducible benchmark harness
 
-`python scripts/evaluate_learning.py <benchmark.json>` evaluates a JSON array of cases. Each case may contain `mapping`, `roadmap`, and `ranking` sections. The harness reports average mapping precision, roadmap completion rate, ranking hit rate, and case count. It is intentionally deterministic and is suitable for CI regression fixtures once a reviewed, de-identified benchmark set is supplied.
+`python scripts/evaluate_learning.py <benchmark.json>` evaluates a JSON array of cases. Each case may contain `mapping`, `roadmap`, `ranking`, and `historical_ranking` sections. The harness reports average mapping precision, roadmap completion rate, normal ranking hit rate, historical ranking hit rate, and case count. Historical exam ranking inputs should record source/year and concept coverage. It is intentionally deterministic and is suitable for CI regression fixtures once a reviewed, de-identified benchmark set is supplied.

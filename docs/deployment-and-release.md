@@ -1,9 +1,9 @@
 # Deployment and Release Specification
 
 **Document ID:** ILR-REL-001
-**Version:** 1.0
-**Status:** Development baseline
-**Last reviewed:** 2026-10-27
+**Version:** 2.0
+**Status:** Implementation-complete development baseline
+**Last reviewed:** 2026-10-28
 
 ## 1. Supported deployment modes
 
@@ -11,7 +11,7 @@
 |---|---|---|
 | Local no-service | Development and unit testing | Python, Node.js, SQLite |
 | Docker Compose | Integrated development or controlled staging | Docker, PostgreSQL, Redis |
-| Production | Not yet approved | Managed database, secrets, TLS, observability, backup and recovery |
+| Production | Requires operational approval | Managed database, secrets, TLS, observability, backup/recovery, object storage, and external security acceptance |
 
 ## 2. Release inputs
 
@@ -26,11 +26,11 @@ The following checks are required before a release is approved:
 1. Backend tests, lint, type checks, and dependency audit pass.
 2. Frontend lockfile installation and production build pass.
 3. C++ tests pass using the supported compiler/toolchain.
-4. Database migrations apply cleanly to an empty database and are reversible or have a documented forward-only recovery plan.
+4. Database migrations apply cleanly to an empty database and are reversible or have a documented forward-only recovery plan; the Compose smoke workflow verifies service startup.
 5. API authentication, ownership, upload validation, and rate limiting are tested.
 6. Container images are scanned and an SBOM is produced by the security workflow.
 7. Secrets, demo accounts, default credentials, and development fallbacks are removed or overridden.
-8. A rollback revision and database recovery plan are recorded.
+8. A rollback revision, database recovery plan, DAST report, and audit-retention policy are recorded.
 
 ## 4. Deployment procedure
 

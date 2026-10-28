@@ -1,16 +1,15 @@
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, get_current_user, hash_password, verify_password
-from app.core.config import settings
 from app.db.session import get_db
-from app.models import Concept, ConceptPrerequisite, Course, QuizAttempt, Resource, ResourceConceptMapping, StudyPlan, StudyPlanItem, StudyPlanRevision, SyllabusVersion, TopicProgress, User as UserModel
+from app.models import AuditEvent, Concept, ConceptPrerequisite, Course, QuizAttempt, Resource, ResourceConceptMapping, StudyPlan, StudyPlanItem, StudyPlanRevision, SyllabusVersion, TopicProgress, User as UserModel
 from app.schemas.auth import DeleteAccountRequest, LoginRequest, LoginResponse, RegisterRequest, User
 from app.infrastructure.rate_limiter import enforce_rate_limit, login_limiter
+from app.services.storage import storage
+from app.services.audit import record_event
 from fastapi import Request
 
 router = APIRouter()
@@ -74,7 +73,7 @@ def delete_account(payload: DeleteAccountRequest, current_user: UserModel = Depe
     course_ids = [item.id for item in db.scalars(select(Course).where(Course.owner_id == current_user.id)).all()]
     concept_ids = [item.id for item in db.scalars(select(Concept).where(Concept.course_id.in_(course_ids))).all()] if course_ids else []
     owned_resources = db.scalars(select(Resource).where(Resource.course_id.in_(course_ids))).all() if course_ids else []
-    owned_files = [(resource.id, resource.storage_key) for resource in owned_resources]
+    owned_files = [(resource.storage_key, resource.processed_key, resource.id) for resource in owned_resources]
     plan_ids = [item.id for item in db.scalars(select(StudyPlan).where(StudyPlan.user_id == current_user.id)).all()]
     if plan_ids:
         db.execute(delete(StudyPlanItem).where(StudyPlanItem.plan_id.in_(plan_ids)))
@@ -93,15 +92,10 @@ def delete_account(payload: DeleteAccountRequest, current_user: UserModel = Depe
         db.execute(delete(Concept).where(Concept.id.in_(concept_ids)))
     if course_ids:
         db.execute(delete(Course).where(Course.id.in_(course_ids)))
+    db.execute(delete(AuditEvent).where(AuditEvent.actor_id == current_user.id))
+    record_event(db, "account_deleted", None, metadata={"account_deleted": True})
     db.delete(current_user)
     db.commit()
-    upload_root = Path(settings.upload_dir).resolve()
-    processed_root = Path(settings.processed_dir).resolve()
-    for resource_id, storage_key in owned_files:
-        if storage_key:
-            upload_path = (upload_root / storage_key).resolve()
-            if upload_root in upload_path.parents and upload_path.is_file():
-                upload_path.unlink()
-        processed_path = (processed_root / f"{resource_id}.txt").resolve()
-        if processed_root in processed_path.parents and processed_path.is_file():
-            processed_path.unlink()
+    for storage_key, processed_key, _resource_id in owned_files:
+        storage.delete(storage_key)
+        storage.delete(processed_key or f"processed/{_resource_id}.txt")

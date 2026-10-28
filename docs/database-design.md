@@ -1,9 +1,9 @@
 # Database Design Specification
 
 **Document ID:** ILR-DB-001
-**Version:** 1.0
-**Status:** Development baseline
-**Last reviewed:** 2026-10-27
+**Version:** 2.0
+**Status:** Implementation-complete development baseline
+**Last reviewed:** 2026-10-28
 
 ## 1. Authority and persistence
 
@@ -11,7 +11,7 @@ The relational contract is represented by SQLAlchemy models, `database/init.sql`
 
 ## 2. Ownership and relationships
 
-Users own courses. Courses own concepts and resources. Prerequisite edges connect concepts within a course. Progress, quiz attempts, and study plans are scoped to users. Roadmap items are persisted derived data and can be regenerated from progress, availability, deadlines, and dependencies. Study plan revisions preserve generated snapshots, and resource-concept mappings preserve review state, confidence, source, and reviewer.
+Users own courses. Courses own concepts and resources. Prerequisite edges connect concepts within a course. Progress, quiz attempts, and study plans are scoped to users. Roadmap items are persisted derived data and can be regenerated from progress, availability, deadlines, and dependencies. Study plan revisions preserve generated snapshots, resource-concept mappings preserve review state, confidence, source, and reviewer, historical exam questions preserve source/year and concept evidence, and audit events preserve security/product events until retention cleanup.
 
 ## 3. Integrity requirements
 
@@ -26,7 +26,7 @@ Users own courses. Courses own concepts and resources. Prerequisite edges connec
 
 ## 4. File data
 
-Private uploads are stored under `storage/uploads` using generated UUID filenames. Metadata and checksums are stored in the database; extracted text is written to `storage/processed` after validated PDF processing. These directories are not public frontend assets and must use encrypted, access-controlled storage in production.
+Private uploads are stored under `storage/uploads` using generated UUID filenames. Metadata and checksums are stored in the database; extracted text is written to `storage/processed` after validated PDF processing. `processed_key` tracks the derived object when S3-compatible storage is enabled. These directories/buckets are not public frontend assets and must use encrypted, access-controlled storage in production.
 
 ## 5. Recovery requirements
 

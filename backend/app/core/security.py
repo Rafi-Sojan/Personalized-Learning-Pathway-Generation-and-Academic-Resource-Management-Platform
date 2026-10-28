@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from collections.abc import Callable
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -42,3 +43,15 @@ def get_current_user(
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
+
+
+def require_roles(*roles: str) -> Callable:
+    """Return a dependency that enforces server-side role membership."""
+    allowed = set(roles)
+
+    def dependency(user: User = Depends(get_current_user)) -> User:
+        if user.role not in allowed:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient role")
+        return user
+
+    return dependency

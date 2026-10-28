@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
 from app.db.session import get_db
+from app.infrastructure.cache import redis_cache
 from app.models import Concept, Course, TopicProgress, User, utc_now
 from app.schemas.learning import ProgressUpdate
 
@@ -32,4 +33,7 @@ def update_progress(payload: ProgressUpdate, current_user: User = Depends(get_cu
     progress.last_studied_at = utc_now()
     concept.status = "completed" if payload.completed else "in_progress"
     db.commit()
+    redis_cache.delete(f"courses:{current_user.id}")
+    redis_cache.delete(f"concepts:{current_user.id}:all")
+    redis_cache.delete(f"concepts:{current_user.id}:{concept.course_id}")
     return {"saved": True, "update": payload.model_dump()}

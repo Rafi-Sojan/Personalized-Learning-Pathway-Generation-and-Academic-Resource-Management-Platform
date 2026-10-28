@@ -1,9 +1,9 @@
 # Test and Verification Specification
 
 **Document ID:** ILR-TST-001
-**Version:** 1.0
-**Status:** Development baseline
-**Last reviewed:** 2026-10-27
+**Version:** 2.0
+**Status:** Implementation-complete development baseline
+**Last reviewed:** 2026-10-28
 
 ## 1. Verification objectives
 
@@ -13,16 +13,15 @@ Testing shall verify functional behavior, authorization boundaries, data validat
 
 The baseline verification record includes:
 
-- 13 Python tests across backend, ML, and cross-module flows, including the reproducible evaluation benchmark.
-- Ruff static checks with no reported violations.
-- Mypy checks with no reported issues across 43 backend source files.
+- 15 Python tests across backend, ML, and cross-module flows, including numbered-question parsing, role enforcement, historical exam import, and the reproducible evaluation benchmark.
+- CI executes Ruff static checks and Mypy checks across the backend source tree.
 - Frontend `npm ci` followed by a successful TypeScript/Vite production build.
-- `npm audit --audit-level=high` with zero reported project dependency vulnerabilities at the time of verification.
+- `npm audit --offline --audit-level=high` reported zero project dependency vulnerabilities during this verification pass.
 - Alembic initial migration applied successfully to the local SQLite database.
-- Compose YAML parsed successfully; Docker runtime execution was unavailable because Docker was not installed.
+- Compose YAML is checked in and the CI Compose smoke workflow starts PostgreSQL, Redis, backend, worker, and frontend, then verifies health/readiness.
 - C++17 scoring CLI compilation and native test execution.
 
-For the current hardening pass, Python bytecode compilation and the frontend production build passed. The local shell did not have the backend dependencies installed, so the Python test, Ruff, mypy, and pip-audit commands must be rerun in the project virtual environment or CI. Docker was unavailable locally, and the npm advisory endpoint was unreachable from the restricted shell.
+For the current hardening pass, Python bytecode compilation and the frontend production build passed. The local shell does not currently have the backend dependencies installed, so the Python test, Ruff, mypy, and pip-audit commands must be run in the project virtual environment or CI. Docker was unavailable locally; CI contains the runtime smoke and DAST jobs. The frontend offline npm audit passed with zero vulnerabilities.
 
 ## Security-focused tests
 
@@ -41,11 +40,11 @@ The dependency-free load smoke test can be run against a local API with `python 
 
 ## Test gaps
 
-- PostgreSQL and Redis integration tests are not run in the local test suite.
-- OCR and malformed-PDF tests are not yet present.
-- Browser-level frontend tests are not yet present.
-- No load, fuzz, DAST, or penetration testing has been performed.
-- Browser-level tests require the Playwright package and browser binaries; the current shell has not installed the browser binary, while CI provisions it explicitly.
+- PostgreSQL and Redis integration tests require service containers and are run by CI.
+- OCR execution requires the optional OCR image and an installed Tesseract binary.
+- External penetration testing remains an operational acceptance activity; the repository includes DAST automation and bounded malformed-input checks.
+- Browser-level tests require the Playwright package and browser binaries; the two checked-in Playwright smoke tests passed after Chromium provisioning, and CI provisions Chromium explicitly.
 
-The Playwright smoke suite is located in `frontend/e2e/`, is invoked with `npm run test:e2e`, and is now part of the frontend CI workflow. CI installs the Chromium browser before execution.
-- CMake was not available on the development machine; the C++ implementation was verified with direct `g++` compilation.
+The Playwright smoke suite is located in `frontend/e2e/`, is invoked with `npm run test:e2e`, and is part of the frontend CI workflow. CI installs the Chromium browser before execution.
+- CMake is exercised by the C++ workflow; direct `g++` compilation remains a local fallback.
+- The DAST workflow is scheduled weekly and manually dispatchable. Reports are retained as workflow artifacts.

@@ -1,9 +1,9 @@
 # Operations and Runbook
 
 **Document ID:** ILR-OPS-001
-**Version:** 1.0
-**Status:** Development baseline
-**Last reviewed:** 2026-10-27
+**Version:** 2.0
+**Status:** Implementation-complete development baseline
+**Last reviewed:** 2026-10-28
 
 ## 1. Operational responsibility
 
@@ -61,6 +61,9 @@ Copy `.env.example` to `.env` for local overrides. Important values include:
 - `UPLOAD_DIR`
 - `PROCESSED_DIR`
 - `MAX_UPLOAD_SIZE_MB`
+- `STORAGE_BACKEND`, `STORAGE_BUCKET`, `STORAGE_PREFIX`, and `STORAGE_ENDPOINT_URL`
+- `AUDIT_RETENTION_DAYS`
+- `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` for development bootstrap only
 
 Never commit `.env` or real credentials.
 
@@ -89,6 +92,14 @@ After startup, verify that the API responds, the interactive documentation loads
 
 The readiness endpoint is `GET /health/ready`; it confirms database connectivity and reports whether Redis is available or the process-local fallback is active.
 
+## Roles and administration
+
+New registrations are always students. An initial development administrator can be provisioned with `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD`; production administrators should be created through the deployment secret-management process. Administrators can manage users through `/api/v1/admin/users`. Instructors can import historical exam questions and manage course question data. All role checks are enforced on the server.
+
+## Storage and retention
+
+Local storage is suitable for development. Production should use an encrypted S3-compatible bucket with lifecycle rules for the configured upload and processed prefixes. Run `python scripts/purge_audit_events.py` on the retention schedule after confirming the policy with the data owner. Account deletion removes database records and storage keys immediately, subject to backup/object-storage retention policies.
+
 ## Verification commands
 
 ```bash
@@ -96,7 +107,7 @@ python -m pytest backend/tests ml/tests tests
 python -m ruff check backend ml tests
 python -m mypy backend/app --ignore-missing-imports
 python -m pip install pip-audit
-python -m pip_audit -r backend/requirements.txt -r ml/requirements.txt
+pip-audit -r backend/requirements.txt -r backend/requirements-ocr.txt -r backend/requirements-storage.txt -r ml/requirements.txt
 
 cd frontend
 npm ci
@@ -107,6 +118,8 @@ cd ../scoring-engine
 cmake -S . -B build
 cmake --build build --config Release
 ctest --test-dir build --build-config Release --output-on-failure
+
+python scripts/purge_audit_events.py
 ```
 
 ## Incident response basics

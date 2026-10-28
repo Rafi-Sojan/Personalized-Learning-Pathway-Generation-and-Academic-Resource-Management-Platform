@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
 from app.db.session import get_db
+from app.infrastructure.cache import get_json, set_json, redis_cache
 from app.models import Concept, Course as CourseModel, TopicProgress, User
 from app.models import SyllabusVersion as SyllabusVersionModel
 from app.schemas.course import Course, CourseCreate, SyllabusVersion, SyllabusVersionCreate
@@ -13,8 +14,13 @@ router = APIRouter()
 
 @router.get("", response_model=list[Course])
 def get_courses(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[Course]:
+    cached = get_json(f"courses:{current_user.id}")
+    if isinstance(cached, list):
+        return [Course(**item) for item in cached]
     courses = db.scalars(select(CourseModel).where(CourseModel.owner_id == current_user.id)).all()
-    return [Course(**course_dict(course, db, current_user.id)) for course in courses]
+    result = [Course(**course_dict(course, db, current_user.id)) for course in courses]
+    set_json(f"courses:{current_user.id}", [item.model_dump() for item in result], expire=30)
+    return result
 
 
 @router.get("/{course_id}", response_model=Course)
@@ -31,6 +37,7 @@ def create_course(payload: CourseCreate, current_user: User = Depends(get_curren
     db.add(course)
     db.commit()
     db.refresh(course)
+    redis_cache.delete(f"courses:{current_user.id}")
     return Course(**course_dict(course, db, current_user.id))
 
 

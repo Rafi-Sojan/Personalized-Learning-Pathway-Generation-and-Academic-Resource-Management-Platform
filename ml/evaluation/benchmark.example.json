@@ -12,6 +12,11 @@
       "recommended": ["functions", "control-flow"],
       "relevant": ["functions"],
       "k": 5
+    },
+    "historical_ranking": {
+      "recommended": ["functions", "control-flow"],
+      "relevant": ["functions"],
+      "k": 5
     }
   }
 ]

@@ -1,9 +1,9 @@
 # API Specification
 
 **Document ID:** ILR-API-001
-**Version:** 1.0
-**Status:** Development baseline
-**Last reviewed:** 2026-10-27
+**Version:** 2.0
+**Status:** Implementation-complete development baseline
+**Last reviewed:** 2026-10-28
 
 ## 1. Contract conventions
 
@@ -37,14 +37,18 @@ Successful responses use the route-specific JSON schema. Validation and authoriz
 | POST | `/quizzes/{concept_id}/attempts` | Yes | Submit a quiz attempt |
 | GET | `/rankings` | Yes | Read the development leaderboard |
 | GET | `/rankings/concepts` | Yes | Rank owned concepts using native scoring when configured |
+| GET/POST | `/exams/questions` | Yes; POST instructor/admin | List or create historical exam question records |
+| POST | `/exams/import` | Instructor/admin | Import numbered or paragraph-separated question paper text |
+| GET | `/exams/rankings` | Yes | Rank concepts by historical question frequency and difficulty |
+| GET/POST | `/admin/users` | Admin | List or create users with server-side roles |
 
 ## 3. Authorization rules
 
-The authenticated user ID is obtained from the verified token and applied server-side to private queries and mutations. A client-supplied owner or user ID must not widen access. Public resource visibility is the only intentional exception to owner filtering.
+The authenticated user ID is obtained from the verified token and applied server-side to private queries and mutations. A client-supplied owner, user ID, or role must not widen access. Public resource visibility is the only intentional exception to owner filtering. Instructor and administrator operations use server-side role dependencies.
 
 ## 4. Resource processing contract
 
-Upload requests must identify a PDF and remain below the configured size limit. The server generates the storage filename, records a checksum, and writes extracted text to private processed storage. Processing is synchronous in the development baseline; production requires an isolated worker and resource limits.
+Upload requests must identify a PDF and remain below the configured size limit. The server generates the storage filename, records a checksum, and writes extracted text to private processed storage. Processing is queued for the worker path; local background tasks remain available for development.
 
 ## 5. Compatibility policy
 

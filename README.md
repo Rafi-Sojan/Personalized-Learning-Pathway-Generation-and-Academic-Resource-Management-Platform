@@ -1,15 +1,15 @@
 # Intelligent Learning Roadmap
 
 **Project document:** ILR-DOC-001
-**Release status:** Development baseline
-**Documentation version:** 1.0
-**Last reviewed:** 2026-10-27
+**Release status:** Implementation-complete development baseline
+**Documentation version:** 2.0
+**Last reviewed:** 2026-10-28
 
 Intelligent Learning Roadmap is a modular learning-support platform that converts course material, learner progress, and concept dependencies into an actionable study plan. It combines a web dashboard, a typed API, explainable learning utilities, and a native scoring engine.
 
 ## 1. Project status
 
-This repository provides a functional development slice with signed authentication, Argon2 password hashing, ownership-aware SQLAlchemy persistence, upload validation, deadline-aware roadmap generation, and optional Redis-backed throttling. SQLite is used for a no-service local run; Docker Compose provisions PostgreSQL and Redis.
+This repository provides an implementation-complete development baseline with signed authentication, Argon2 password hashing, role-gated administration, ownership-aware SQLAlchemy persistence, secure asynchronous document processing, optional OCR, object-storage abstraction, deadline-aware roadmap generation, historical exam ranking, Redis-backed caching/throttling, privacy workflows, and a native scoring boundary. SQLite is used for a no-service local run; Docker Compose provisions PostgreSQL, Redis, a worker, private storage, and the frontend/backend services.
 
 ## 2. Capabilities
 
@@ -20,6 +20,9 @@ This repository provides a functional development slice with signed authenticati
 - Progress updates and dashboard summaries.
 - Deterministic Python utilities for text cleaning, semantic matching, dependency ordering, scheduling, and evaluation.
 - C++ scoring library and command-line demonstration for concept prioritization.
+- Historical exam question import, concept association, and frequency/difficulty ranking.
+- S3-compatible private storage option with durable audit-event retention and purge tooling.
+- Student, instructor, and administrator roles with protected user-management operations.
 
 ## 3. Repository structure
 
@@ -51,6 +54,8 @@ python -m venv .venv
 # macOS/Linux
 source .venv/bin/activate
 python -m pip install -r backend/requirements.txt -r ml/requirements.txt
+# Optional OCR and S3-compatible storage dependencies:
+python -m pip install -r backend/requirements-ocr.txt -r backend/requirements-storage.txt
 ```
 
 Start the API from the repository root:
@@ -108,7 +113,7 @@ Backend quality checks:
 python -m ruff check backend ml tests
 python -m mypy backend/app --ignore-missing-imports
 python -m pip install pip-audit
-python -m pip_audit -r backend/requirements.txt -r ml/requirements.txt
+pip-audit -r backend/requirements.txt -r backend/requirements-ocr.txt -r backend/requirements-storage.txt -r ml/requirements.txt
 ```
 
 The same operations are available through the root `Makefile` where the required tools are installed.
@@ -132,10 +137,14 @@ The API is mounted under `/api/v1`:
 | `GET`, `POST` | `/progress` | Read or record learner progress |
 | `GET` | `/quizzes/{concept_id}` | Retrieve a concept quiz |
 | `GET` | `/rankings` | Retrieve the development leaderboard |
+| `GET`, `POST` | `/exams/questions` | List or create historical exam questions; creation requires instructor/admin role |
+| `POST` | `/exams/import` | Import numbered or paragraph-separated question paper text |
+| `GET` | `/exams/rankings` | Rank concepts by historical question evidence |
+| `GET`, `POST` | `/admin/users` | Admin-only user and role management |
 
 ## 8. Configuration
 
-Copy `.env.example` to `.env` when local overrides are required. The most relevant settings are `FRONTEND_ORIGIN`, `API_PREFIX`, `DATABASE_URL`, `REDIS_URL`, and `SECRET_KEY`. The current development repository does not require a database or Redis connection.
+Copy `.env.example` to `.env` when local overrides are required. The most relevant settings are `FRONTEND_ORIGIN`, `API_PREFIX`, `DATABASE_URL`, `REDIS_URL`, and `SECRET_KEY`. The current development repository does not require a database or Redis connection. Production-style storage is enabled with `STORAGE_BACKEND=s3`, `STORAGE_BUCKET`, and the related object-storage settings.
 
 ## 9. Controlled documentation
 

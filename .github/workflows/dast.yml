@@ -1,0 +1,38 @@
+name: DAST baseline
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  zap-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Start backend
+        env:
+          POSTGRES_PASSWORD: dast-ci-password
+          SECRET_KEY: dast-ci-secret-key-change-me
+        run: docker compose up --build --detach postgres redis backend
+      - name: Wait for API
+        run: |
+          for attempt in {1..30}; do curl --fail --silent http://127.0.0.1:8000/health && exit 0 || sleep 5; done
+          exit 1
+      - name: Run OWASP ZAP baseline
+        run: |
+          mkdir -p dast-report
+          docker run --network host --user 0 --volume "$PWD/dast-report:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://127.0.0.1:8000/openapi.json -r zap-report.html -J zap-report.json
+      - name: Upload DAST report
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.6.2
+        with:
+          name: dast-report
+          path: dast-report
+      - name: Stop stack
+        if: always()
+        run: docker compose down --volumes

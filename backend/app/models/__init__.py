@@ -70,6 +70,7 @@ class Resource(Base):
     kind: Mapped[str] = mapped_column(String(32))
     url: Mapped[str] = mapped_column(String(1000), default="")
     storage_key: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    processed_key: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     checksum: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     duration_minutes: Mapped[int] = mapped_column(Integer, default=0)
     processing_status: Mapped[str] = mapped_column(String(32), default="ready")
@@ -87,6 +88,29 @@ class ResourceConceptMapping(Base):
     source: Mapped[str] = mapped_column(String(32), default="manual")
     reviewed_by: Mapped[Optional[str]] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class HistoricalExamQuestion(Base):
+    __tablename__ = "historical_exam_questions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    course_id: Mapped[str] = mapped_column(ForeignKey("courses.id"), index=True)
+    source: Mapped[str] = mapped_column(String(240))
+    exam_year: Mapped[int] = mapped_column(Integer, index=True)
+    prompt: Mapped[str] = mapped_column(Text)
+    concept_id: Mapped[Optional[str]] = mapped_column(ForeignKey("concepts.id"), index=True, nullable=True)
+    topic_label: Mapped[str] = mapped_column(String(120), default="general")
+    difficulty: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    actor_id: Mapped[Optional[str]] = mapped_column(ForeignKey("users.id"), index=True, nullable=True)
+    event_type: Mapped[str] = mapped_column(String(80), index=True)
+    request_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
 
 
 class TopicProgress(Base):

@@ -13,6 +13,7 @@ from app.infrastructure.rate_limiter import enforce_rate_limit, expensive_limite
 from app.models import Concept, Course, Resource as ResourceModel, ResourceConceptMapping, User
 from app.schemas.learning import Resource, ResourceMappingRequest, ResourceMappingResponse
 from app.services.document_processing import process_resource_by_id
+from app.services.storage import storage
 
 router = APIRouter()
 
@@ -39,11 +40,9 @@ async def upload_resource(request: Request, file: UploadFile = File(...), course
     if len(data) > settings.max_upload_bytes:
         raise HTTPException(status_code=413, detail="File exceeds the configured upload limit")
     key = f"{uuid.uuid4()}.pdf"
-    upload_path = Path(settings.upload_dir)
-    upload_path.mkdir(parents=True, exist_ok=True)
     if not data.startswith(b"%PDF-"):
         raise HTTPException(status_code=415, detail="Uploaded content is not a valid PDF")
-    (upload_path / key).write_bytes(data)
+    storage.put_bytes(key, data, content_type="application/pdf")
     safe_title = Path(file.filename or "uploaded.pdf").name[:240]
     resource = ResourceModel(title=safe_title, kind="pdf", course_id=course_id, concept_id=concept_id, storage_key=key, checksum=hashlib.sha256(data).hexdigest(), duration_minutes=0, processing_status="uploaded")
     db.add(resource)

@@ -1,9 +1,9 @@
 # ML, Scheduling, and Scoring Design Specification
 
 **Document ID:** ILR-ML-001
-**Version:** 1.0
-**Status:** Development baseline
-**Last reviewed:** 2026-10-27
+**Version:** 2.0
+**Status:** Implementation-complete development baseline
+**Last reviewed:** 2026-10-28
 
 ## 1. Purpose
 
@@ -51,7 +51,8 @@ Each recommendation should be attributable to available evidence such as prerequ
 - OCR is integrated as an optional Tesseract/PyMuPDF provider and is invoked only for image-only documents when enabled. Its dependencies are deliberately excluded from the base API image and must be supplied by a dedicated OCR-enabled image/provider with binary patching and worker metrics.
 - Semantic matching is deterministic and suitable for a baseline; it is not a validated domain model.
 - The C++ scorer is independently testable and exposes a line-oriented stdin contract. The backend uses the native executable when `SCORING_ENGINE_PATH` is configured and falls back to the Python contract when it is unavailable.
-- Background processing, model serving, feature storage, and model monitoring remain planned.
+- Historical exam imports split numbered or paragraph-separated prompts, infer a topic label, associate prompts with matching course concepts when possible, and rank concepts by question frequency weighted by difficulty.
+- Background document processing, bounded OCR, reproducible evaluation, and native scorer integration are implemented. External model serving and model monitoring are optional future extensions rather than required baseline components.
 
 ## 6. Safety and quality constraints
 

@@ -1,3 +1,5 @@
+-- Reference bootstrap schema. Alembic under backend/migrations is authoritative for deployed databases.
+
 CREATE TABLE IF NOT EXISTS courses (
   id TEXT PRIMARY KEY,
   code TEXT NOT NULL UNIQUE,
@@ -85,5 +87,26 @@ CREATE TABLE IF NOT EXISTS quiz_attempts (
   answer_index INTEGER NOT NULL,
   correct BOOLEAN NOT NULL,
   score REAL NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS historical_exam_questions (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL REFERENCES courses(id),
+  source TEXT NOT NULL,
+  exam_year INTEGER NOT NULL,
+  prompt TEXT NOT NULL,
+  concept_id TEXT REFERENCES concepts(id),
+  topic_label TEXT NOT NULL DEFAULT 'general',
+  difficulty INTEGER NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS audit_events (
+  id TEXT PRIMARY KEY,
+  actor_id TEXT REFERENCES users(id),
+  event_type TEXT NOT NULL,
+  request_id TEXT,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

@@ -1,9 +1,9 @@
 # Architecture Specification
 
 **Document ID:** ILR-ARC-001
-**Version:** 1.0
-**Status:** Development baseline
-**Last reviewed:** 2026-10-27
+**Version:** 2.0
+**Status:** Implementation-complete development baseline
+**Last reviewed:** 2026-10-28
 
 ## 1. Architectural style
 
@@ -13,10 +13,10 @@ The platform is a modular monolith with separately testable frontend, API, learn
 
 1. **Frontend:** React/Vite presents courses, concept maps, roadmaps, resources, quizzes, and progress.
 2. **API:** FastAPI owns HTTP contracts, authentication, ownership checks, validation, and application orchestration.
-3. **Persistence:** SQLAlchemy models and repositories persist users, courses, concepts, prerequisites, resources, progress, and study plans.
+3. **Persistence:** SQLAlchemy models and repositories persist users, courses, concepts, prerequisites, resources, historical exam questions, audit events, progress, and study plans.
 4. **Learning logic:** The ML package provides deterministic preprocessing, concept mapping, graph, scheduling, and evaluation primitives.
 5. **Scoring:** The C++ engine provides a fast ranking primitive and a command-line testable boundary.
-6. **Infrastructure:** PostgreSQL is the Compose persistence service; Redis supports rate limits and future caching.
+6. **Infrastructure:** PostgreSQL is the Compose persistence service; Redis supports rate limits and JSON response caching; local or S3-compatible storage holds private documents.
 
 ## 3. Trust boundaries
 
@@ -32,10 +32,10 @@ The platform is a modular monolith with separately testable frontend, API, learn
 Browser -> FastAPI -> authentication/authorization -> services -> SQLAlchemy -> database
                                       |                 |
                                       v                 v
-                              rate limiter       ML/scoring integrations
+                              rate limiter/cache  ML/scoring integrations
                                       |
                                       v
-                                    Redis
+                         Redis + private object storage
 ```
 
 ## 5. Deployment boundaries
@@ -51,3 +51,5 @@ SQLite is the zero-service development default. Docker Compose provisions Postgr
 | SQLAlchemy plus Alembic | Portable persistence and controlled schema changes | Migrations must be run in deployment |
 | Deterministic learning utilities | Explainability and repeatable tests | Less semantic coverage than a validated ML model |
 | Redis fallback | Local development remains usable without Redis | Distributed rate-limit consistency requires Redis |
+| Storage abstraction | Local files remain simple while S3-compatible storage supports production durability | Production requires bucket encryption, lifecycle, and credential management |
+| Durable audit events | Security/product changes survive process restarts and support retention | Operators must schedule retention cleanup and protect audit access |

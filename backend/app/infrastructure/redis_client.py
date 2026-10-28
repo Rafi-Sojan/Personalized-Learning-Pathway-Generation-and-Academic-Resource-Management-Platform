@@ -32,3 +32,25 @@ class RedisClient:
             except Exception:
                 pass
         self._values[key] = value
+
+    def delete(self, key: str) -> None:
+        if self._redis is not None:
+            try:
+                self._redis.delete(key)
+                return
+            except Exception:
+                pass
+        self._values.pop(key, None)
+
+    def increment(self, key: str, expire: int | None = None) -> int:
+        if self._redis is not None:
+            try:
+                value = int(self._redis.incr(key))
+                if value == 1 and expire:
+                    self._redis.expire(key, expire)
+                return value
+            except Exception:
+                pass
+        value = int(self._values.get(key, "0")) + 1
+        self._values[key] = str(value)
+        return value

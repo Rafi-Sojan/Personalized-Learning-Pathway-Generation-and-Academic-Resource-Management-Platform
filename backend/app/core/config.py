@@ -20,12 +20,25 @@ class Settings:
     worker_timeout_seconds: int = int(os.getenv("DOCUMENT_WORKER_TIMEOUT_SECONDS", "120"))
     ocr_enabled: bool = os.getenv("OCR_ENABLED", "false").lower() in {"1", "true", "yes"}
     scoring_engine_path: str = os.getenv("SCORING_ENGINE_PATH", "")
+    storage_backend: str = os.getenv("STORAGE_BACKEND", "local").lower()
+    storage_bucket: str = os.getenv("STORAGE_BUCKET", "")
+    storage_prefix: str = os.getenv("STORAGE_PREFIX", "learning-roadmap")
+    storage_endpoint_url: str = os.getenv("STORAGE_ENDPOINT_URL", "")
+    audit_retention_days: int = int(os.getenv("AUDIT_RETENTION_DAYS", "3650"))
+    initial_admin_email: str = os.getenv("INITIAL_ADMIN_EMAIL", "")
+    initial_admin_password: str = os.getenv("INITIAL_ADMIN_PASSWORD", "")
 
     def __post_init__(self) -> None:
         if self.environment.lower() == "production" and self.secret_key == "development-only-change-me":
             raise ValueError("SECRET_KEY must be explicitly configured in production")
         if self.max_pdf_pages < 1 or self.max_extracted_text_chars < 1:
             raise ValueError("PDF processing limits must be positive")
+        if self.storage_backend not in {"local", "s3"}:
+            raise ValueError("STORAGE_BACKEND must be local or s3")
+        if self.storage_backend == "s3" and not self.storage_bucket:
+            raise ValueError("STORAGE_BUCKET is required when STORAGE_BACKEND=s3")
+        if self.audit_retention_days < 1:
+            raise ValueError("AUDIT_RETENTION_DAYS must be positive")
 
     @property
     def cors_origins(self) -> list[str]:

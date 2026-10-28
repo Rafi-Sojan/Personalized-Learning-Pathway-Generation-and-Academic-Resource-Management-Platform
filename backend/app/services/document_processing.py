@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models import Resource
 from ml.preprocessing.ocr_processor import run_pdf_ocr
+from app.services.storage import storage
 
 
 def process_pdf(upload_path: Path, processed_path: Path) -> int:
@@ -54,18 +55,21 @@ def process_resource_by_id(resource_id: str) -> bool:
         resource = db.get(Resource, resource_id)
         if resource is None or not resource.storage_key:
             return False
-        upload_path = (Path(settings.upload_dir) / resource.storage_key).resolve()
-        upload_root = Path(settings.upload_dir).resolve()
-        if upload_root not in upload_path.parents:
-            raise ValueError("Invalid private storage path")
-        if resource.checksum:
-            digest = hashlib.sha256()
-            with upload_path.open("rb") as handle:
-                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                    digest.update(chunk)
-            if digest.hexdigest() != resource.checksum:
-                raise ValueError("Uploaded document checksum does not match metadata")
-        process_pdf(upload_path, Path(settings.processed_dir).resolve() / f"{resource.id}.txt")
+        with storage.materialize(resource.storage_key) as upload_path:
+            if resource.checksum:
+                digest = hashlib.sha256()
+                with upload_path.open("rb") as handle:
+                    for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                if digest.hexdigest() != resource.checksum:
+                    raise ValueError("Uploaded document checksum does not match metadata")
+            output_key = f"processed/{resource.id}.txt"
+            output_path = Path(settings.processed_dir).resolve() / f"{resource.id}.txt"
+            process_pdf(upload_path, output_path)
+            storage.put_bytes(output_key, output_path.read_bytes(), content_type="text/plain; charset=utf-8")
+            resource.processed_key = output_key
+            if settings.storage_backend == "s3":
+                output_path.unlink(missing_ok=True)
         resource.processing_status = "processed"
         db.commit()
         return True
