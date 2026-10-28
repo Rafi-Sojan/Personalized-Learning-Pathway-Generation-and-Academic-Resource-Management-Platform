@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RVCE verified course record",
+  "type": "object",
+  "required": ["program_code", "scheme_year", "semester", "course_code", "title", "credits", "source_url", "source_checksum", "verification_status"],
+  "properties": {
+    "program_code": {"type": "string", "minLength": 2, "maxLength": 20},
+    "scheme_year": {"type": "integer", "minimum": 2016, "maximum": 2100},
+    "semester": {"type": "integer", "minimum": 1, "maximum": 8},
+    "course_code": {"type": "string", "minLength": 2, "maxLength": 40},
+    "title": {"type": "string", "minLength": 2, "maxLength": 240},
+    "credits": {"type": "number", "exclusiveMinimum": 0, "maximum": 20},
+    "category": {"type": "string", "maxLength": 80},
+    "contact_hours": {"type": "number", "minimum": 0, "maximum": 100},
+    "prerequisites": {"type": "array", "items": {"type": "string"}},
+    "outcomes": {"type": "array", "items": {"type": "string"}},
+    "source_url": {"type": "string", "format": "uri"},
+    "source_checksum": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+    "verification_status": {"type": "string", "enum": ["pending_review", "academic_verified", "rejected"]}
+  },
+  "additionalProperties": false
+}

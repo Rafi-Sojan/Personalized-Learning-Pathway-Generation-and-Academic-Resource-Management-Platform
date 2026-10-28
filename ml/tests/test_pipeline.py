@@ -2,6 +2,7 @@ from ml.graph.dependency_graph import topological_order
 from ml.scheduling.roadmap_scheduler import schedule
 from ml.evaluation.benchmark import evaluate_cases
 from ml.preprocessing.question_parser import parse_questions
+from ml.preprocessing.rvce_catalog import load_rvce_catalog
 
 
 def test_graph_order() -> None:
@@ -24,3 +25,10 @@ def test_evaluation_benchmark() -> None:
 def test_question_parser_handles_numbered_exam_text() -> None:
     questions = parse_questions("1. Define a variable.\n2) Explain functions.\n\n3. Describe control flow.")
     assert questions == ["Define a variable.", "Explain functions.", "Describe control flow."]
+
+
+def test_rvce_catalog_has_provenance_and_normalized_program_codes() -> None:
+    catalog = load_rvce_catalog()
+    assert catalog["institution"]["short_name"] == "RVCE"
+    assert len(catalog["program_schemes"]) == 15
+    assert any(program["code"] == "ET" and "TE" in program["aliases"] for program in catalog["program_schemes"])

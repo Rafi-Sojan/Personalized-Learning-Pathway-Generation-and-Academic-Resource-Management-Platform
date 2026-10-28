@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: install backend frontend test quality security cpp compose-up compose-down migrate evaluate release-verify load-test clean
+.PHONY: install backend frontend test quality security cpp compose-up compose-down migrate evaluate validate-rvce release-verify load-test clean
 
 install:
 	$(PYTHON) -m pip install -r backend/requirements.txt -r ml/requirements.txt
@@ -36,6 +36,9 @@ security:
 
 evaluate:
 	$(PYTHON) scripts/evaluate_learning.py ml/evaluation/benchmark.example.json --minimum mapping_f1=0.80 --minimum ranking_ndcg=0.80 --minimum historical_ranking_ndcg=0.80
+
+validate-rvce:
+	$(PYTHON) scripts/validate_rvce_courses.py database/rvce_courses.json
 
 release-verify:
 	$(PYTHON) scripts/verify_release.py

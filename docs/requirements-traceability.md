@@ -70,6 +70,8 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Production privacy/legal approval | Partial | PIA and formal approval requirements are documented; data-owner/legal approval remains required |
 | Licensed evaluation corpus | Partial | Deterministic benchmark and threshold gate exist; licensed/de-identified production-quality corpus remains required |
 | Staging load/performance evidence | Partial | Dependency-free load tool and formal evidence procedure exist; deployed staging measurements remain required |
+| RVCE program and scheme catalog | Implemented | Source-provenance manifest, normalized program aliases, validator, and `/catalog/rvce` endpoint |
+| RVCE subject/course syllabus rows | Partial | Versioned persistence, validation, provenance, duplicate prevention, and import API are implemented; official source PDFs and selected cohort scope are still required |
 
 ## Known development limitations
 

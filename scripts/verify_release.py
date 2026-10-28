@@ -21,9 +21,14 @@ REQUIRED_FILES = (
     "docs/accessibility-and-performance.md",
     "docs/security-acceptance.md",
     "docs/release-acceptance.md",
+    "docs/rvce-catalog.md",
     "monitoring/prometheus.yml",
     "monitoring/alert-rules.yml",
     "monitoring/README.md",
+    "database/rvce_catalog.json",
+    "database/rvce-course-record.schema.json",
+    "database/rvce_courses.json",
+    "database/init.sql",
     "backend/migrations/versions/0006_processing_reliability.py",
 )
 REQUIRED_ENV = (

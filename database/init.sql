@@ -50,6 +50,25 @@ CREATE TABLE IF NOT EXISTS syllabus_versions (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS rvce_syllabus_courses (
+  id TEXT PRIMARY KEY,
+  program_code TEXT NOT NULL,
+  scheme_year INTEGER NOT NULL,
+  semester INTEGER NOT NULL CHECK (semester BETWEEN 1 AND 8),
+  course_code TEXT NOT NULL,
+  title TEXT NOT NULL,
+  credits REAL NOT NULL CHECK (credits > 0),
+  category TEXT NOT NULL DEFAULT '',
+  contact_hours REAL,
+  prerequisites_json TEXT NOT NULL DEFAULT '[]',
+  outcomes_json TEXT NOT NULL DEFAULT '[]',
+  source_url TEXT NOT NULL,
+  source_checksum TEXT NOT NULL,
+  verification_status TEXT NOT NULL DEFAULT 'pending_review',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (program_code, scheme_year, semester, course_code)
+);
+
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT NOT NULL UNIQUE,

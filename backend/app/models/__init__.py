@@ -47,6 +47,26 @@ class SyllabusVersion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class RvceSyllabusCourse(Base):
+    __tablename__ = "rvce_syllabus_courses"
+    __table_args__ = (UniqueConstraint("program_code", "scheme_year", "semester", "course_code", name="uq_rvce_syllabus_course_identity"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    program_code: Mapped[str] = mapped_column(String(20), index=True)
+    scheme_year: Mapped[int] = mapped_column(Integer, index=True)
+    semester: Mapped[int] = mapped_column(Integer, index=True)
+    course_code: Mapped[str] = mapped_column(String(40), index=True)
+    title: Mapped[str] = mapped_column(String(240))
+    credits: Mapped[float] = mapped_column(Float)
+    category: Mapped[str] = mapped_column(String(80), default="")
+    contact_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    prerequisites_json: Mapped[str] = mapped_column(Text, default="[]")
+    outcomes_json: Mapped[str] = mapped_column(Text, default="[]")
+    source_url: Mapped[str] = mapped_column(String(1000))
+    source_checksum: Mapped[str] = mapped_column(String(64))
+    verification_status: Mapped[str] = mapped_column(String(24), default="pending_review", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
 class Concept(Base):
     __tablename__ = "concepts"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)

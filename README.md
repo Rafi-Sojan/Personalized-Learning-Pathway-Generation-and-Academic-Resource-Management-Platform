@@ -9,7 +9,7 @@ Intelligent Learning Roadmap is a modular learning-support platform that convert
 
 ## 1. Project status
 
-This repository provides an implementation-complete development baseline with signed authentication, Argon2 password hashing, role-gated administration, ownership-aware SQLAlchemy persistence, secure asynchronous document processing, optional OCR, object-storage abstraction, deadline-aware roadmap generation, historical exam ranking, Redis-backed caching/throttling, privacy workflows, and a native scoring boundary. SQLite is used for a no-service local run; Docker Compose provisions PostgreSQL, Redis, a worker, private storage, and the frontend/backend services.
+This repository provides an implementation-complete development baseline for an RVCE-focused learning platform with signed authentication, Argon2 password hashing, role-gated administration, ownership-aware SQLAlchemy persistence, secure asynchronous document processing, optional OCR, object-storage abstraction, deadline-aware roadmap generation, historical exam ranking, Redis-backed caching/throttling, privacy workflows, and a native scoring boundary. The RVCE program/scheme catalog is source-provenance validated; subject rows remain pending official document import and academic verification. SQLite is used for a no-service local run; Docker Compose provisions PostgreSQL, Redis, a worker, private storage, and the frontend/backend services.
 
 ## 2. Capabilities
 
@@ -23,6 +23,7 @@ This repository provides an implementation-complete development baseline with si
 - Historical exam question import, concept association, and frequency/difficulty ranking.
 - S3-compatible private storage option with durable audit-event retention and purge tooling.
 - Student, instructor, and administrator roles with protected user-management operations.
+- RVCE program and scheme catalog metadata with normalized program aliases, provenance, and validated course-row handoff.
 
 ## 3. Repository structure
 
@@ -152,6 +153,8 @@ The API is mounted under `/api/v1`:
 | `GET` | `/exams/rankings` | Rank concepts by historical question evidence |
 | `GET`, `POST` | `/admin/users` | Admin-only user and role management |
 | `GET` | `/metrics` | Internal Prometheus-compatible request/status metrics |
+| `GET` | `/catalog/rvce` | Validated RVCE program, scheme, and source metadata |
+| `GET`, `POST` | `/catalog/rvce/courses` | Read verified or add source-backed RVCE course records |
 
 ## 8. Configuration
 
@@ -183,6 +186,7 @@ The following documents form the formal project record. Statuses and gaps are co
 | [accessibility-and-performance.md](docs/accessibility-and-performance.md) | Frontend automated and manual acceptance criteria |
 | [security-acceptance.md](docs/security-acceptance.md) | Independent security testing and approval requirements |
 | [release-acceptance.md](docs/release-acceptance.md) | Evidence-based production release approval template |
+| [rvce-catalog.md](docs/rvce-catalog.md) | RVCE syllabus authority, catalog manifest, and import contract |
 
 The existing `database/diagrams/er-diagram.md` and `scoring-engine/README.md` provide component-specific supporting records.
 

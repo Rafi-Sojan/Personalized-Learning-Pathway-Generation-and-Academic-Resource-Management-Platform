@@ -1,10 +1,11 @@
 from fastapi import APIRouter
 
-from app.api.v1 import admin, auth, concepts, courses, exams, progress, quizzes, rankings, resources, roadmap, syllabus
+from app.api.v1 import admin, auth, catalog, concepts, courses, exams, progress, quizzes, rankings, resources, roadmap, syllabus
 
 router = APIRouter()
 router.include_router(auth.router, prefix="/auth", tags=["auth"])
 router.include_router(admin.router, prefix="/admin", tags=["admin"])
+router.include_router(catalog.router, prefix="/catalog", tags=["catalog"])
 router.include_router(exams.router, prefix="/exams", tags=["exams"])
 router.include_router(courses.router, prefix="/courses", tags=["courses"])
 router.include_router(syllabus.router, prefix="/syllabus", tags=["syllabus"])

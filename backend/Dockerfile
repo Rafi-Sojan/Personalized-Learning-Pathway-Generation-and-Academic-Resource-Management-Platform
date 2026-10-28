@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt -r requirements-storage.txt
 COPY backend/app ./app
 COPY backend/alembic.ini ./alembic.ini
 COPY backend/migrations ./migrations
+COPY database/rvce_catalog.json ./database/rvce_catalog.json
 COPY ml ./ml
 COPY scripts ./scripts
 RUN useradd --create-home --uid 10001 appuser && mkdir -p /app/storage/uploads /app/storage/processed && chown -R appuser:appuser /app

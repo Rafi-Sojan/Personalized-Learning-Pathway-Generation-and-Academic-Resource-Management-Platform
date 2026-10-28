@@ -1,0 +1,36 @@
+{
+  "institution": {
+    "name": "R V College of Engineering",
+    "short_name": "RVCE",
+    "catalog_scope": "BE undergraduate programs",
+    "source_url": "https://rvce.edu.in/rvce-scheme-syllabus",
+    "source_accessed": "2026-10-28",
+    "source_note": "The official page publishes scheme/syllabus links by program and academic year. This manifest records catalog metadata; course rows must be imported from the linked approved documents."
+  },
+  "common_first_year_schemes": [2016, 2018, 2021, 2022, 2025],
+  "program_schemes": [
+    {"code": "AI", "name": "Artificial Intelligence and Machine Learning", "aliases": ["AIML"], "schemes": [2021, 2022]},
+    {"code": "AS", "name": "Aerospace Engineering", "aliases": [], "schemes": [2016, 2018, 2021, 2022]},
+    {"code": "BT", "name": "Biotechnology", "aliases": [], "schemes": [2016, 2018, 2021, 2022]},
+    {"code": "CH", "name": "Chemical Engineering", "aliases": [], "schemes": [2016, 2018, 2021, 2022]},
+    {"code": "CV", "name": "Civil Engineering", "aliases": [], "schemes": [2016, 2018, 2021, 2022]},
+    {"code": "CS", "name": "Computer Science and Engineering", "aliases": ["CSE"], "schemes": [2016, 2018, 2021, 2022]},
+    {"code": "CD", "name": "Computer Science and Engineering - Data Science", "aliases": ["CSE-DS"], "schemes": [2022]},
+    {"code": "CY", "name": "Computer Science and Engineering - Cyber Security", "aliases": ["CSE-CY"], "schemes": [2022]},
+    {"code": "EE", "name": "Electrical and Electronics Engineering", "aliases": ["EEE"], "schemes": [2016, 2018, 2021, 2022]},
+    {"code": "EC", "name": "Electronics and Communication Engineering", "aliases": ["ECE"], "schemes": [2016, 2018, 2021, 2022]},
+    {"code": "EI", "name": "Electronics and Instrumentation Engineering", "aliases": ["EIE"], "schemes": [2016, 2018, 2021, 2022]},
+    {"code": "IM", "name": "Industrial Engineering and Management", "aliases": ["IEM"], "schemes": [2016, 2018, 2021, 2022]},
+    {"code": "IS", "name": "Information Science and Engineering", "aliases": ["ISE"], "schemes": [2016, 2018, 2021, 2022]},
+    {"code": "ME", "name": "Mechanical Engineering", "aliases": ["MECH"], "schemes": [2016, 2018, 2021, 2022]},
+    {"code": "ET", "name": "Electronics and Telecommunication Engineering", "aliases": ["TE"], "schemes": [2016, 2018, 2021, 2022], "normalization_note": "The official page displays ET/TE in different year tables; ET is the normalized application code and TE is retained as an alias."}
+  ],
+  "document_matrix": [
+    {"scope": "BE", "scheme_year": 2025, "semesters": [1, 2], "status": "catalog-indexed", "source_url": "https://rvce.edu.in/rvce-scheme-syllabus"},
+    {"scope": "BE", "scheme_year": 2022, "semesters": [1, 2], "status": "catalog-indexed", "source_url": "https://rvce.edu.in/rvce-scheme-syllabus"},
+    {"scope": "program-specific", "scheme_year": 2022, "semesters": [3, 4, 5, 6], "status": "catalog-indexed", "source_url": "https://rvce.edu.in/rvce-scheme-syllabus"},
+    {"scope": "program-specific", "scheme_year": 2021, "semesters": [3, 4, 5, 6, 7, 8], "status": "catalog-indexed", "source_url": "https://rvce.edu.in/rvce-scheme-syllabus"},
+    {"scope": "program-specific", "scheme_year": 2018, "semesters": [3, 4, 5, 6, 7, 8], "status": "catalog-indexed", "source_url": "https://rvce.edu.in/rvce-scheme-syllabus"},
+    {"scope": "program-specific", "scheme_year": 2016, "semesters": [3, 4, 5, 6, 7, 8], "status": "catalog-indexed", "source_url": "https://rvce.edu.in/rvce-scheme-syllabus"}
+  ]
+}

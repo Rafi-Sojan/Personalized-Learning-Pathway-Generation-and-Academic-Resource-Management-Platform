@@ -44,6 +44,9 @@ Successful responses use the route-specific JSON schema. Validation and authoriz
 | GET | `/exams/rankings` | Yes | Rank concepts by historical question frequency and difficulty |
 | GET/POST | `/admin/users` | Admin | List or create users with server-side roles |
 | GET | `/admin/processing` | Admin | Read bounded document-worker queue counts and oldest active job |
+| GET | `/catalog/rvce` | No | Read validated RVCE program, scheme, and source metadata |
+| GET | `/catalog/rvce/courses` | No | List academically verified RVCE course records with program/scheme/semester filters |
+| POST | `/catalog/rvce/courses` | Instructor/admin | Add a source-backed RVCE course record; only admins can mark it academically verified |
 
 ## 3. Authorization rules
 

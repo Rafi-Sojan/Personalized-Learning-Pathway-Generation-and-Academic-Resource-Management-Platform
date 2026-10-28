@@ -36,6 +36,7 @@ The repository is an implementation-complete development baseline. A production 
 | Accessibility and performance acceptance | ILR-FE-002 | Automated and manual frontend acceptance criteria |
 | Security acceptance | ILR-SEC-002 | Independent security testing and approval record |
 | Release acceptance | ILR-REL-002 | Evidence-based production approval template |
+| RVCE syllabus catalog | ILR-RVCE-001 | RVCE source authority, metadata, normalization, and course-row import contract |
 
 ## 3. Status definitions
 
