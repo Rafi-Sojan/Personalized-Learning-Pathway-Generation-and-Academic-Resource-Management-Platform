@@ -75,6 +75,11 @@ class Resource(Base):
     checksum: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     duration_minutes: Mapped[int] = mapped_column(Integer, default=0)
     processing_status: Mapped[str] = mapped_column(String(32), default="ready")
+    processing_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    processing_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    processing_started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    processing_next_attempt_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 

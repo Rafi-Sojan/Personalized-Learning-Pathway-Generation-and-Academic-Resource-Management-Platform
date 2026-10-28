@@ -1,14 +1,49 @@
 import hashlib
+import logging
+from datetime import timedelta
 from pathlib import Path
 
 from pypdf import PdfReader
-from sqlalchemy import update
+from sqlalchemy import or_, select, update
 
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models import Resource
 from ml.preprocessing.ocr_processor import run_pdf_ocr
 from app.services.storage import storage
+from app.core.metrics import metrics
+
+
+logger = logging.getLogger(__name__)
+
+
+def recover_stale_resources() -> int:
+    """Release worker leases that exceeded the configured processing timeout."""
+    db = SessionLocal()
+    try:
+        from app.models import utc_now
+
+        now = utc_now()
+        cutoff = now - timedelta(seconds=settings.worker_timeout_seconds)
+        stale = db.scalars(
+            select(Resource).where(
+                Resource.processing_status == "processing",
+                Resource.processing_started_at.is_not(None),
+                Resource.processing_started_at < cutoff,
+            )
+        ).all()
+        for resource in stale:
+            terminal = resource.processing_attempts >= settings.max_processing_attempts
+            resource.processing_status = "failed" if terminal else "retryable"
+            resource.processing_error = "Worker lease expired before processing completed"
+            resource.processing_next_attempt_at = None if terminal else now + timedelta(seconds=settings.document_retry_delay_seconds)
+        if stale:
+            db.commit()
+            metrics.observe_worker("lease_expired")
+            logger.warning("Recovered %s stale document-processing lease(s)", len(stale))
+        return len(stale)
+    finally:
+        db.close()
 
 
 def process_pdf(upload_path: Path, processed_path: Path) -> int:
@@ -43,18 +78,34 @@ def process_pdf(upload_path: Path, processed_path: Path) -> int:
 
 
 def process_resource_by_id(resource_id: str) -> bool:
-    """Process one queued resource; safe for a worker retry loop."""
+    """Process one resource with durable retry and dead-letter state."""
     db = SessionLocal()
-    resource = None
     try:
-        claimed = db.execute(update(Resource).where(Resource.id == resource_id, Resource.processing_status == "queued").values(processing_status="processing"))
+        from app.models import utc_now
+
+        claimed_at = utc_now()
+        claimed = db.execute(
+            update(Resource)
+            .where(
+                Resource.id == resource_id,
+                Resource.processing_status.in_(["queued", "retryable"]),
+                or_(Resource.processing_next_attempt_at.is_(None), Resource.processing_next_attempt_at <= claimed_at),
+            )
+            .values(
+                processing_status="processing",
+                processing_attempts=Resource.processing_attempts + 1,
+                processing_started_at=claimed_at,
+                processing_next_attempt_at=None,
+                processing_error=None,
+            )
+        )
         if claimed.rowcount != 1:
             db.rollback()
             return False
         db.commit()
         resource = db.get(Resource, resource_id)
         if resource is None or not resource.storage_key:
-            return False
+            raise ValueError("Queued resource has no storage key")
         with storage.materialize(resource.storage_key) as upload_path:
             if resource.checksum:
                 digest = hashlib.sha256()
@@ -71,12 +122,23 @@ def process_resource_by_id(resource_id: str) -> bool:
             if settings.storage_backend == "s3":
                 output_path.unlink(missing_ok=True)
         resource.processing_status = "processed"
+        resource.processing_error = None
+        resource.processing_next_attempt_at = None
+        resource.processed_at = utc_now()
         db.commit()
+        metrics.observe_worker("processed")
         return True
-    except Exception:
+    except Exception as exc:
+        db.rollback()
+        resource = db.scalar(select(Resource).where(Resource.id == resource_id))
         if resource is not None:
-            resource.processing_status = "failed"
+            terminal = resource.processing_attempts >= settings.max_processing_attempts
+            resource.processing_status = "failed" if terminal else "retryable"
+            resource.processing_error = str(exc)[:1000]
+            resource.processing_next_attempt_at = None if terminal else utc_now() + timedelta(seconds=settings.document_retry_delay_seconds)
             db.commit()
+            metrics.observe_worker("failed" if terminal else "retryable")
+            logger.exception("Document processing failed resource_id=%s terminal=%s", resource_id, terminal)
         return False
     finally:
         db.close()

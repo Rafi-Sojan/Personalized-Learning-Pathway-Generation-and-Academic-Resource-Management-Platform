@@ -1,7 +1,7 @@
 # Operations and Runbook
 
 **Document ID:** ILR-OPS-001
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Implementation-complete development baseline
 **Last reviewed:** 2026-10-28
 
@@ -47,7 +47,7 @@ Services:
 | `postgres` | Persistent relational database | `localhost:5432` |
 | `redis` | Rate-limit/cache service | `localhost:6379` |
 
-The database and Redis volumes are named `postgres_data` and `redis_data`. Uploads and processed text are mounted from the repository `storage/` directory. The worker retries queued documents independently of the API process. OCR dependencies in `backend/requirements-ocr.txt` are optional; build `backend/Dockerfile.ocr` from the repository root when an OCR-enabled image is required.
+The database and Redis volumes are named `postgres_data` and `redis_data`. Uploads and processed text are mounted from the repository `storage/` directory. The backend applies Alembic migrations before serving, and the worker waits for backend readiness before consuming documents. A document is retried up to `DOCUMENT_MAX_PROCESSING_ATTEMPTS`, with `DOCUMENT_RETRY_DELAY_SECONDS` between attempts; terminal failures remain visible as `failed` for operator review. OCR dependencies in `backend/requirements-ocr.txt` are optional; build `backend/Dockerfile.ocr` from the repository root when an OCR-enabled image is required.
 
 ## Configuration
 
@@ -63,6 +63,9 @@ Copy `.env.example` to `.env` for local overrides. Important values include:
 - `MAX_UPLOAD_SIZE_MB`
 - `STORAGE_BACKEND`, `STORAGE_BUCKET`, `STORAGE_PREFIX`, and `STORAGE_ENDPOINT_URL`
 - `AUDIT_RETENTION_DAYS`
+- `DOCUMENT_MAX_PROCESSING_ATTEMPTS` and `DOCUMENT_RETRY_DELAY_SECONDS`
+- `DOCUMENT_WORKER_TIMEOUT_SECONDS` for stale-worker lease recovery
+- `METRICS_AUTH_TOKEN` to protect `/metrics` in a private monitoring network
 - `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` for development bootstrap only
 
 Never commit `.env` or real credentials.
@@ -90,7 +93,7 @@ The restore script requires explicit `RESTORE` confirmation. Backup files are ig
 
 After startup, verify that the API responds, the interactive documentation loads, the frontend can reach the configured API origin, database migrations are current, and Redis connectivity is either healthy or intentionally operating in fallback mode. Perform an authenticated smoke test for login, a private read, a progress update, and roadmap generation.
 
-The readiness endpoint is `GET /health/ready`; it confirms database connectivity and reports whether Redis is available or the process-local fallback is active. `GET /metrics` exposes request/status counters for an internal Prometheus scraper and must not be published directly to the internet.
+The readiness endpoint is `GET /health/ready`; it confirms database connectivity and reports whether Redis is available or the process-local fallback is active. `GET /metrics` exposes normalized request/status and document-worker counters for an internal Prometheus scraper. Set `METRICS_AUTH_TOKEN` and enforce private network access before enabling production scraping; the endpoint must not be published directly to the internet. Authorized administrators can inspect queue counts and the oldest active job at `/api/v1/admin/processing`.
 
 ## Roles and administration
 
@@ -122,6 +125,7 @@ ctest --test-dir build --build-config Release --output-on-failure
 python scripts/purge_audit_events.py
 
 # The scheduled CI backup/restore drill is defined in .github/workflows/backup-restore.yml.
+python scripts/verify_release.py
 ```
 
 ## Incident response basics

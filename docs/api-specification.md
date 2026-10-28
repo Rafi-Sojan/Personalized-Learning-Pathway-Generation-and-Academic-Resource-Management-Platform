@@ -1,7 +1,7 @@
 # API Specification
 
 **Document ID:** ILR-API-001
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Implementation-complete development baseline
 **Last reviewed:** 2026-10-28
 
@@ -38,11 +38,12 @@ Successful responses use the route-specific JSON schema. Validation and authoriz
 | POST | `/quizzes/{concept_id}/attempts` | Yes | Submit a quiz attempt |
 | GET | `/rankings` | Yes | Read the development leaderboard |
 | GET | `/rankings/concepts` | Yes | Rank owned concepts using native scoring when configured |
-| GET | `/metrics` | No | Prometheus-compatible request/status counters; deployment access should be network-restricted |
+| GET | `/metrics` | Optional bearer token | Prometheus-compatible request/status counters; set `METRICS_AUTH_TOKEN` and restrict deployment access |
 | GET/POST | `/exams/questions` | Yes; POST instructor/admin | List or create historical exam question records |
 | POST | `/exams/import` | Instructor/admin | Import numbered or paragraph-separated question paper text |
 | GET | `/exams/rankings` | Yes | Rank concepts by historical question frequency and difficulty |
 | GET/POST | `/admin/users` | Admin | List or create users with server-side roles |
+| GET | `/admin/processing` | Admin | Read bounded document-worker queue counts and oldest active job |
 
 ## 3. Authorization rules
 
@@ -50,7 +51,7 @@ The authenticated user ID is obtained from the verified token and applied server
 
 ## 4. Resource processing contract
 
-Upload requests must identify a PDF and remain below the configured size limit. The server generates the storage filename, records a checksum, and writes extracted text to private processed storage. Processing is queued for the worker path; local background tasks remain available for development.
+Upload requests must identify a PDF and remain below the configured size limit. The server generates the storage filename, records a checksum, and writes extracted text to private processed storage. Processing moves through `uploaded`, `queued`, `processing`, `retryable`, `processed`, or terminal `failed` states. The worker applies the configured attempt, delay, and lease-timeout limits; stale `processing` leases are recovered before the next polling cycle. Manual processing requests reset the retry state. Local background tasks remain available for development.
 
 ## 5. Compatibility policy
 

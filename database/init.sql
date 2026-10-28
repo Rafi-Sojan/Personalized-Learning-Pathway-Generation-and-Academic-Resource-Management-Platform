@@ -21,20 +21,31 @@ CREATE TABLE IF NOT EXISTS concept_prerequisites (
   PRIMARY KEY (concept_id, prerequisite_id)
 );
 
-CREATE TABLE IF NOT EXISTS resources (
+CREATE TABLE IF NOT EXISTS academic_resources (
   id TEXT PRIMARY KEY,
+  course_id TEXT REFERENCES courses(id),
   concept_id TEXT REFERENCES concepts(id),
   title TEXT NOT NULL,
   kind TEXT NOT NULL,
-  url TEXT NOT NULL,
-  duration_minutes INTEGER NOT NULL DEFAULT 0
+  url TEXT NOT NULL DEFAULT '',
+  storage_key TEXT,
+  processed_key TEXT,
+  checksum TEXT,
+  duration_minutes INTEGER NOT NULL DEFAULT 0,
+  processing_status TEXT NOT NULL DEFAULT 'ready',
+  processing_attempts INTEGER NOT NULL DEFAULT 0,
+  processing_error TEXT,
+  processing_started_at TIMESTAMP,
+  processing_next_attempt_at TIMESTAMP,
+  processed_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS syllabus_versions (
   id TEXT PRIMARY KEY,
   course_id TEXT NOT NULL REFERENCES courses(id),
   label TEXT NOT NULL,
-  source_resource_id TEXT REFERENCES resources(id),
+  source_resource_id TEXT REFERENCES academic_resources(id),
   effective_from DATE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

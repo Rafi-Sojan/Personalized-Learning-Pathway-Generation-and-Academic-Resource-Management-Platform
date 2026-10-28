@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -21,6 +21,9 @@ class Resource(BaseModel):
     concept_id: str | None = None
     duration_minutes: int = Field(ge=0)
     processing_status: str = "ready"
+    processing_attempts: int = Field(default=0, ge=0)
+    processing_error: str | None = None
+    processed_at: datetime | None = None
 
 
 class HistoricalExamQuestionCreate(BaseModel):

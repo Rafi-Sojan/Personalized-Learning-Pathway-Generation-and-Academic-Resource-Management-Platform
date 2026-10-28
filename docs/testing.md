@@ -1,7 +1,7 @@
 # Test and Verification Specification
 
 **Document ID:** ILR-TST-001
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Implementation-complete development baseline
 **Last reviewed:** 2026-10-28
 
@@ -13,7 +13,7 @@ Testing shall verify functional behavior, authorization boundaries, data validat
 
 The baseline verification record includes:
 
-- 16 Python tests across backend, ML, and cross-module flows, including token revocation, metrics, numbered-question parsing, role enforcement, historical exam import, and the reproducible evaluation benchmark.
+- 17 Python tests across backend, ML, and cross-module flows, including token revocation, metrics, processing administration, numbered-question parsing, role enforcement, historical exam import, and the reproducible evaluation benchmark.
 - CI executes Ruff static checks and Mypy checks across the backend source tree.
 - Frontend `npm ci` followed by a successful TypeScript/Vite production build.
 - `npm audit --offline --audit-level=high` reported zero project dependency vulnerabilities during this verification pass.

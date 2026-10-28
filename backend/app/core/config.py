@@ -18,6 +18,8 @@ class Settings:
     max_pdf_pages: int = int(os.getenv("MAX_PDF_PAGES", "100"))
     max_extracted_text_chars: int = int(os.getenv("MAX_EXTRACTED_TEXT_CHARS", "500000"))
     worker_timeout_seconds: int = int(os.getenv("DOCUMENT_WORKER_TIMEOUT_SECONDS", "120"))
+    max_processing_attempts: int = int(os.getenv("DOCUMENT_MAX_PROCESSING_ATTEMPTS", "3"))
+    document_retry_delay_seconds: int = int(os.getenv("DOCUMENT_RETRY_DELAY_SECONDS", "60"))
     ocr_enabled: bool = os.getenv("OCR_ENABLED", "false").lower() in {"1", "true", "yes"}
     scoring_engine_path: str = os.getenv("SCORING_ENGINE_PATH", "")
     storage_backend: str = os.getenv("STORAGE_BACKEND", "local").lower()
@@ -27,12 +29,15 @@ class Settings:
     audit_retention_days: int = int(os.getenv("AUDIT_RETENTION_DAYS", "3650"))
     initial_admin_email: str = os.getenv("INITIAL_ADMIN_EMAIL", "")
     initial_admin_password: str = os.getenv("INITIAL_ADMIN_PASSWORD", "")
+    metrics_auth_token: str = os.getenv("METRICS_AUTH_TOKEN", "")
 
     def __post_init__(self) -> None:
         if self.environment.lower() == "production" and self.secret_key == "development-only-change-me":
             raise ValueError("SECRET_KEY must be explicitly configured in production")
         if self.max_pdf_pages < 1 or self.max_extracted_text_chars < 1:
             raise ValueError("PDF processing limits must be positive")
+        if self.worker_timeout_seconds < 1 or self.max_processing_attempts < 1 or self.document_retry_delay_seconds < 0:
+            raise ValueError("Document retry settings are invalid")
         if self.storage_backend not in {"local", "s3"}:
             raise ValueError("STORAGE_BACKEND must be local or s3")
         if self.storage_backend == "s3" and not self.storage_bucket:

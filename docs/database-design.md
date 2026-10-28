@@ -1,7 +1,7 @@
 # Database Design Specification
 
 **Document ID:** ILR-DB-001
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Implementation-complete development baseline
 **Last reviewed:** 2026-10-28
 
@@ -23,10 +23,12 @@ Users own courses. Courses own concepts and resources. Prerequisite edges connec
 - Schema changes shall be introduced through reviewed migrations rather than ad hoc production table creation.
 - Roadmap regeneration shall supersede the prior active plan and create a revision snapshot.
 - Resource mappings shall be unique per resource/concept pair and use explicit proposed, accepted, or rejected states.
+- Resource processing state shall record attempts, bounded error detail, active-start time, next retry time, and successful completion time so worker recovery is auditable.
+- A worker lease that exceeds `DOCUMENT_WORKER_TIMEOUT_SECONDS` shall be reclaimed on the next worker polling cycle and recorded as retryable or terminal failure according to the attempt limit.
 
 ## 4. File data
 
-Private uploads are stored under `storage/uploads` using generated UUID filenames. Metadata and checksums are stored in the database; extracted text is written to `storage/processed` after validated PDF processing. `processed_key` tracks the derived object when S3-compatible storage is enabled. These directories/buckets are not public frontend assets and must use encrypted, access-controlled storage in production.
+Private uploads are stored under `storage/uploads` using generated UUID filenames. Metadata, checksums, and processing lifecycle fields are stored in `academic_resources`; extracted text is written to `storage/processed` after validated PDF processing. `processed_key` tracks the derived object when S3-compatible storage is enabled. These directories/buckets are not public frontend assets and must use encrypted, access-controlled storage in production.
 
 ## 5. Recovery requirements
 

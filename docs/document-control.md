@@ -2,7 +2,7 @@
 
 **Document ID:** ILR-DOC-001
 **System:** Intelligent Learning Roadmap
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Implementation-complete development baseline
 **Owner:** Project maintainer
 **Last reviewed:** 2026-10-28
@@ -32,6 +32,7 @@ The repository is an implementation-complete development baseline. A production 
 | Evaluation | ILR-EVAL-001 | Quality and learning-outcome measures |
 | Privacy impact assessment | ILR-PIA-001 | Personal-data flows, risks, rights, and approvals |
 | Service-level objectives | ILR-SLO-001 | Reliability targets, metrics, and alert conditions |
+| Operational readiness | ILR-OPS-002 | Release handoff controls, operator acceptance, and evidence package |
 
 ## 3. Status definitions
 

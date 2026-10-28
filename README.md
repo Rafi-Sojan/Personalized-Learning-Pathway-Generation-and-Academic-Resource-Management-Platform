@@ -2,7 +2,7 @@
 
 **Project document:** ILR-DOC-001
 **Release status:** Implementation-complete development baseline
-**Documentation version:** 2.0
+**Documentation version:** 2.1
 **Last reviewed:** 2026-10-28
 
 Intelligent Learning Roadmap is a modular learning-support platform that converts course material, learner progress, and concept dependencies into an actionable study plan. It combines a web dashboard, a typed API, explainable learning utilities, and a native scoring engine.
@@ -170,6 +170,7 @@ The following documents form the formal project record. Statuses and gaps are co
 | [evaluation.md](docs/evaluation.md) | Learning-quality metrics and acceptance criteria |
 | [privacy-impact-assessment.md](docs/privacy-impact-assessment.md) | Personal-data flows, privacy risks, rights, and approvals |
 | [service-level-objectives.md](docs/service-level-objectives.md) | Reliability objectives, observability, and alerting |
+| [operational-readiness.md](docs/operational-readiness.md) | Release handoff controls, operator acceptance, and evidence requirements |
 
 The existing `database/diagrams/er-diagram.md` and `scoring-engine/README.md` provide component-specific supporting records.
 

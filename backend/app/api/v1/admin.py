@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password, require_roles
 from app.db.session import get_db
-from app.models import User
+from app.models import Resource, User
 from app.schemas.auth import ManagedUserCreate, User as UserResponse
 from app.services.audit import record_event
 
@@ -27,3 +27,16 @@ def create_managed_user(payload: ManagedUserCreate, current_user: User = Depends
     db.commit()
     db.refresh(user)
     return UserResponse.model_validate(user)
+
+
+@router.get("/processing")
+def processing_status(_: User = Depends(require_roles("admin")), db: Session = Depends(get_db)) -> dict[str, object]:
+    """Expose bounded document-worker state to authorized operators."""
+    counts = {
+        status: count
+        for status, count in db.execute(
+            select(Resource.processing_status, func.count(Resource.id)).group_by(Resource.processing_status)
+        ).all()
+    }
+    oldest = db.scalar(select(func.min(Resource.processing_started_at)).where(Resource.processing_status == "processing"))
+    return {"counts": counts, "oldest_processing_at": oldest.isoformat() if oldest else None}

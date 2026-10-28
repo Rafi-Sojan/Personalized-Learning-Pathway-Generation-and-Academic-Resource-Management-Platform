@@ -18,11 +18,11 @@
 
 ## 2. Observability contract
 
-The API exposes `/health` for liveness, `/health/ready` for database/Redis readiness, and `/metrics` for Prometheus-compatible request and status counters. Metrics should be kept on a private network and scraped by the deployment monitor. Request logs include request IDs but exclude credentials, tokens, and document contents.
+The API exposes `/health` for liveness, `/health/ready` for database/Redis readiness, and `/metrics` for Prometheus-compatible request, status, and in-process document-worker counters. Durable worker state is exposed through the admin processing summary because the standalone worker has its own process memory. Metrics paths are normalized to avoid unbounded UUID label cardinality, and `METRICS_AUTH_TOKEN` can require bearer authentication. Metrics should be kept on a private network and scraped by the deployment monitor. Request logs include request IDs but exclude credentials, tokens, and document contents.
 
 ## 3. Alert conditions
 
-Operators should alert on readiness failures, sustained 5xx responses, queued documents older than the processing objective, backup failures, restore-drill failures, high/critical image findings, DAST regressions, and repeated rate-limit or authentication anomalies.
+Operators should alert on readiness failures, sustained 5xx responses, retryable or terminal worker outcomes, queued documents older than the processing objective, repeated lease expirations, backup failures, restore-drill failures, high/critical image findings, DAST regressions, and repeated rate-limit or authentication anomalies.
 
 ## 4. Review and escalation
 

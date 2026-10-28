@@ -1,7 +1,7 @@
 # Requirements Traceability Matrix
 
 **Document ID:** ILR-REQ-001
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Implementation-complete development baseline
 **Last reviewed:** 2026-10-28
 
@@ -59,6 +59,10 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Monitoring and alerting contract | Implemented | Health/readiness endpoints, Prometheus-compatible metrics, SLO document, and alert conditions |
 | Accessibility/performance gates | Implemented | Playwright accessibility checks, Lighthouse workflow, and frontend JavaScript bundle budget |
 | Backup and restore verification | Implemented | PostgreSQL backup/restore scripts and scheduled CI drill restoring into a fresh database |
+| Durable document-worker retry and failure handling | Implemented | Processing attempts, delayed retryable state, terminal failed state, bounded error detail, and admin queue summary |
+| Migration gate before container startup | Implemented | Compose backend applies Alembic migrations before serving and worker waits for backend readiness |
+| Protected operational metrics | Implemented | Optional bearer-token protection and normalized path labels on `/metrics` |
+| Release invariant verification | Implemented | `scripts/verify_release.py` validates controlled artifacts, configuration entries, migration gate, and pinned actions |
 
 ## Known development limitations
 
@@ -69,3 +73,4 @@ An item is marked **Implemented** only when the repository contains the behavior
 - Docker runtime validation is reproducible in `.github/workflows/compose-smoke.yml`; local Docker execution depends on the developer machine.
 - External penetration testing, production SLO approval, and privacy/legal approval remain operator or release-owner acceptance activities.
 - `npm audit` validates repository dependencies, not the globally installed npm CLI or Node runtime.
+- Release-gate execution still requires the GitHub runner, container runtime, and operator-owned staging evidence; the local repository check does not replace those acceptance activities.

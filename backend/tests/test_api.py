@@ -89,3 +89,22 @@ def test_roles_protect_admin_and_exam_import_is_rankable() -> None:
     assert imported.status_code == 201
     rankings = client.get("/api/v1/exams/rankings", headers=student, params={"course_id": course_id})
     assert rankings.status_code == 200
+
+
+def test_admin_can_read_processing_queue_summary() -> None:
+    db = SessionLocal()
+    try:
+        user = db.scalar(select(UserModel).where(UserModel.email == "processing-admin@example.com"))
+        if user is None:
+            user = UserModel(email="processing-admin@example.com", name="Processing Admin", password_hash=hash_password("admin-password"), role="admin")
+            db.add(user)
+        else:
+            user.role = "admin"
+        db.commit()
+    finally:
+        db.close()
+    response = client.post("/api/v1/auth/login", json={"email": "processing-admin@example.com", "password": "admin-password"})
+    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
+    summary = client.get("/api/v1/admin/processing", headers=headers)
+    assert summary.status_code == 200
+    assert "counts" in summary.json()

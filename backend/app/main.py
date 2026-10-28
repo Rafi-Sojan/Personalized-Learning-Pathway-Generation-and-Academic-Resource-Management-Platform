@@ -3,7 +3,7 @@ import time
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from redis import Redis
 from sqlalchemy import select, text
@@ -107,5 +107,7 @@ def readiness() -> dict[str, str]:
 
 
 @app.get("/metrics", include_in_schema=False)
-def metrics_endpoint() -> Response:
+def metrics_endpoint(request: Request) -> Response:
+    if settings.metrics_auth_token and request.headers.get("Authorization") != f"Bearer {settings.metrics_auth_token}":
+        raise HTTPException(status_code=401, detail="Metrics authentication required")
     return Response(content=metrics.render_prometheus(), media_type="text/plain; version=0.0.4")

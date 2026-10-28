@@ -43,6 +43,10 @@ services:
       STORAGE_PREFIX: ${STORAGE_PREFIX:-learning-roadmap}
       STORAGE_ENDPOINT_URL: ${STORAGE_ENDPOINT_URL:-}
       AUDIT_RETENTION_DAYS: ${AUDIT_RETENTION_DAYS:-3650}
+      DOCUMENT_WORKER_TIMEOUT_SECONDS: ${DOCUMENT_WORKER_TIMEOUT_SECONDS:-120}
+      DOCUMENT_MAX_PROCESSING_ATTEMPTS: ${DOCUMENT_MAX_PROCESSING_ATTEMPTS:-3}
+      DOCUMENT_RETRY_DELAY_SECONDS: ${DOCUMENT_RETRY_DELAY_SECONDS:-60}
+      METRICS_AUTH_TOKEN: ${METRICS_AUTH_TOKEN:-}
       INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
       AWS_REGION: ${AWS_REGION:-}
@@ -52,6 +56,12 @@ services:
       PROCESSED_DIR: /app/storage/processed
     ports:
       - "8000:8000"
+    command: ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     volumes:
       - ./backend/app:/app/app
       - ./backend/migrations:/app/migrations
@@ -80,6 +90,9 @@ services:
       STORAGE_PREFIX: ${STORAGE_PREFIX:-learning-roadmap}
       STORAGE_ENDPOINT_URL: ${STORAGE_ENDPOINT_URL:-}
       AUDIT_RETENTION_DAYS: ${AUDIT_RETENTION_DAYS:-3650}
+      DOCUMENT_WORKER_TIMEOUT_SECONDS: ${DOCUMENT_WORKER_TIMEOUT_SECONDS:-120}
+      DOCUMENT_MAX_PROCESSING_ATTEMPTS: ${DOCUMENT_MAX_PROCESSING_ATTEMPTS:-3}
+      DOCUMENT_RETRY_DELAY_SECONDS: ${DOCUMENT_RETRY_DELAY_SECONDS:-60}
       AWS_REGION: ${AWS_REGION:-}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
@@ -89,6 +102,8 @@ services:
       - ./scripts:/app/scripts
       - ./storage:/app/storage
     depends_on:
+      backend:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:

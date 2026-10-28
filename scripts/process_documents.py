@@ -9,21 +9,34 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.db.session import SessionLocal
 from app.models import Resource
-from app.services.document_processing import process_resource_by_id
+from app.services.document_processing import process_resource_by_id, recover_stale_resources
 
 
 def process_once() -> int:
+    recover_stale_resources()
     db = SessionLocal()
     try:
-        ids = list(db.scalars(select(Resource.id).where(Resource.processing_status == "queued").limit(10)).all())
+        now = datetime.now(timezone.utc)
+        ids = list(
+            db.scalars(
+                select(Resource.id)
+                .where(
+                    Resource.processing_status.in_(["queued", "retryable"]),
+                    or_(Resource.processing_next_attempt_at.is_(None), Resource.processing_next_attempt_at <= now),
+                )
+                .order_by(Resource.created_at)
+                .limit(10)
+            ).all()
+        )
     finally:
         db.close()
     return sum(1 for resource_id in ids if process_resource_by_id(resource_id))

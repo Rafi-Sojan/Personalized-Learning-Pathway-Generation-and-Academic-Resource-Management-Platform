@@ -61,6 +61,11 @@ def process_resource(resource_id: str, background_tasks: BackgroundTasks, curren
         db.commit()
         return Resource.model_validate(resource)
     resource.processing_status = "queued"
+    resource.processing_attempts = 0
+    resource.processing_error = None
+    resource.processing_started_at = None
+    resource.processing_next_attempt_at = None
+    resource.processed_at = None
     db.commit()
     db.refresh(resource)
     background_tasks.add_task(_process_resource_in_background, resource.id)
