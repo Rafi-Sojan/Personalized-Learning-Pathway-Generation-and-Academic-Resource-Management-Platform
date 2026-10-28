@@ -18,6 +18,12 @@ REQUIRED_FILES = (
     "docs/operational-readiness.md",
     "docs/privacy-impact-assessment.md",
     "docs/service-level-objectives.md",
+    "docs/accessibility-and-performance.md",
+    "docs/security-acceptance.md",
+    "docs/release-acceptance.md",
+    "monitoring/prometheus.yml",
+    "monitoring/alert-rules.yml",
+    "monitoring/README.md",
     "backend/migrations/versions/0006_processing_reliability.py",
 )
 REQUIRED_ENV = (

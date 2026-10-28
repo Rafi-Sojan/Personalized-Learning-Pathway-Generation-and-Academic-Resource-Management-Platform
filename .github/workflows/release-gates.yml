@@ -24,6 +24,8 @@ jobs:
         run: python scripts/verify_release.py
       - name: Compile repository Python modules
         run: python -m compileall -q backend ml tests scripts
+      - name: Run learning-quality regression gate
+        run: python scripts/evaluate_learning.py ml/evaluation/benchmark.example.json --minimum mapping_f1=0.80 --minimum ranking_ndcg=0.80 --minimum historical_ranking_ndcg=0.80
 
   frontend-release-build:
     runs-on: ubuntu-latest

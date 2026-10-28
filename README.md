@@ -35,6 +35,7 @@ This repository provides an implementation-complete development baseline with si
 | `database/` | Initial relational schema, seed data, and ER documentation |
 | `tests/` | Cross-module integration tests |
 | `docs/` | Architecture, API, security, database, and evaluation notes |
+| `monitoring/` | Prometheus scrape configuration and alert rules |
 
 ## 4. Prerequisites
 
@@ -116,6 +117,14 @@ python -m pip install pip-audit
 pip-audit -r backend/requirements.txt -r backend/requirements-ocr.txt -r backend/requirements-storage.txt -r ml/requirements.txt
 ```
 
+Release and evaluation checks:
+
+```bash
+python scripts/evaluate_learning.py ml/evaluation/benchmark.example.json --minimum mapping_f1=0.80 --minimum ranking_ndcg=0.80 --minimum historical_ranking_ndcg=0.80
+python scripts/verify_release.py
+python scripts/load_test.py --url http://localhost:8000/health/ready --requests 100 --workers 10
+```
+
 The same operations are available through the root `Makefile` where the required tools are installed.
 
 ## 7. API overview
@@ -171,6 +180,9 @@ The following documents form the formal project record. Statuses and gaps are co
 | [privacy-impact-assessment.md](docs/privacy-impact-assessment.md) | Personal-data flows, privacy risks, rights, and approvals |
 | [service-level-objectives.md](docs/service-level-objectives.md) | Reliability objectives, observability, and alerting |
 | [operational-readiness.md](docs/operational-readiness.md) | Release handoff controls, operator acceptance, and evidence requirements |
+| [accessibility-and-performance.md](docs/accessibility-and-performance.md) | Frontend automated and manual acceptance criteria |
+| [security-acceptance.md](docs/security-acceptance.md) | Independent security testing and approval requirements |
+| [release-acceptance.md](docs/release-acceptance.md) | Evidence-based production release approval template |
 
 The existing `database/diagrams/er-diagram.md` and `scoring-engine/README.md` provide component-specific supporting records.
 

@@ -1,7 +1,7 @@
 # Security Audit and Operating Posture
 
 **Document ID:** ILR-AUD-001
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Development audit with implementation closure
 **Last reviewed:** 2026-10-28
 
@@ -66,6 +66,7 @@ The frontend Dockerfile and CI workflow are pinned to Node `24.22.1` with npm `1
 - Request audit logging with request IDs is emitted without credentials or document contents, and durable audit events have configurable retention and purge support.
 - DAST is automated through `.github/workflows/dast.yml` and `scripts/run_dast.ps1`; an external penetration test remains an acceptance activity.
 - S3-compatible storage is supported through `STORAGE_BACKEND=s3`; credentials and bucket lifecycle policies remain operator-managed.
+- Prometheus scrape and alert baselines are version-controlled under `monitoring/`; notification routing, secret-backed metrics authentication, and on-call ownership remain operator-managed.
 
 ## Release checklist
 

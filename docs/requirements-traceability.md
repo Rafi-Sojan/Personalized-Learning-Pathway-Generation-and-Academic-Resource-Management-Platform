@@ -63,6 +63,13 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Migration gate before container startup | Implemented | Compose backend applies Alembic migrations before serving and worker waits for backend readiness |
 | Protected operational metrics | Implemented | Optional bearer-token protection and normalized path labels on `/metrics` |
 | Release invariant verification | Implemented | `scripts/verify_release.py` validates controlled artifacts, configuration entries, migration gate, and pinned actions |
+| Prometheus scrape and alert configuration | Implemented | Version-controlled scrape baseline and alert rules under `monitoring/` |
+| Expanded learning-quality evaluation | Implemented | Benchmark harness now reports mapping recall/F1 and ranking NDCG with threshold gates |
+| Frontend manual acceptance record | Partial | Automated accessibility/performance gates and formal manual-review checklist are present; operator review remains required |
+| External security acceptance | Partial | DAST and repository controls are implemented; independent penetration testing remains required |
+| Production privacy/legal approval | Partial | PIA and formal approval requirements are documented; data-owner/legal approval remains required |
+| Licensed evaluation corpus | Partial | Deterministic benchmark and threshold gate exist; licensed/de-identified production-quality corpus remains required |
+| Staging load/performance evidence | Partial | Dependency-free load tool and formal evidence procedure exist; deployed staging measurements remain required |
 
 ## Known development limitations
 
@@ -74,3 +81,4 @@ An item is marked **Implemented** only when the repository contains the behavior
 - External penetration testing, production SLO approval, and privacy/legal approval remain operator or release-owner acceptance activities.
 - `npm audit` validates repository dependencies, not the globally installed npm CLI or Node runtime.
 - Release-gate execution still requires the GitHub runner, container runtime, and operator-owned staging evidence; the local repository check does not replace those acceptance activities.
+- Monitoring rule files define alert behavior but do not provision a notification destination or on-call rotation; those remain deployment-owned configuration.

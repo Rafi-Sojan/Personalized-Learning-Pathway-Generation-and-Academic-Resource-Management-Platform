@@ -33,6 +33,9 @@ The repository is an implementation-complete development baseline. A production 
 | Privacy impact assessment | ILR-PIA-001 | Personal-data flows, risks, rights, and approvals |
 | Service-level objectives | ILR-SLO-001 | Reliability targets, metrics, and alert conditions |
 | Operational readiness | ILR-OPS-002 | Release handoff controls, operator acceptance, and evidence package |
+| Accessibility and performance acceptance | ILR-FE-002 | Automated and manual frontend acceptance criteria |
+| Security acceptance | ILR-SEC-002 | Independent security testing and approval record |
+| Release acceptance | ILR-REL-002 | Evidence-based production approval template |
 
 ## 3. Status definitions
 
