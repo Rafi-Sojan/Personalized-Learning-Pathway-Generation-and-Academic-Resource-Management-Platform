@@ -64,10 +64,73 @@ REQUIRED_ENV = (
     "METRICS_AUTH_TOKEN=",
 )
 DOCUMENTED_PYTHON_ROOTS = ("backend", "ml", "scripts", "tests")
+TS_FUNCTION_DECLARATION = re.compile(r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)")
+TS_FUNCTION_VARIABLE = re.compile(r"^\s*(?:export\s+)?(?:const|let)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*(.*)$")
+CPP_METHOD_DECLARATION = re.compile(r"^\s*(?:Score|std::vector<Score>)\s+\w+\s*\([^;]*\)\s*const;\s*$")
+
+
+def verify_frontend_function_comments() -> tuple[int, list[str]]:
+    """Require leading JSDoc for named frontend functions and callable variables."""
+    count = 0
+    failures: list[str] = []
+    for source_file in (ROOT / "frontend" / "src").rglob("*.ts*"):
+        if source_file.suffix not in {".ts", ".tsx"}:
+            continue
+        lines = source_file.read_text(encoding="utf-8").splitlines()
+        for index, line in enumerate(lines):
+            declaration = TS_FUNCTION_DECLARATION.match(line)
+            if declaration is None:
+                declaration = TS_FUNCTION_VARIABLE.match(line)
+                if declaration is None:
+                    continue
+                initializer = "\n".join(lines[index : index + 12]).split("=", 1)[1]
+                initializer_head = initializer.lstrip()
+                direct_callable = initializer_head.startswith(("(", "async "))
+                callback_factory = initializer_head.startswith("useCallback(")
+                arrow_at = initializer.find("=>")
+                semicolon_at = initializer.find(";")
+                if not (direct_callable or callback_factory) or arrow_at < 0 or (semicolon_at >= 0 and semicolon_at < arrow_at):
+                    continue
+            count += 1
+            previous = index - 1
+            while previous >= 0 and not lines[previous].strip():
+                previous -= 1
+            comment = lines[previous].strip() if previous >= 0 else ""
+            if not (comment.startswith("/**") or comment.startswith("*") or comment.startswith("//")):
+                relative = source_file.relative_to(ROOT).as_posix()
+                failures.append(f"missing function JSDoc: {relative}:{index + 1}:{declaration.group(1)}")
+    return count, failures
+
+
+def verify_cpp_api_comments() -> tuple[int, list[str]]:
+    """Require Doxygen comments on public scorer declarations and comments on entry points."""
+    count = 0
+    failures: list[str] = []
+    header = ROOT / "scoring-engine" / "include" / "scoring" / "scorer.hpp"
+    lines = header.read_text(encoding="utf-8").splitlines()
+    for index, line in enumerate(lines):
+        if CPP_METHOD_DECLARATION.match(line):
+            count += 1
+            previous = lines[index - 1].strip() if index else ""
+            if not (previous.startswith("///") or previous.startswith("/**") or previous.endswith("*/")):
+                failures.append(f"missing C++ API comment: {header.relative_to(ROOT).as_posix()}:{index + 1}")
+
+    entry_point = re.compile(r"^\s*int\s+main\s*\(")
+    for source_file in (ROOT / "scoring-engine").rglob("*.cpp"):
+        lines = source_file.read_text(encoding="utf-8").splitlines()
+        for index, line in enumerate(lines):
+            if entry_point.match(line):
+                previous = index - 1
+                while previous >= 0 and not lines[previous].strip():
+                    previous -= 1
+                comment = lines[previous].strip() if previous >= 0 else ""
+                if not (comment.startswith("//") or comment.startswith("/*") or comment.endswith("*/")):
+                    failures.append(f"missing C++ entry-point comment: {source_file.relative_to(ROOT).as_posix()}:{index + 1}")
+    return count, failures
 
 
 def main() -> int:
-    """Check required release artifacts, configuration keys, migration startup, and pinned actions."""
+    """Check release artifacts, configuration, workflow pins, and function comments across languages."""
     failures: list[str] = []
     for relative in REQUIRED_FILES:
         if not (ROOT / relative).is_file():
@@ -102,11 +165,20 @@ def main() -> int:
             if "uses:" in line and not action_pattern.match(line):
                 failures.append(f"un-pinned workflow action: {workflow.relative_to(ROOT)}:{line_number}")
 
+    frontend_function_count, frontend_failures = verify_frontend_function_comments()
+    cpp_method_count, cpp_failures = verify_cpp_api_comments()
+    failures.extend(frontend_failures)
+    failures.extend(cpp_failures)
+
     if failures:
         print("Release verification failed:")
         print("\n".join(f"- {failure}" for failure in failures))
         return 1
-    print(f"Release verification passed: {len(REQUIRED_FILES)} controlled artifacts, {documented_function_count} Python function docstrings, and workflow pins checked.")
+    print(
+        f"Release verification passed: {len(REQUIRED_FILES)} controlled artifacts, "
+        f"{documented_function_count} Python docstrings, {frontend_function_count} frontend function comments, "
+        f"{cpp_method_count} C++ API comments, and workflow pins checked."
+    )
     return 0
 
 
