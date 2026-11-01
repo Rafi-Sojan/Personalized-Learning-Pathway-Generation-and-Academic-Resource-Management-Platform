@@ -1,9 +1,11 @@
 # Release Acceptance Record
 
 **Document ID:** ILR-REL-002  
-**Version:** 1.0  
-**Status:** Template; staging evidence required  
-**Last reviewed:** 2026-10-28
+**Version:** 1.1
+**Status:** Candidate-specific template; staging evidence required
+**Last reviewed:** 2026-11-01
+
+The consolidated open-target register is `remaining-targets.md` (ILR-REG-001). This record is copied and completed for each release candidate; repository-level passes do not substitute for its external approvals.
 
 ## Acceptance evidence
 

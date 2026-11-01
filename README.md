@@ -194,6 +194,7 @@ The following documents form the formal project record. Statuses and gaps are co
 | [release-acceptance.md](docs/release-acceptance.md) | Evidence-based production release approval template |
 | [rvce-catalog.md](docs/rvce-catalog.md) | RVCE syllabus authority, catalog manifest, and import contract |
 | [implementation-record.md](docs/implementation-record.md) | Formal RVCE ingestion, approval, enrollment, operating, and acceptance record |
+| [remaining-targets.md](docs/remaining-targets.md) | Consolidated completion register with owners, dependencies, and required acceptance evidence |
 | [code-commenting-standard.md](docs/code-commenting-standard.md) | Function-level documentation requirements and review standard |
 
 The existing `database/diagrams/er-diagram.md` and `scoring-engine/README.md` provide component-specific supporting records.

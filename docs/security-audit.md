@@ -1,9 +1,9 @@
 # Security Audit and Operating Posture
 
 **Document ID:** ILR-AUD-001
-**Version:** 2.1
-**Status:** Development audit with implementation closure
-**Last reviewed:** 2026-10-28
+**Version:** 2.2
+**Status:** Development audit with dependency remediation verified; external acceptance pending
+**Last reviewed:** 2026-11-01
 
 ## Scope
 
@@ -54,6 +54,14 @@ The development machine was observed using Node `v24.11.1` and npm `11.6.2`. Nod
 - [npm CLI 11.21.1 release](https://github.com/npm/cli/releases/tag/v11.21.1)
 
 The frontend Dockerfile and CI workflow are pinned to Node `24.22.1` with npm `11.21.1`. Keep npm explicitly upgraded in CI and container builds rather than relying on the runner image default.
+
+## Dependency scan and remediation record
+
+On 2026-11-01, the first Python advisory scan found vulnerable pinned versions of `python-multipart`, `pytest`, `PyJWT`, `pypdf`, `Pillow`, and Starlette. The frontend audit found a high-severity Playwright browser-download certificate advisory. The direct pins were updated to `python-multipart 0.0.33`, `pytest 9.0.3`, `PyJWT 2.15.0`, `pypdf 6.21.4`, `Pillow 13.0.0`, `FastAPI 0.162.0`, `Starlette 1.10.0`, and `@playwright/test 1.64.1`. `httpx2 2.16.0` replaces the deprecated Starlette test-client transport and removes its runtime deprecation warning.
+
+The follow-up `pip-audit` scan across backend, OCR, storage, and ML requirement files reported no known vulnerabilities. The follow-up `npm audit --audit-level=high` reported zero vulnerabilities. These are point-in-time dependency-graph results, not a guarantee that later advisories will not be published. The release workflow repeats both checks for each release candidate.
+
+The local workstation still reports Node `24.11.1` and npm `11.6.2`, below the repository’s declared minimums. CI and the frontend container use the patched Node/npm versions listed above; update the workstation toolchain before relying on local browser-runner results.
 
 ## Residual risks
 

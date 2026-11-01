@@ -1,7 +1,7 @@
 # RVCE Syllabus Integration Implementation Record
 
 **Document ID:** ILR-IMP-001  
-**Version:** 1.0  
+**Version:** 1.1
 **Status:** Implemented development workflow; academic acceptance pending  
 **Owner:** Project maintainer  
 **Last reviewed:** 2026-11-01  
@@ -101,15 +101,22 @@ The repository checks run for this implementation report:
 |---|---|
 | PDF source fingerprint and candidate extraction | Passed; 207 candidates produced and two conflicting rows quarantined |
 | `scripts/validate_rvce_courses.py` | Passed; 207 source-backed records |
-| `scripts/verify_release.py` | Passed; 36 controlled artifacts, 190 Python function docstrings, and pinned workflow actions checked |
+| `scripts/verify_release.py` | Passed; controlled artifact inventory, Python function docstrings, and pinned workflow actions checked |
+| Backend and ML test suites plus cross-module API tests | Passed; 19 passed, 1 skipped (optional integration test requires its external service) |
+| Ruff over backend, ML, and tests | Passed |
+| mypy over `backend/app` | Passed; 52 source files checked |
 | Python `compileall` over backend, ML, tests, and scripts | Passed |
-| Function-comment coverage | Passed; 190 Python functions and 64 named TypeScript/TSX declarations are documented; C++ public methods and entry points have comments |
-| `git diff --check` | Passed; Git emitted line-ending normalization notices only |
-| Backend router import | Not run successfully; the active Python environment lacks FastAPI |
-| Frontend production build | Not run; `frontend/node_modules` is absent |
-| Automated test suites | Not run for this documentation/commenting change |
+| Learning-quality regression benchmark | Passed; mapping F1, ranking NDCG, and historical-ranking NDCG each scored 1.0 against the configured 0.80 minimum |
+| Python dependency audit | Passed; no known vulnerabilities across backend, OCR, storage, and ML requirement sets after remediation |
+| npm dependency audit | Passed; zero vulnerabilities after updating Playwright |
+| Frontend production build and bundle check | Passed; 22 JavaScript assets within configured bundle budget |
+| Frontend Playwright browser acceptance | All four tests reported passing with patched Playwright 1.64.1; the local runner did not exit after reporting results, and local Node 24.11.1 is below the declared minimum, so the pinned-toolchain CI run remains authoritative |
+| Native scoring-engine test | Passed with g++ C++17, `-Wall -Wextra -Werror` |
+| Function-comment coverage | Passed; enforced by `scripts/verify_release.py` |
+| Independent dependency/image audit and Compose staging checks | Defined in release workflow; not run locally in this environment |
+| External RVCE academic, legal/privacy, security, accessibility, and production release approval | Pending; tracked in `remaining-targets.md` |
 
-CI installs project dependencies and runs the repository's backend, ML, RVCE data-validation, release, frontend, C++, and integration checks as defined by the workflows. Local static checks do not replace those CI results.
+The **Release gates** workflow installs pinned dependencies and runs backend, ML, RVCE data-validation, release, frontend, C++, and Compose runtime/restore checks. The local outcomes above are developer-environment evidence; the workflow run and its artifacts must be attached to the release record before approval.
 
 ## 9. Acceptance gaps and release limits
 

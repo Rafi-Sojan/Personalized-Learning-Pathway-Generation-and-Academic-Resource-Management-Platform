@@ -21,6 +21,7 @@ REQUIRED_FILES = (
     "docs/service-level-objectives.md",
     "docs/accessibility-and-performance.md",
     "docs/security-acceptance.md",
+    "docs/security-audit.md",
     "docs/release-acceptance.md",
     "docs/rvce-catalog.md",
     "monitoring/prometheus.yml",
@@ -41,6 +42,14 @@ REQUIRED_FILES = (
     "scripts/import_rvce_candidates.py",
     "scripts/validate_rvce_courses.py",
     "docs/implementation-record.md",
+    "docs/remaining-targets.md",
+    "backend/tests/test_rvce_catalog.py",
+    "backend/requirements.txt",
+    "backend/requirements-ocr.txt",
+    "backend/requirements-storage.txt",
+    "ml/requirements.txt",
+    "frontend/package-lock.json",
+    ".github/workflows/release-gates.yml",
     "docs/code-commenting-standard.md",
     "database/init.sql",
     "backend/migrations/versions/0006_processing_reliability.py",
@@ -70,15 +79,17 @@ def main() -> int:
             failures.append(f"missing configuration template entry: {key}")
 
     documented_function_count = 0
+    documented_source_files = [ROOT / "conftest.py"]
     for relative_root in DOCUMENTED_PYTHON_ROOTS:
-        for source_file in (ROOT / relative_root).rglob("*.py"):
-            relative = source_file.relative_to(ROOT).as_posix()
-            module = ast.parse(source_file.read_text(encoding="utf-8"), filename=relative)
-            for node in ast.walk(module):
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    documented_function_count += 1
-                    if ast.get_docstring(node) is None:
-                        failures.append(f"missing function docstring: {relative}:{node.lineno}:{node.name}")
+        documented_source_files.extend((ROOT / relative_root).rglob("*.py"))
+    for source_file in documented_source_files:
+        relative = source_file.relative_to(ROOT).as_posix()
+        module = ast.parse(source_file.read_text(encoding="utf-8"), filename=relative)
+        for node in ast.walk(module):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                documented_function_count += 1
+                if ast.get_docstring(node) is None:
+                    failures.append(f"missing function docstring: {relative}:{node.lineno}:{node.name}")
 
     compose_text = (ROOT / "docker-compose.yaml").read_text(encoding="utf-8")
     if "alembic upgrade head" not in compose_text:

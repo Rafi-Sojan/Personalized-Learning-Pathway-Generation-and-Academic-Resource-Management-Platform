@@ -1,7 +1,7 @@
 # Requirements Traceability Matrix
 
 **Document ID:** ILR-REQ-001
-**Version:** 2.2
+**Version:** 2.3
 **Status:** Implementation-complete development baseline
 **Last reviewed:** 2026-11-01
 
@@ -49,7 +49,7 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Docker Compose | Implemented | Frontend, backend, worker, PostgreSQL, Redis, configurable storage, health checks, and corrected development mounts |
 | Non-root backend container | Implemented | Backend image runs as `appuser` |
 | Alembic migrations | Implemented | Configured environment plus lifecycle, resource mapping, exam, storage metadata, and audit-event migrations |
-| CI tests and quality checks | Implemented | Python tests, Ruff, mypy, frontend build/audit, C++ tests |
+| CI tests and quality checks | Implemented | Release workflow includes Python API tests, Ruff, mypy, source and invariant validation, learning benchmark gates, frontend build/audit/E2E, native C++ tests, and Compose runtime/restore checks |
 | Container vulnerability scanning | Implemented | CI audits Python/npm dependencies, builds both images, scans high/critical findings, and publishes SPDX SBOM artifacts |
 | Role-based administration | Implemented | Server-side student, instructor, and admin roles; protected admin user-management endpoints; environment-backed initial admin provisioning |
 | Object storage | Implemented | Local private storage and optional S3-compatible backend with upload, materialization, processed-output, and deletion support |
@@ -71,8 +71,9 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Licensed evaluation corpus | Partial | Deterministic benchmark and threshold gate exist; licensed/de-identified production-quality corpus remains required |
 | Staging load/performance evidence | Partial | Dependency-free load tool and formal evidence procedure exist; deployed staging measurements remain required |
 | RVCE program and scheme catalog | Implemented | Source-provenance manifest, normalized program aliases, validator, and `/catalog/rvce` endpoint |
-| RVCE subject/course syllabus rows | Partial | Source-verified extraction and batch import, provenance retention, admin review UI, and branch mapping at approval are implemented; 207 candidates are awaiting academic review and two conflicting rows are quarantined |
+| RVCE subject/course syllabus rows | Partial | Source-verified extraction and batch import, provenance retention, admin review UI, branch mapping at approval, and API flow tests are implemented; 207 candidates are awaiting academic review and two conflicting rows are quarantined |
 | Formal implementation and source-comment records | Implemented | Controlled implementation record, repository-wide code-comment standard, and release-gate enforcement of Python function docstrings across backend, ML, scripts, and tests |
+| Consolidated project completion register | Implemented | `docs/remaining-targets.md` identifies each open target, accountable role, external dependency, and objective closure evidence |
 
 ## Known development limitations
 
@@ -84,4 +85,5 @@ An item is marked **Implemented** only when the repository contains the behavior
 - External penetration testing, production SLO approval, and privacy/legal approval remain operator or release-owner acceptance activities.
 - `npm audit` validates repository dependencies, not the globally installed npm CLI or Node runtime.
 - Release-gate execution still requires the GitHub runner, container runtime, and operator-owned staging evidence; the local repository check does not replace those acceptance activities.
+- The Release gates workflow is defined and locally checked; production acceptance still requires a successful candidate run and the external sign-offs listed in `docs/remaining-targets.md`.
 - Monitoring rule files define alert behavior but do not provision a notification destination or on-call rotation; those remain deployment-owned configuration.

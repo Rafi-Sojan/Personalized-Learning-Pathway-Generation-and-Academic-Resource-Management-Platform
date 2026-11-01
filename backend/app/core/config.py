@@ -2,13 +2,16 @@ import os
 from dataclasses import dataclass
 
 
+_DEVELOPMENT_SECRET = "development-only-change-me-use-32-or-more-bytes"
+
+
 @dataclass(frozen=True)
 class Settings:
     app_name: str = os.getenv("APP_NAME", "Intelligent Learning Roadmap")
     environment: str = os.getenv("ENVIRONMENT", "development")
     api_prefix: str = os.getenv("API_PREFIX", "/api/v1")
     frontend_origin: str = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
-    secret_key: str = os.getenv("SECRET_KEY", "development-only-change-me")
+    secret_key: str = os.getenv("SECRET_KEY", _DEVELOPMENT_SECRET)
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./learning.db")
     redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
@@ -33,7 +36,7 @@ class Settings:
 
     def __post_init__(self) -> None:
         """Reject unsafe production secrets, invalid limits, and incomplete storage settings."""
-        if self.environment.lower() == "production" and self.secret_key == "development-only-change-me":
+        if self.environment.lower() == "production" and self.secret_key == _DEVELOPMENT_SECRET:
             raise ValueError("SECRET_KEY must be explicitly configured in production")
         if self.max_pdf_pages < 1 or self.max_extracted_text_chars < 1:
             raise ValueError("PDF processing limits must be positive")

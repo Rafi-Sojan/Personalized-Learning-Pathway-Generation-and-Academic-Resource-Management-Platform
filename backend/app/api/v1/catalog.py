@@ -71,7 +71,6 @@ def list_rvce_courses(
     query = select(RvceSyllabusCourse).where(
         RvceSyllabusCourse.verification_status == "academic_verified",
         RvceSyllabusCourse.program_code != "BE-UNMAPPED",
-        RvceSyllabusCourse.program_code == program_code.upper() if program_code else True,
     )
     if program_code:
         query = query.where(RvceSyllabusCourse.program_code == program_code.upper())

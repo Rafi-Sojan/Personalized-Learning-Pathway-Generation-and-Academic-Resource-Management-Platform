@@ -18,7 +18,7 @@ def run_pdf_ocr(path: str, max_chars: int) -> str:
         total = 0
         for page in document:
             pixmap = page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5), alpha=False)
-            image = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
+            image = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
             text = normalize_ocr_text(pytesseract.image_to_string(image))
             remaining = max_chars - total
             if remaining <= 0:

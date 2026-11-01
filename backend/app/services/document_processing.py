@@ -71,7 +71,7 @@ def process_pdf(upload_path: Path, processed_path: Path) -> int:
         total += min(len(text), remaining)
     extracted = "\n".join(chunks)
     if settings.ocr_enabled and len(extracted.strip()) < 20:
-        extracted = run_pdf_ocr(upload_path, settings.max_extracted_text_chars)
+        extracted = run_pdf_ocr(str(upload_path), settings.max_extracted_text_chars)
     processed_path.parent.mkdir(parents=True, exist_ok=True)
     processed_path.write_text(extracted, encoding="utf-8")
     return len(extracted)

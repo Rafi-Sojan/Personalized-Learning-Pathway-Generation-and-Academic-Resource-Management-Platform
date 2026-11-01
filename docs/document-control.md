@@ -2,7 +2,7 @@
 
 **Document ID:** ILR-DOC-001
 **System:** Intelligent Learning Roadmap
-**Version:** 2.2
+**Version:** 2.3
 **Status:** Implementation-complete development baseline
 **Owner:** Project maintainer
 **Last reviewed:** 2026-11-01
@@ -25,7 +25,7 @@ The repository is an implementation-complete development baseline. A production 
 | Database design | ILR-DB-001 | Relational persistence contract |
 | Data protection | ILR-DATA-001 | Data classification, retention, and privacy controls |
 | Security baseline | ILR-SEC-001 | Required security controls |
-| Security audit | ILR-AUD-001 | Findings, risks, and remediation status |
+| Security audit | ILR-AUD-001 | Findings, dependency scan evidence, risks, and remediation status |
 | Deployment and release | ILR-REL-001 | Build, release, and rollback procedures |
 | Operations | ILR-OPS-001 | Runtime and incident procedures |
 | Testing | ILR-TST-001 | Verification strategy and evidence |
@@ -39,6 +39,7 @@ The repository is an implementation-complete development baseline. A production 
 | RVCE syllabus catalog | ILR-RVCE-001 | RVCE source authority, metadata, normalization, and course-row import contract |
 | RVCE implementation record | ILR-IMP-001 | RVCE extraction, validation, import, academic review, enrollment, operations, evidence, and acceptance gaps |
 | Source code documentation standard | ILR-CODE-001 | Function-level comments and code comment review requirements |
+| Project completion and acceptance register | ILR-REG-001 | Consolidated repository targets, external dependencies, owners, and closure evidence |
 
 ## 3. Status definitions
 

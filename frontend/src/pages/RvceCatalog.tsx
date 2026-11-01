@@ -4,7 +4,7 @@ import { enrollRvceSemester, getRvceCatalog } from '../services/rvce'
 
 /** Let learners select a catalogued RVCE scheme and enroll verified semester courses. */
 export function RvceCatalog() {
-  const { data, loading, error } = useAsync(useCallback(() => getRvceCatalog(), []), [])
+  const { data, loading, error } = useAsync(useCallback(() => getRvceCatalog(), []), { program_schemes: [], common_first_year_schemes: [] })
   const [program, setProgram] = useState('AS')
   const [scheme, setScheme] = useState(2025)
   const [semester, setSemester] = useState(3)

@@ -15,14 +15,14 @@ class Metrics:
     def __init__(self) -> None:
         """Create synchronized counters for requests, response codes, and worker outcomes."""
         self._lock = Lock()
-        self.requests = Counter()
-        self.statuses = Counter()
-        self.worker = Counter()
+        self.requests: Counter[tuple[str, str]] = Counter()
+        self.statuses: Counter[str] = Counter()
+        self.worker: Counter[str] = Counter()
 
     def observe_request(self, method: str, path: str, status_code: int) -> None:
         """Record a request using a normalized path to bound metric-label cardinality."""
         with self._lock:
-            self.requests[f'{method}|{normalize_path(path)}'] += 1
+            self.requests[(method, normalize_path(path))] += 1
             self.statuses[str(status_code)] += 1
 
     def observe_worker(self, outcome: str) -> None:

@@ -28,8 +28,14 @@ def get_concept_rankings(course_id: str | None = Query(default=None), current_us
         query = query.where(Concept.course_id == course_id)
     concepts = db.scalars(query).all()
     progress = {item.concept_id: item for item in db.scalars(select(TopicProgress).where(TopicProgress.user_id == current_user.id)).all()}
-    ranked = rank_concepts([
-        {"id": concept.id, "difficulty": concept.difficulty, "progress": progress.get(concept.id).score if progress.get(concept.id) and progress.get(concept.id).score is not None else 0.0, "prerequisite_ready": concept.status != "not_started"}
-        for concept in concepts
-    ])
+    ranked_inputs = []
+    for concept in concepts:
+        topic_progress = progress.get(concept.id)
+        ranked_inputs.append({
+            "id": concept.id,
+            "difficulty": concept.difficulty,
+            "progress": topic_progress.score if topic_progress and topic_progress.score is not None else 0.0,
+            "prerequisite_ready": concept.status != "not_started",
+        })
+    ranked = rank_concepts(ranked_inputs)
     return ranked
