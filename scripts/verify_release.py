@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import ast
 import re
-import sys
 from pathlib import Path
 
 
@@ -35,7 +34,12 @@ REQUIRED_FILES = (
     "database/rvce_course_conflicts.json",
     "backend/app/api/v1/catalog.py",
     "backend/app/schemas/rvce.py",
+    "backend/app/api/v1/progress.py",
     "frontend/src/pages/RvceCatalog.tsx",
+    "frontend/src/pages/Dashboard.tsx",
+    "frontend/src/pages/Progress.tsx",
+    "frontend/src/utils/activity.ts",
+    "frontend/src/App.tsx",
     "frontend/src/pages/Admin.tsx",
     "frontend/src/services/rvce.ts",
     "scripts/extract_rvce_candidates.py",
@@ -83,13 +87,18 @@ def verify_frontend_function_comments() -> tuple[int, list[str]]:
                 declaration = TS_FUNCTION_VARIABLE.match(line)
                 if declaration is None:
                     continue
-                initializer = "\n".join(lines[index : index + 12]).split("=", 1)[1]
+                initializer_lines = [declaration.group(2)]
+                for following in lines[index + 1 : index + 6]:
+                    if re.match(r"^\s*(?:const|let|return)\b", following):
+                        break
+                    initializer_lines.append(following)
+                    if ";" in following:
+                        break
+                initializer = "\n".join(initializer_lines)
                 initializer_head = initializer.lstrip()
-                direct_callable = initializer_head.startswith(("(", "async "))
-                callback_factory = initializer_head.startswith("useCallback(")
-                arrow_at = initializer.find("=>")
-                semicolon_at = initializer.find(";")
-                if not (direct_callable or callback_factory) or arrow_at < 0 or (semicolon_at >= 0 and semicolon_at < arrow_at):
+                direct_callable = re.match(r"(?:async\s*)?\([^)]*\)\s*(?::[^=]+)?\s*=>", initializer_head, re.DOTALL)
+                callback_factory = re.match(r"useCallback\(\s*(?:async\s*)?\([^)]*\)\s*=>", initializer_head, re.DOTALL)
+                if not (direct_callable or callback_factory):
                     continue
             count += 1
             previous = index - 1

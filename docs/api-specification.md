@@ -1,7 +1,7 @@
 # API Specification
 
 **Document ID:** ILR-API-001
-**Version:** 2.2
+**Version:** 2.3
 **Status:** Implementation-complete development baseline
 **Last reviewed:** 2026-11-01
 
@@ -33,7 +33,7 @@ Successful responses use the route-specific JSON schema. Validation and authoriz
 | POST | `/resources/upload` | Yes | Validate and store a private PDF |
 | POST | `/resources/{id}/process` | Yes | Extract text from an owned PDF |
 | GET/POST | `/resources/{id}/mappings` | Yes | Review resource-to-concept mappings |
-| GET/POST | `/progress` | Yes | Read or update private progress |
+| GET/POST | `/progress` | Yes | Read/update private progress; reads include up to 400 days of learner-owned quiz/progress timestamps normalized to UTC for local-calendar streak and activity displays |
 | GET | `/quizzes/{concept_id}` | Yes | Get an owned concept quiz |
 | POST | `/quizzes/{concept_id}/attempts` | Yes | Submit a quiz attempt |
 | GET | `/rankings` | Yes | Read the development leaderboard |

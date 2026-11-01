@@ -1,7 +1,7 @@
 # Requirements Traceability Matrix
 
 **Document ID:** ILR-REQ-001
-**Version:** 2.3
+**Version:** 2.4
 **Status:** Implementation-complete development baseline
 **Last reviewed:** 2026-11-01
 
@@ -28,7 +28,8 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Feasibility checks | Implemented | Scheduler rejects impossible capacity and cyclic graphs |
 | Roadmap explanations | Implemented | Items include transparent prioritization explanations |
 | Quiz attempts | Implemented | Concept quiz endpoint and attempt submission |
-| Progress adaptation | Implemented | Quiz/progress updates modify topic mastery state |
+| Progress adaptation and study activity | Implemented | Quiz/progress updates modify topic mastery; `/progress` returns learner-owned activity timestamps for the live dashboard streak |
+| Live learner dashboard | Implemented | Current date/greeting, active-course count, completion, activity streak, roadmap focus, empty states, and navigation actions use live API/browser data instead of fixed demo values |
 | Account data export and deletion | Implemented | Authenticated export and email-confirmed deletion endpoints plus frontend account screen |
 | Roadmap revision history | Implemented | Generated plans create revision snapshots and supersede prior active plans |
 | Historical exam ranking | Implemented | Historical question records, numbered-text import, concept matching, frequency/difficulty ranking, C++ scorer contract, and benchmark harness |

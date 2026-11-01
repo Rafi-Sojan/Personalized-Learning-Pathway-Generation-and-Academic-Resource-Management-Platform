@@ -1,7 +1,7 @@
 # Frontend Design Specification
 
 **Document ID:** ILR-FE-001
-**Version:** 2.1
+**Version:** 2.2
 **Status:** Implementation-complete development baseline
 **Last reviewed:** 2026-11-01
 
@@ -25,7 +25,7 @@ The frontend is a React, Vite, and TypeScript single-page application. It provid
 
 1. A learner registers or signs in through `Login.tsx`.
 2. The client stores the short-lived access token and sends it as a bearer token.
-3. The dashboard summarizes available course, roadmap, and progress information.
+3. The dashboard summarizes live course, roadmap, and progress data, including a local-calendar study streak derived from recorded progress updates and quiz attempts.
 4. The learner navigates to a course, reviews concepts and prerequisite relationships, and opens resources or quizzes.
 5. The learner requests or reviews a dated study roadmap.
 6. Progress updates are submitted to the authenticated API and reflected in progress views.
@@ -40,6 +40,8 @@ The frontend is a React, Vite, and TypeScript single-page application. It provid
 - User-controlled text shall be rendered as text, not injected as HTML.
 - API contract changes shall update the corresponding service and type definitions together.
 - Loading and empty states shall be represented for screens that depend on remote data.
+- Dashboard counts and activity indicators shall be derived from authenticated API data; demo-only dates, study time, and streak values must not be presented as learner facts.
+- The progress activity chart shall show recorded active days from the last seven local calendar days; it shall not interpolate or invent mastery history.
 
 ## 5. Build and delivery
 
