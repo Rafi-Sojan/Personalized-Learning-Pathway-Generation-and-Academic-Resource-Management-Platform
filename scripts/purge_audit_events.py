@@ -17,6 +17,7 @@ from app.models import AuditEvent  # noqa: E402
 
 
 def main() -> int:
+    """Delete audit rows older than the configured retention interval."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=settings.audit_retention_days)
     db = SessionLocal()
     try:

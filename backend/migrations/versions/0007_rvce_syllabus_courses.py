@@ -11,6 +11,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Create the provenance-aware RVCE syllabus course table and lookup indexes."""
     inspector = sa.inspect(op.get_bind())
     if "rvce_syllabus_courses" in inspector.get_table_names():
         return
@@ -41,6 +42,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Drop RVCE syllabus indexes and the syllabus course table."""
     op.drop_index("ix_rvce_syllabus_courses_verification_status", table_name="rvce_syllabus_courses")
     op.drop_index("ix_rvce_syllabus_courses_course_code", table_name="rvce_syllabus_courses")
     op.drop_index("ix_rvce_syllabus_courses_semester", table_name="rvce_syllabus_courses")

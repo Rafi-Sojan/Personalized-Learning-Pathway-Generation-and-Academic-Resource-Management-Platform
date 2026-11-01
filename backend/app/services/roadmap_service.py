@@ -5,6 +5,7 @@ from app.repositories.in_memory import repository
 
 
 def build_roadmap(days: int = 14) -> list[dict]:
+    """Build a deterministic sample roadmap with one item per requested day."""
     pending = [concept for concept in repository.concepts if concept["status"] != "completed"]
     result = []
     for index, concept in enumerate(pending):

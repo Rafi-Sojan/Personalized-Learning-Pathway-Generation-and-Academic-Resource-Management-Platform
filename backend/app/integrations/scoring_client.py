@@ -7,11 +7,13 @@ from app.core.config import settings
 
 
 def score_concept(difficulty: int, progress: float) -> float:
+    """Score a concept through the native engine when available, otherwise use Python fallback."""
     """Fallback implementation matching the C++ engine's simple scoring contract."""
     return round((difficulty * 20) + max(0, 100 - progress) * 0.6, 2)
 
 
 def rank_concepts(concepts: list[dict]) -> list[dict]:
+    """Attach priority scores to concepts and return them in descending score order."""
     """Use the configured native scorer, falling back to the Python contract."""
     binary = Path(settings.scoring_engine_path)
     if binary.is_file():

@@ -14,6 +14,7 @@ router = APIRouter()
 
 @router.get("", response_model=list[Course])
 def get_courses(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[Course]:
+    """List the authenticated user's courses with progress counts and short-lived caching."""
     cached = get_json(f"courses:{current_user.id}")
     if isinstance(cached, list):
         return [Course(**item) for item in cached]
@@ -25,6 +26,7 @@ def get_courses(current_user: User = Depends(get_current_user), db: Session = De
 
 @router.get("/{course_id}", response_model=Course)
 def get_course(course_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Course:
+    """Return one owned course or a not-found response when it is outside the user's scope."""
     course = db.scalar(select(CourseModel).where(CourseModel.id == course_id, CourseModel.owner_id == current_user.id))
     if course is None:
         raise HTTPException(404, "Course not found")
@@ -33,6 +35,7 @@ def get_course(course_id: str, current_user: User = Depends(get_current_user), d
 
 @router.post("", response_model=Course, status_code=201)
 def create_course(payload: CourseCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Course:
+    """Persist a course for the authenticated user and invalidate their course cache."""
     course = CourseModel(owner_id=current_user.id, **payload.model_dump())
     db.add(course)
     db.commit()
@@ -42,6 +45,7 @@ def create_course(payload: CourseCreate, current_user: User = Depends(get_curren
 
 
 def course_dict(course: CourseModel, db: Session, user_id: str) -> dict:
+    """Build the course response fields from stored data and the owner's progress."""
     concept_count = db.scalar(select(func.count(Concept.id)).where(Concept.course_id == course.id)) or 0
     completed_count = db.scalar(select(func.count(TopicProgress.id)).join(Concept, Concept.id == TopicProgress.concept_id).where(TopicProgress.user_id == user_id, TopicProgress.completed.is_(True), Concept.course_id == course.id)) or 0
     return {
@@ -56,6 +60,7 @@ def course_dict(course: CourseModel, db: Session, user_id: str) -> dict:
 
 @router.post("/{course_id}/syllabus-versions", response_model=SyllabusVersion, status_code=201)
 def create_syllabus_version(course_id: str, payload: SyllabusVersionCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> SyllabusVersion:
+    """Add a syllabus version after confirming that the parent course belongs to the caller."""
     course = db.scalar(select(CourseModel).where(CourseModel.id == course_id, CourseModel.owner_id == current_user.id))
     if course is None:
         raise HTTPException(status_code=404, detail="Course not found")
@@ -68,6 +73,7 @@ def create_syllabus_version(course_id: str, payload: SyllabusVersionCreate, curr
 
 @router.get("/{course_id}/syllabus-versions", response_model=list[SyllabusVersion])
 def list_syllabus_versions(course_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[SyllabusVersion]:
+    """List versions only after verifying ownership of the requested course."""
     if db.scalar(select(CourseModel).where(CourseModel.id == course_id, CourseModel.owner_id == current_user.id)) is None:
         raise HTTPException(status_code=404, detail="Course not found")
     versions = db.scalars(select(SyllabusVersionModel).where(SyllabusVersionModel.course_id == course_id)).all()

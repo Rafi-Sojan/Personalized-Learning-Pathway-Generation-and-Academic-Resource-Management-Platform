@@ -12,6 +12,7 @@ from app.core.config import settings
 
 class StorageService:
     def __init__(self) -> None:
+        """Configure local storage or initialize the optional S3-compatible client."""
         self._s3 = None
         if settings.storage_backend == "s3":
             try:
@@ -21,9 +22,11 @@ class StorageService:
             self._s3 = boto3.client("s3", endpoint_url=settings.storage_endpoint_url or None)
 
     def _key(self, key: str) -> str:
+        """Prefix a logical storage key with the configured private bucket namespace."""
         return f"{settings.storage_prefix.rstrip('/')}/{key.lstrip('/')}"
 
     def put_bytes(self, key: str, data: bytes, content_type: str = "application/octet-stream") -> None:
+        """Persist bytes to private local storage or the configured object bucket."""
         if self._s3 is not None:
             self._s3.put_object(Bucket=settings.storage_bucket, Key=self._key(key), Body=data, ContentType=content_type)
             return
@@ -32,11 +35,13 @@ class StorageService:
         path.write_bytes(data)
 
     def read_bytes(self, key: str) -> bytes:
+        """Read an object from the active storage backend."""
         if self._s3 is not None:
             return self._s3.get_object(Bucket=settings.storage_bucket, Key=self._key(key))["Body"].read()
         return self._local_path(key).read_bytes()
 
     def delete(self, key: str | None) -> None:
+        """Delete an optional object key from the active storage backend."""
         if not key:
             return
         if self._s3 is not None:
@@ -48,6 +53,7 @@ class StorageService:
 
     @contextmanager
     def materialize(self, key: str) -> Iterator[Path]:
+        """Yield a local path for processing and remove temporary S3 downloads afterward."""
         if self._s3 is None:
             path = self._local_path(key)
             yield path
@@ -61,6 +67,7 @@ class StorageService:
             temporary.unlink(missing_ok=True)
 
     def _local_path(self, key: str) -> Path:
+        """Resolve a logical key inside the private upload or processed directory."""
         root = Path(settings.upload_dir).resolve()
         processed_root = Path(settings.processed_dir).resolve()
         relative = Path(key)

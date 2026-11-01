@@ -1,8 +1,10 @@
 def normalize_ocr_text(text: str) -> str:
+    """Normalize line endings, repeated whitespace, and empty OCR lines."""
     return " ".join(text.replace("\u00ad", "").split())
 
 
 def run_pdf_ocr(path: str, max_chars: int) -> str:
+    """OCR pages from a PDF while enforcing a total extracted-character limit."""
     """OCR image-only PDF pages using the optional Tesseract provider."""
     try:
         import fitz

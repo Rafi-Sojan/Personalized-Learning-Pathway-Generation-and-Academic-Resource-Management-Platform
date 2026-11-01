@@ -1,0 +1,28 @@
+# Source Code Documentation Standard
+
+**Document ID:** ILR-CODE-001  
+**Version:** 1.0  
+**Status:** Controlled engineering standard  
+**Owner:** Project maintainer  
+**Last reviewed:** 2026-11-01
+
+## 1. Purpose
+
+This standard defines how function-level intent and non-obvious behavior are recorded in the Intelligent Learning Roadmap source tree. Comments support maintenance and review; they do not replace types, validation, API specifications, or tests.
+
+## 2. Function documentation
+
+- Python application functions, API endpoints, service operations, scripts, and migration entry points use a docstring directly inside the function.
+- TypeScript and TSX exported functions, page components, and non-trivial event handlers use JSDoc immediately above the declaration.
+- C++ public declarations use Doxygen-compatible `///` or `/** ... */` comments in the header. A source comment is added where implementation behavior is not apparent from the contract.
+- State the function's observable purpose and relevant constraints, side effects, authorization, error behavior, or data ownership. Include parameter/return detail when the type signature alone is insufficient.
+- Describe the reason behind a non-obvious branch or invariant at the point where it is enforced. Do not paraphrase an immediately readable statement.
+- Keep comments accurate when behavior changes; comments that conflict with code are defects.
+
+## 3. Repository coverage
+
+All 190 named Python functions in `backend/`, `ml/`, `scripts/`, and `tests/` carry docstrings. `scripts/verify_release.py` parses these source trees and fails the release check if any function loses its docstring. All 64 named TypeScript/TSX declarations in `frontend/src/` have JSDoc, including page/component functions, service calls, hooks, and named event handlers. The two public C++ scoring methods are documented at their header declarations; both CLI and test entry points are commented, and the scorer implementations explain readiness scaling and sorted output. Inline callbacks and JSX event lambdas are described by their owning function unless they have independent behavior that warrants extraction into a named function.
+
+## 4. Review checklist
+
+When a function is added or materially changed, reviewers confirm that its comment explains purpose and any important security, persistence, provenance, retry, lifecycle, or algorithmic constraints. Mechanical accessors and trivial callbacks may use a concise owner-level explanation when separate comments would only repeat the syntax.

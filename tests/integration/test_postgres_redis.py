@@ -9,6 +9,7 @@ pytestmark = pytest.mark.integration
 
 
 def test_postgres_and_redis_connectivity() -> None:
+    """Verify the integration environment can connect to both configured services."""
     if os.getenv("INTEGRATION_TESTS") != "1":
         pytest.skip("Set INTEGRATION_TESTS=1 to run service integration checks")
     database_url = os.environ["DATABASE_URL"]

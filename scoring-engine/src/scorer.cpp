@@ -5,12 +5,14 @@
 namespace scoring {
 
 Score Scorer::score(const ConceptInput& concept) const {
+    // Lower prerequisite readiness scales down the score without hiding the concept.
     const double gap = std::max(0.0, 100.0 - concept.progress);
     const double readiness = concept.prerequisite_ready ? 1.0 : 0.25;
     return {concept.id, (concept.difficulty * 20.0 + gap * 0.6) * readiness};
 }
 
 std::vector<Score> Scorer::rank(std::vector<ConceptInput> concepts) const {
+    // Keep the caller's input isolated because ranking sorts the resulting score list.
     std::vector<Score> scores;
     scores.reserve(concepts.size());
     for (const auto& concept : concepts) scores.push_back(score(concept));

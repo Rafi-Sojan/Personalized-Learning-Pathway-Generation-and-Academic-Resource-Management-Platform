@@ -10,6 +10,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Add processed-object metadata, historical questions, and durable audit events."""
     inspector = sa.inspect(op.get_bind())
     if "processed_key" not in {column["name"] for column in inspector.get_columns("academic_resources")}:
         op.add_column("academic_resources", sa.Column("processed_key", sa.String(length=500), nullable=True))
@@ -45,6 +46,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Remove audit and exam tables and the processed-object metadata column."""
     op.drop_index("ix_audit_events_created_at", table_name="audit_events")
     op.drop_index("ix_audit_events_event_type", table_name="audit_events")
     op.drop_index("ix_audit_events_actor_id", table_name="audit_events")

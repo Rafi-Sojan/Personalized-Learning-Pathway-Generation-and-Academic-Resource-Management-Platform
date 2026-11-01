@@ -15,14 +15,18 @@ if str(ROOT) not in sys.path:
 from ml.preprocessing.rvce_catalog import load_rvce_catalog  # noqa: E402
 
 
-REQUIRED = {"program_code", "scheme_year", "semester", "course_code", "title", "credits", "source_url", "source_checksum", "verification_status"}
+REQUIRED = {"program_code", "scheme_year", "semester", "course_code", "title", "credits", "source_url", "source_checksum", "source_filename", "source_page", "verification_status"}
 
 
 def validate_rows(rows: list[dict[str, Any]]) -> list[str]:
+    """Check identity, catalog scope, status, and page-level source provenance for rows."""
     catalog = load_rvce_catalog()
     programs = {program["code"]: set(program["schemes"]) for program in catalog["program_schemes"]}
     aliases = {alias: program["code"] for program in catalog["program_schemes"] for alias in program.get("aliases", [])}
     common_schemes = set(catalog["common_first_year_schemes"])
+    source_manifest_path = ROOT / "database" / "rvce_source_documents.json"
+    source_manifest = json.loads(source_manifest_path.read_text(encoding="utf-8"))
+    sources = {item["relative_path"]: item for item in source_manifest["documents"]}
     errors: list[str] = []
     seen: set[tuple[str, int, int, str]] = set()
     for index, row in enumerate(rows, start=1):
@@ -34,7 +38,12 @@ def validate_rows(rows: list[dict[str, Any]]) -> list[str]:
         normalized_code = aliases.get(program_code, program_code)
         scheme_year = row["scheme_year"]
         semester = row["semester"]
-        if normalized_code not in programs:
+        if normalized_code == "BE-UNMAPPED":
+            if semester not in (1, 2):
+                errors.append(f"row {index}: BE-UNMAPPED records are limited to semesters 1 and 2")
+            if scheme_year not in common_schemes:
+                errors.append(f"row {index}: unsupported common first-year scheme {scheme_year}")
+        elif normalized_code not in programs:
             errors.append(f"row {index}: unknown RVCE program code {program_code}")
         elif semester in (1, 2):
             if scheme_year not in common_schemes:
@@ -49,6 +58,17 @@ def validate_rows(rows: list[dict[str, Any]]) -> list[str]:
             errors.append(f"row {index}: invalid verification_status")
         if len(str(row["source_checksum"])) != 64:
             errors.append(f"row {index}: source_checksum must be SHA-256")
+        source = sources.get(str(row["source_filename"]))
+        if source is None:
+            errors.append(f"row {index}: source_filename is not in the inventoried RVCE document set")
+        elif source["sha256"].lower() != str(row["source_checksum"]).lower():
+            errors.append(f"row {index}: source_checksum does not match the inventoried PDF")
+        if not isinstance(row["source_page"], int) or row["source_page"] < 1 or (source and row["source_page"] > source["pages"]):
+            errors.append(f"row {index}: source_page must identify a page in the inventoried PDF")
+        if row["source_url"] != source_manifest["source_url"]:
+            errors.append(f"row {index}: source_url must match the official RVCE syllabus index")
+        if not str(row["course_code"]).strip() or not str(row["title"]).strip():
+            errors.append(f"row {index}: course_code and title must not be empty")
         identity = (normalized_code, int(scheme_year), int(semester), str(row["course_code"]).upper())
         if identity in seen:
             errors.append(f"row {index}: duplicate course identity {identity}")
@@ -57,6 +77,7 @@ def validate_rows(rows: list[dict[str, Any]]) -> list[str]:
 
 
 def main() -> int:
+    """Validate a candidate JSON file and return a process status suitable for CI."""
     parser = argparse.ArgumentParser()
     parser.add_argument("records", type=Path, help="JSON array of source-backed RVCE course records")
     args = parser.parse_args()

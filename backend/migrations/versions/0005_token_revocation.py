@@ -10,10 +10,12 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Add the per-user token version used to revoke previously issued access tokens."""
     inspector = sa.inspect(op.get_bind())
     if "token_version" not in {column["name"] for column in inspector.get_columns("users")}:
         op.add_column("users", sa.Column("token_version", sa.Integer(), nullable=False, server_default="0"))
 
 
 def downgrade() -> None:
+    """Remove the token-version column from user records."""
     op.drop_column("users", "token_version")

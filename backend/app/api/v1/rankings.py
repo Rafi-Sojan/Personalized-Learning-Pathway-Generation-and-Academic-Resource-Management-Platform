@@ -12,6 +12,7 @@ router = APIRouter()
 
 @router.get("")
 def get_rankings(_: User = Depends(get_current_user)) -> list[dict]:
+    """Return the development leaderboard visible to authenticated users."""
     return [
         {"rank": 1, "name": "Aarav", "points": 1240},
         {"rank": 2, "name": "Maya", "points": 1110},
@@ -21,6 +22,7 @@ def get_rankings(_: User = Depends(get_current_user)) -> list[dict]:
 
 @router.get("/concepts")
 def get_concept_rankings(course_id: str | None = Query(default=None), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[dict]:
+    """Score owned concepts from difficulty, learner progress, and prerequisite readiness."""
     query = select(Concept).join(Course, Course.id == Concept.course_id).where(Course.owner_id == current_user.id)
     if course_id:
         query = query.where(Concept.course_id == course_id)

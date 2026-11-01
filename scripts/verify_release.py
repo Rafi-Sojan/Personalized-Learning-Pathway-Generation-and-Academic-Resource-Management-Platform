@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import re
 import sys
 from pathlib import Path
@@ -26,10 +27,25 @@ REQUIRED_FILES = (
     "monitoring/alert-rules.yml",
     "monitoring/README.md",
     "database/rvce_catalog.json",
+    "database/rvce_source_documents.json",
     "database/rvce-course-record.schema.json",
     "database/rvce_courses.json",
+    "database/rvce_course_candidates.json",
+    "database/rvce_course_conflicts.json",
+    "backend/app/api/v1/catalog.py",
+    "backend/app/schemas/rvce.py",
+    "frontend/src/pages/RvceCatalog.tsx",
+    "frontend/src/pages/Admin.tsx",
+    "frontend/src/services/rvce.ts",
+    "scripts/extract_rvce_candidates.py",
+    "scripts/import_rvce_candidates.py",
+    "scripts/validate_rvce_courses.py",
+    "docs/implementation-record.md",
+    "docs/code-commenting-standard.md",
     "database/init.sql",
     "backend/migrations/versions/0006_processing_reliability.py",
+    "backend/migrations/versions/0007_rvce_syllabus_courses.py",
+    "backend/migrations/versions/0008_rvce_source_page.py",
 )
 REQUIRED_ENV = (
     "SECRET_KEY=",
@@ -38,9 +54,11 @@ REQUIRED_ENV = (
     "DOCUMENT_RETRY_DELAY_SECONDS=",
     "METRICS_AUTH_TOKEN=",
 )
+DOCUMENTED_PYTHON_ROOTS = ("backend", "ml", "scripts", "tests")
 
 
 def main() -> int:
+    """Check required release artifacts, configuration keys, migration startup, and pinned actions."""
     failures: list[str] = []
     for relative in REQUIRED_FILES:
         if not (ROOT / relative).is_file():
@@ -50,6 +68,17 @@ def main() -> int:
     for key in REQUIRED_ENV:
         if key not in env_text:
             failures.append(f"missing configuration template entry: {key}")
+
+    documented_function_count = 0
+    for relative_root in DOCUMENTED_PYTHON_ROOTS:
+        for source_file in (ROOT / relative_root).rglob("*.py"):
+            relative = source_file.relative_to(ROOT).as_posix()
+            module = ast.parse(source_file.read_text(encoding="utf-8"), filename=relative)
+            for node in ast.walk(module):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    documented_function_count += 1
+                    if ast.get_docstring(node) is None:
+                        failures.append(f"missing function docstring: {relative}:{node.lineno}:{node.name}")
 
     compose_text = (ROOT / "docker-compose.yaml").read_text(encoding="utf-8")
     if "alembic upgrade head" not in compose_text:
@@ -66,7 +95,7 @@ def main() -> int:
         print("Release verification failed:")
         print("\n".join(f"- {failure}" for failure in failures))
         return 1
-    print(f"Release verification passed: {len(REQUIRED_FILES)} controlled artifacts and workflow pins checked.")
+    print(f"Release verification passed: {len(REQUIRED_FILES)} controlled artifacts, {documented_function_count} Python function docstrings, and workflow pins checked.")
     return 0
 
 

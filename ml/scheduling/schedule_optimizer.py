@@ -1,4 +1,5 @@
 def fit_to_daily_budget(items: list[dict], daily_minutes: int = 60) -> list[dict]:
+    """Group ordered study items into day offsets without exceeding the daily budget."""
     result, used, day = [], 0, 0
     for item in items:
         if used + item["minutes"] > daily_minutes:

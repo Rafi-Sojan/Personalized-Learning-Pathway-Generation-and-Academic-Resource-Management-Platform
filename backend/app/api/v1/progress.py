@@ -13,6 +13,7 @@ router = APIRouter()
 
 @router.get("")
 def get_progress(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Summarize concept completion and progress records for the authenticated learner."""
     concepts = db.scalars(select(Concept).join(Course, Course.id == Concept.course_id).where(Course.owner_id == current_user.id)).all()
     updates = db.scalars(select(TopicProgress).where(TopicProgress.user_id == current_user.id)).all()
     completed = sum(1 for item in updates if item.completed)
@@ -21,6 +22,7 @@ def get_progress(current_user: User = Depends(get_current_user), db: Session = D
 
 @router.post("")
 def update_progress(payload: ProgressUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Upsert owned concept progress, synchronize concept status, and clear stale caches."""
     concept = db.scalar(select(Concept).join(Course, Course.id == Concept.course_id).where(Concept.id == payload.concept_id, Course.owner_id == current_user.id))
     if concept is None:
         raise HTTPException(404, "Concept not found")

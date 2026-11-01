@@ -2,14 +2,14 @@
 
 **Project document:** ILR-DOC-001
 **Release status:** Implementation-complete development baseline
-**Documentation version:** 2.1
-**Last reviewed:** 2026-10-28
+**Documentation version:** 2.2
+**Last reviewed:** 2026-11-01
 
 Intelligent Learning Roadmap is a modular learning-support platform that converts course material, learner progress, and concept dependencies into an actionable study plan. It combines a web dashboard, a typed API, explainable learning utilities, and a native scoring engine.
 
 ## 1. Project status
 
-This repository provides an implementation-complete development baseline for an RVCE-focused learning platform with signed authentication, Argon2 password hashing, role-gated administration, ownership-aware SQLAlchemy persistence, secure asynchronous document processing, optional OCR, object-storage abstraction, deadline-aware roadmap generation, historical exam ranking, Redis-backed caching/throttling, privacy workflows, and a native scoring boundary. The RVCE program/scheme catalog is source-provenance validated; subject rows remain pending official document import and academic verification. SQLite is used for a no-service local run; Docker Compose provisions PostgreSQL, Redis, a worker, private storage, and the frontend/backend services.
+This repository provides an implementation-complete development baseline for an RVCE-focused learning platform with signed authentication, Argon2 password hashing, role-gated administration, ownership-aware SQLAlchemy persistence, secure asynchronous document processing, optional OCR, object-storage abstraction, deadline-aware roadmap generation, historical exam ranking, Redis-backed caching/throttling, privacy workflows, and a native scoring boundary. The RVCE program/scheme catalog is source-provenance validated. Eight supplied PDFs have been inventoried; extracted course candidates remain pending academic verification, conflict resolution, and first-year branch mapping. SQLite is used for a no-service local run; Docker Compose provisions PostgreSQL, Redis, a worker, private storage, and the frontend/backend services.
 
 ## 2. Capabilities
 
@@ -23,7 +23,7 @@ This repository provides an implementation-complete development baseline for an 
 - Historical exam question import, concept association, and frequency/difficulty ranking.
 - S3-compatible private storage option with durable audit-event retention and purge tooling.
 - Student, instructor, and administrator roles with protected user-management operations.
-- RVCE program and scheme catalog metadata with normalized program aliases, provenance, and validated course-row handoff.
+- RVCE program and scheme catalog metadata, PDF checksum/page provenance, batch import, administrator academic review, and verified semester enrollment.
 
 ## 3. Repository structure
 
@@ -126,6 +126,8 @@ python scripts/verify_release.py
 python scripts/load_test.py --url http://localhost:8000/health/ready --requests 100 --workers 10
 ```
 
+RVCE course extraction reads the source PDFs in place, verifies their SHA-256 fingerprints, and writes pending-review candidates plus conflicts under `database/`. Set `RVCE_SYLLABUS_DIR` to the supplied syllabus directory and run `make extract-rvce` to regenerate and validate the files. After the backend is running and an administrator is logged in, submit candidates with `python scripts/import_rvce_candidates.py --token <admin-token>`. Imported candidates stay hidden from learners until an administrator approves them. First-year candidates are labeled `BE-UNMAPPED` and remain unavailable for branch enrollment until reviewed.
+
 The same operations are available through the root `Makefile` where the required tools are installed.
 
 ## 7. API overview
@@ -155,6 +157,10 @@ The API is mounted under `/api/v1`:
 | `GET` | `/metrics` | Internal Prometheus-compatible request/status metrics |
 | `GET` | `/catalog/rvce` | Validated RVCE program, scheme, and source metadata |
 | `GET`, `POST` | `/catalog/rvce/courses` | Read verified or add source-backed RVCE course records |
+| `POST` | `/catalog/rvce/courses/import` | Admin bulk import of candidates into pending review |
+| `GET` | `/catalog/rvce/courses/review` | Instructor/admin review queue |
+| `PATCH` | `/catalog/rvce/courses/{id}/verification` | Admin approval, rejection, or return to review |
+| `POST` | `/catalog/rvce/enroll` | Add verified branch-specific semester courses to a learner account |
 
 ## 8. Configuration
 
@@ -187,6 +193,8 @@ The following documents form the formal project record. Statuses and gaps are co
 | [security-acceptance.md](docs/security-acceptance.md) | Independent security testing and approval requirements |
 | [release-acceptance.md](docs/release-acceptance.md) | Evidence-based production release approval template |
 | [rvce-catalog.md](docs/rvce-catalog.md) | RVCE syllabus authority, catalog manifest, and import contract |
+| [implementation-record.md](docs/implementation-record.md) | Formal RVCE ingestion, approval, enrollment, operating, and acceptance record |
+| [code-commenting-standard.md](docs/code-commenting-standard.md) | Function-level documentation requirements and review standard |
 
 The existing `database/diagrams/er-diagram.md` and `scoring-engine/README.md` provide component-specific supporting records.
 

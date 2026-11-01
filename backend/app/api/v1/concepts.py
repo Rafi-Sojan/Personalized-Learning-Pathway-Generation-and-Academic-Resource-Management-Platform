@@ -18,6 +18,7 @@ class PrerequisiteRequest(BaseModel):
 
 @router.get("", response_model=list[Concept])
 def get_concepts(course_id: str | None = Query(default=None), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[Concept]:
+    """List owned concepts and prerequisite edges, using a short-lived user-scoped cache."""
     cache_key = f"concepts:{current_user.id}:{course_id or 'all'}"
     cached = get_json(cache_key)
     if isinstance(cached, list):
@@ -37,6 +38,7 @@ def get_concepts(course_id: str | None = Query(default=None), current_user: User
 
 @router.get("/{concept_id}", response_model=Concept)
 def get_one_concept(concept_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Concept:
+    """Return one owned concept with its prerequisite identifiers."""
     concept = db.scalar(select(ConceptModel).join(Course, Course.id == ConceptModel.course_id).where(ConceptModel.id == concept_id, Course.owner_id == current_user.id))
     if concept is None:
         raise HTTPException(404, "Concept not found")
@@ -46,6 +48,7 @@ def get_one_concept(concept_id: str, current_user: User = Depends(get_current_us
 
 @router.post("/{concept_id}/prerequisites", status_code=201)
 def add_prerequisite(concept_id: str, payload: PrerequisiteRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Create an owned same-course prerequisite edge after rejecting self-links and cycles."""
     concept = db.scalar(select(ConceptModel).join(Course, Course.id == ConceptModel.course_id).where(ConceptModel.id == concept_id, Course.owner_id == current_user.id))
     prerequisite = db.scalar(select(ConceptModel).join(Course, Course.id == ConceptModel.course_id).where(ConceptModel.id == payload.prerequisite_id, Course.owner_id == current_user.id))
     if concept is None or prerequisite is None or concept.course_id != prerequisite.course_id:
@@ -67,9 +70,11 @@ def add_prerequisite(concept_id: str, payload: PrerequisiteRequest, current_user
 
 
 def _has_cycle(graph: dict[str, list[str]]) -> bool:
+    """Detect a directed cycle in the concept-to-prerequisite adjacency map."""
     visiting: set[str] = set()
     visited: set[str] = set()
     def visit(node: str) -> bool:
+        """Track the active DFS path separately from nodes already fully explored."""
         if node in visiting:
             return True
         if node in visited:

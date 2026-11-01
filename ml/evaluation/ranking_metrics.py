@@ -1,8 +1,10 @@
 def hit_rate(recommended: list[str], relevant: set[str], k: int = 5) -> float:
+    """Return one when any relevant item appears in the first k recommendations."""
     return float(bool(set(recommended[:k]) & relevant))
 
 
 def ndcg(recommended: list[str], relevant: set[str], k: int = 5) -> float:
+    """Compute binary-relevance normalized discounted cumulative gain at k."""
     """Compute binary-relevance NDCG for a top-k recommendation list."""
     import math
 

@@ -1,4 +1,5 @@
 def validate_mapping(mapping: dict[str, list[str]]) -> list[str]:
+    """Report blank source concepts and repeated target concepts in a crosswalk."""
     errors = []
     for source, targets in mapping.items():
         if not source.strip():

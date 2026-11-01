@@ -19,6 +19,7 @@ from app.models import Concept, ConceptPrerequisite, Course, Resource, TopicProg
 
 
 def init_database() -> None:
+    """Prepare local storage and development seed data without bypassing production migrations."""
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.processed_dir).mkdir(parents=True, exist_ok=True)
     if settings.environment.lower() == "production":
@@ -75,6 +76,7 @@ app.include_router(router, prefix=settings.api_prefix)
 
 @app.middleware("http")
 async def security_headers(request, call_next):
+    """Attach browser security headers, request correlation, metrics, and access logging."""
     request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
     started = time.perf_counter()
     response = await call_next(request)
@@ -91,11 +93,13 @@ async def security_headers(request, call_next):
 
 @app.get("/health", tags=["system"])
 def health() -> dict[str, str]:
+    """Report process liveness without checking downstream services."""
     return {"status": "ok", "service": "learning-roadmap-api"}
 
 
 @app.get("/health/ready", tags=["system"])
 def readiness() -> dict[str, str]:
+    """Check database connectivity and report Redis fallback availability."""
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
     status = "ready"
@@ -108,6 +112,7 @@ def readiness() -> dict[str, str]:
 
 @app.get("/metrics", include_in_schema=False)
 def metrics_endpoint(request: Request) -> Response:
+    """Expose Prometheus counters only when optional bearer-token protection passes."""
     if settings.metrics_auth_token and request.headers.get("Authorization") != f"Bearer {settings.metrics_auth_token}":
         raise HTTPException(status_code=401, detail="Metrics authentication required")
     return Response(content=metrics.render_prometheus(), media_type="text/plain; version=0.0.4")

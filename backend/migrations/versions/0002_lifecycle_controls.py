@@ -13,6 +13,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Create the study-plan revision history table and its plan lookup index."""
     op.create_table(
         "study_plan_revisions",
         sa.Column("id", sa.String(length=36), primary_key=True),
@@ -26,5 +27,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Remove the study-plan revision index and table."""
     op.drop_index("ix_study_plan_revisions_plan_id", table_name="study_plan_revisions")
     op.drop_table("study_plan_revisions")

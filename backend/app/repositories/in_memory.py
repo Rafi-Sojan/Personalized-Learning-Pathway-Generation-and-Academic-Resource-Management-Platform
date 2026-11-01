@@ -3,6 +3,7 @@ from copy import deepcopy
 
 class InMemoryRepository:
     def __init__(self) -> None:
+        """Seed deterministic local examples used by development service adapters."""
         self.courses = [
             {"id": "course-python", "code": "CS101", "title": "Python Foundations", "description": "Core programming and problem solving.", "progress": 42, "concept_count": 8},
             {"id": "course-data", "code": "DS201", "title": "Data Structures", "description": "Algorithms, complexity, and practical structures.", "progress": 18, "concept_count": 6},
@@ -20,6 +21,7 @@ class InMemoryRepository:
         self.progress: dict[str, dict] = {}
 
     def clone(self, value):
+        """Return an isolated deep copy so callers cannot mutate repository fixtures."""
         return deepcopy(value)
 
 

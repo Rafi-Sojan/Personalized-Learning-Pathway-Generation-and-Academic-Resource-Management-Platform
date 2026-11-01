@@ -9,10 +9,12 @@ from app.db.base import Base
 
 
 def new_id() -> str:
+    """Generate a UUID string for a persisted model identifier."""
     return str(uuid4())
 
 
 def utc_now() -> datetime:
+    """Return the current timezone-aware UTC timestamp."""
     return datetime.now(timezone.utc)
 
 
@@ -63,6 +65,8 @@ class RvceSyllabusCourse(Base):
     outcomes_json: Mapped[str] = mapped_column(Text, default="[]")
     source_url: Mapped[str] = mapped_column(String(1000))
     source_checksum: Mapped[str] = mapped_column(String(64))
+    source_filename: Mapped[str] = mapped_column(String(500), default="")
+    source_page: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     verification_status: Mapped[str] = mapped_column(String(24), default="pending_review", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 

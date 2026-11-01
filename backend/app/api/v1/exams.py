@@ -16,6 +16,7 @@ router = APIRouter()
 
 
 def _course_for_user(course_id: str, user: User, db: Session) -> Course:
+    """Resolve a course the caller owns, allowing instructors and admins broader access."""
     course = db.scalar(select(Course).where(Course.id == course_id, Course.owner_id == user.id))
     if course is None and user.role in {"admin", "instructor"}:
         course = db.get(Course, course_id)
@@ -25,6 +26,7 @@ def _course_for_user(course_id: str, user: User, db: Session) -> Course:
 
 
 def _concept_for_prompt(prompt: str, course_id: str, db: Session) -> tuple[str | None, str]:
+    """Associate a prompt with a same-course concept and return its classifier label."""
     prediction = classify(prompt)
     concepts = db.scalars(select(Concept).where(Concept.course_id == course_id)).all()
     lowered = prompt.lower()
@@ -34,6 +36,7 @@ def _concept_for_prompt(prompt: str, course_id: str, db: Session) -> tuple[str |
 
 @router.post("/questions", response_model=HistoricalExamQuestionResponse, status_code=201)
 def create_question(payload: HistoricalExamQuestionCreate, current_user: User = Depends(require_roles("admin", "instructor")), db: Session = Depends(get_db)) -> HistoricalExamQuestionResponse:
+    """Persist one authorized historical question with an explicit or inferred concept link."""
     _course_for_user(payload.course_id, current_user, db)
     concept_id = payload.concept_id
     if concept_id and db.scalar(select(Concept).where(Concept.id == concept_id, Concept.course_id == payload.course_id)) is None:
@@ -49,6 +52,7 @@ def create_question(payload: HistoricalExamQuestionCreate, current_user: User = 
 
 @router.post("/import", response_model=list[HistoricalExamQuestionResponse], status_code=201)
 def import_questions(payload: HistoricalExamImportRequest, current_user: User = Depends(require_roles("admin", "instructor")), db: Session = Depends(get_db)) -> list[HistoricalExamQuestionResponse]:
+    """Parse and save a historical paper's prompts with best-effort concept associations."""
     _course_for_user(payload.course_id, current_user, db)
     questions = []
     for prompt in parse_questions(payload.text):
@@ -64,6 +68,7 @@ def import_questions(payload: HistoricalExamImportRequest, current_user: User = 
 
 @router.get("/questions", response_model=list[HistoricalExamQuestionResponse])
 def list_questions(course_id: str, current_user: User = Depends(require_roles("admin", "instructor", "student")), db: Session = Depends(get_db)) -> list[HistoricalExamQuestionResponse]:
+    """List question records for a course the caller is authorized to access."""
     _course_for_user(course_id, current_user, db)
     questions = db.scalars(select(HistoricalExamQuestion).where(HistoricalExamQuestion.course_id == course_id).order_by(HistoricalExamQuestion.exam_year.desc(), HistoricalExamQuestion.id)).all()
     return [HistoricalExamQuestionResponse.model_validate(question) for question in questions]
@@ -71,6 +76,7 @@ def list_questions(course_id: str, current_user: User = Depends(require_roles("a
 
 @router.get("/rankings", response_model=list[HistoricalExamRanking])
 def historical_rankings(course_id: str, current_user: User = Depends(require_roles("admin", "instructor", "student")), db: Session = Depends(get_db)) -> list[HistoricalExamRanking]:
+    """Rank concepts by stored historical-question frequency and difficulty evidence."""
     _course_for_user(course_id, current_user, db)
     concepts = {concept.id: concept for concept in db.scalars(select(Concept).where(Concept.course_id == course_id)).all()}
     grouped: dict[str, list[int]] = defaultdict(list)

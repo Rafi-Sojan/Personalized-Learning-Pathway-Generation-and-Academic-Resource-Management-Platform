@@ -2,10 +2,10 @@
 
 **Document ID:** ILR-DOC-001
 **System:** Intelligent Learning Roadmap
-**Version:** 2.1
+**Version:** 2.2
 **Status:** Implementation-complete development baseline
 **Owner:** Project maintainer
-**Last reviewed:** 2026-10-28
+**Last reviewed:** 2026-11-01
 
 ## 1. Purpose
 
@@ -37,6 +37,8 @@ The repository is an implementation-complete development baseline. A production 
 | Security acceptance | ILR-SEC-002 | Independent security testing and approval record |
 | Release acceptance | ILR-REL-002 | Evidence-based production approval template |
 | RVCE syllabus catalog | ILR-RVCE-001 | RVCE source authority, metadata, normalization, and course-row import contract |
+| RVCE implementation record | ILR-IMP-001 | RVCE extraction, validation, import, academic review, enrollment, operations, evidence, and acceptance gaps |
+| Source code documentation standard | ILR-CODE-001 | Function-level comments and code comment review requirements |
 
 ## 3. Status definitions
 

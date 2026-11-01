@@ -2,11 +2,13 @@ import { FormEvent, useState } from 'react'
 import { Compass, LockKeyhole } from 'lucide-react'
 import { login } from '../services/auth'
 
+/** Authenticate the learner and report successful login to the application shell. */
 export function Login({ onSuccess }: { onSuccess: () => void }) {
   const [email, setEmail] = useState('demo@example.com')
   const [password, setPassword] = useState('demo-password')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  /** Submit credentials and expose authentication failures without losing form state. */
   async function submit(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError(null)
     try { await login(email, password); onSuccess() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to sign in') } finally { setBusy(false) }

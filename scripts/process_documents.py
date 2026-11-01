@@ -22,6 +22,7 @@ from app.services.document_processing import process_resource_by_id, recover_sta
 
 
 def process_once() -> int:
+    """Claim and process one eligible document or report that the queue is empty."""
     recover_stale_resources()
     db = SessionLocal()
     try:
@@ -43,6 +44,7 @@ def process_once() -> int:
 
 
 def main() -> int:
+    """Poll the document queue until stopped, recovering stale leases between runs."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--loop", action="store_true")

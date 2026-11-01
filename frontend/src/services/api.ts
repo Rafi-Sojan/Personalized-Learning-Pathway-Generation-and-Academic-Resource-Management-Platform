@@ -1,5 +1,6 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'
 
+/** Send a typed API request with the active bearer token and parse its JSON response. */
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const token = localStorage.getItem('access_token')
   const isMultipart = typeof FormData !== 'undefined' && init?.body instanceof FormData

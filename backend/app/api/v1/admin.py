@@ -13,11 +13,13 @@ router = APIRouter()
 
 @router.get("/users", response_model=list[UserResponse])
 def list_users(_: User = Depends(require_roles("admin")), db: Session = Depends(get_db)) -> list[UserResponse]:
+    """List managed accounts for an administrator without returning credential hashes."""
     return [UserResponse.model_validate(user) for user in db.scalars(select(User).order_by(User.created_at)).all()]
 
 
 @router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_managed_user(payload: ManagedUserCreate, current_user: User = Depends(require_roles("admin")), db: Session = Depends(get_db)) -> UserResponse:
+    """Create an account with an administrator-selected server-side role."""
     email = str(payload.email).lower()
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered")
@@ -31,6 +33,7 @@ def create_managed_user(payload: ManagedUserCreate, current_user: User = Depends
 
 @router.get("/processing")
 def processing_status(_: User = Depends(require_roles("admin")), db: Session = Depends(get_db)) -> dict[str, object]:
+    """Summarize document processing states and the oldest active worker lease."""
     """Expose bounded document-worker state to authorized operators."""
     counts = {
         status: count

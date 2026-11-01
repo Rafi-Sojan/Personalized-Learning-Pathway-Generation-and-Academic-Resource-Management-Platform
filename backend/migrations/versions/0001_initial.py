@@ -15,6 +15,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Create the original mapped application tables that are not introduced later."""
     historical_tables = [
         table for table in Base.metadata.sorted_tables
         if table.name not in {"study_plan_revisions", "resource_concept_mappings", "historical_exam_questions", "audit_events"}
@@ -23,4 +24,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Drop metadata tables created by the initial schema revision."""
     Base.metadata.drop_all(bind=op.get_bind())

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 
+/** Keep remote data, loading state, and request errors synchronized for a mounted view. */
 export function useAsync<T>(loader: () => Promise<T>, fallback: T) {
   const [data, setData] = useState<T>(fallback)
   const [loading, setLoading] = useState(true)

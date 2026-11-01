@@ -5,6 +5,7 @@
 
 #include "scoring/scorer.hpp"
 
+// Run the demonstration scorer or read pipe-delimited concept rows from standard input.
 int main(int argc, char** argv) {
     scoring::Scorer scorer;
     if (argc > 1 && std::string(argv[1]) == "--stdin") {

@@ -17,6 +17,7 @@ router = APIRouter()
 
 @router.post("/login", response_model=LoginResponse)
 def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)) -> LoginResponse:
+    """Authenticate an account and return a short-lived signed access token."""
     enforce_rate_limit(request, login_limiter)
     user = db.scalar(select(UserModel).where(UserModel.email == str(payload.email).lower()))
     if user is None or not verify_password(payload.password, user.password_hash):
@@ -26,6 +27,7 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
 
 @router.post("/register", response_model=LoginResponse, status_code=201)
 def register(payload: RegisterRequest, request: Request, db: Session = Depends(get_db)) -> LoginResponse:
+    """Create a student account after rate limiting and email-uniqueness checks."""
     enforce_rate_limit(request, login_limiter)
     email = str(payload.email).lower()
     if db.scalar(select(UserModel).where(UserModel.email == email)):
@@ -39,11 +41,13 @@ def register(payload: RegisterRequest, request: Request, db: Session = Depends(g
 
 @router.get("/me", response_model=User)
 def me(current_user: UserModel = Depends(get_current_user)) -> User:
+    """Return the identity and role resolved from the current access token."""
     return User.model_validate(current_user)
 
 
 @router.post("/logout", status_code=204)
 def logout(current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)) -> None:
+    """Revoke previously issued tokens by incrementing the account token version."""
     current_user.token_version += 1
     record_event(db, "logout", current_user.id)
     db.commit()
@@ -51,6 +55,7 @@ def logout(current_user: UserModel = Depends(get_current_user), db: Session = De
 
 @router.get("/export")
 def export_account(current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)) -> JSONResponse:
+    """Export the authenticated user's owned learning records as portable JSON."""
     courses = db.scalars(select(Course).where(Course.owner_id == current_user.id)).all()
     course_ids = [course.id for course in courses]
     concepts = db.scalars(select(Concept).where(Concept.course_id.in_(course_ids))).all() if course_ids else []
@@ -75,6 +80,7 @@ def export_account(current_user: UserModel = Depends(get_current_user), db: Sess
 
 @router.post("/delete", status_code=204)
 def delete_account(payload: DeleteAccountRequest, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)) -> None:
+    """Delete the confirmed account's dependent records and private stored files."""
     if str(payload.confirm_email).lower() != current_user.email.lower():
         raise HTTPException(status_code=400, detail="Email confirmation does not match the account")
     course_ids = [item.id for item in db.scalars(select(Course).where(Course.owner_id == current_user.id)).all()]

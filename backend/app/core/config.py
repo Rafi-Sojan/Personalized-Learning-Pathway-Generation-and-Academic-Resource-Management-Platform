@@ -32,6 +32,7 @@ class Settings:
     metrics_auth_token: str = os.getenv("METRICS_AUTH_TOKEN", "")
 
     def __post_init__(self) -> None:
+        """Reject unsafe production secrets, invalid limits, and incomplete storage settings."""
         if self.environment.lower() == "production" and self.secret_key == "development-only-change-me":
             raise ValueError("SECRET_KEY must be explicitly configured in production")
         if self.max_pdf_pages < 1 or self.max_extracted_text_chars < 1:
@@ -47,10 +48,12 @@ class Settings:
 
     @property
     def cors_origins(self) -> list[str]:
+        """Split the configured comma-separated browser origins into trimmed values."""
         return [origin.strip() for origin in self.frontend_origin.split(",") if origin.strip()]
 
     @property
     def max_upload_bytes(self) -> int:
+        """Convert the configured upload limit from mebibytes to bytes."""
         return self.max_upload_size_mb * 1024 * 1024
 
 

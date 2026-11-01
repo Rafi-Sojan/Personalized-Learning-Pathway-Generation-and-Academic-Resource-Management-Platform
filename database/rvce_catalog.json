@@ -10,10 +10,10 @@
   "common_first_year_schemes": [2016, 2018, 2021, 2022, 2025],
   "program_schemes": [
     {"code": "AI", "name": "Artificial Intelligence and Machine Learning", "aliases": ["AIML"], "schemes": [2021, 2022]},
-    {"code": "AS", "name": "Aerospace Engineering", "aliases": [], "schemes": [2016, 2018, 2021, 2022]},
-    {"code": "BT", "name": "Biotechnology", "aliases": [], "schemes": [2016, 2018, 2021, 2022]},
+    {"code": "AS", "name": "Aerospace Engineering", "aliases": [], "schemes": [2016, 2018, 2021, 2022, 2025]},
+    {"code": "BT", "name": "Biotechnology", "aliases": [], "schemes": [2016, 2018, 2021, 2022, 2025]},
     {"code": "CH", "name": "Chemical Engineering", "aliases": [], "schemes": [2016, 2018, 2021, 2022]},
-    {"code": "CV", "name": "Civil Engineering", "aliases": [], "schemes": [2016, 2018, 2021, 2022]},
+    {"code": "CV", "name": "Civil Engineering", "aliases": [], "schemes": [2016, 2018, 2021, 2022, 2025]},
     {"code": "CS", "name": "Computer Science and Engineering", "aliases": ["CSE"], "schemes": [2016, 2018, 2021, 2022]},
     {"code": "CD", "name": "Computer Science and Engineering - Data Science", "aliases": ["CSE-DS"], "schemes": [2022]},
     {"code": "CY", "name": "Computer Science and Engineering - Cyber Security", "aliases": ["CSE-CY"], "schemes": [2022]},

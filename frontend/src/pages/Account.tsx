@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { deleteAccount, exportAccount } from '../services/account'
 import { logout } from '../services/auth'
 
+/** Provide authenticated export, account deletion, and session revocation actions. */
 export function Account() {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  /** Download the authenticated account's JSON export as a local file. */
   async function downloadExport() {
     setError(null)
     try {
@@ -22,6 +24,7 @@ export function Account() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to export account data') }
   }
 
+  /** Confirm deletion through the API and clear the local session after success. */
   async function removeAccount() {
     setError(null)
     setMessage(null)
@@ -32,6 +35,7 @@ export function Account() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to delete account') }
   }
 
+  /** Revoke the current token on the server before returning to login. */
   async function signOut() {
     await logout()
     window.location.assign('/login')

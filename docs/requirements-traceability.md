@@ -1,9 +1,9 @@
 # Requirements Traceability Matrix
 
 **Document ID:** ILR-REQ-001
-**Version:** 2.1
+**Version:** 2.2
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-10-28
+**Last reviewed:** 2026-11-01
 
 This document maps the attached project specification to the current implementation. Statuses are intentionally explicit so the repository does not imply production readiness where a development implementation remains.
 
@@ -71,7 +71,8 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Licensed evaluation corpus | Partial | Deterministic benchmark and threshold gate exist; licensed/de-identified production-quality corpus remains required |
 | Staging load/performance evidence | Partial | Dependency-free load tool and formal evidence procedure exist; deployed staging measurements remain required |
 | RVCE program and scheme catalog | Implemented | Source-provenance manifest, normalized program aliases, validator, and `/catalog/rvce` endpoint |
-| RVCE subject/course syllabus rows | Partial | Versioned persistence, validation, provenance, duplicate prevention, and import API are implemented; official source PDFs and selected cohort scope are still required |
+| RVCE subject/course syllabus rows | Partial | Source-verified extraction and batch import, provenance retention, admin review UI, and branch mapping at approval are implemented; 207 candidates are awaiting academic review and two conflicting rows are quarantined |
+| Formal implementation and source-comment records | Implemented | Controlled implementation record, repository-wide code-comment standard, and release-gate enforcement of Python function docstrings across backend, ML, scripts, and tests |
 
 ## Known development limitations
 

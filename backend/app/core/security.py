@@ -16,14 +16,17 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
+    """Hash a plaintext credential using the configured recommended password scheme."""
     return password_hash.hash(password)
 
 
 def verify_password(password: str, hashed_password: str) -> bool:
+    """Check a plaintext credential against a stored password hash."""
     return password_hash.verify(password, hashed_password)
 
 
 def create_access_token(user_id: str, token_version: int = 0) -> str:
+    """Issue a signed, expiring access token bound to the user's revocation version."""
     expires = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
     return jwt.encode({"sub": user_id, "ver": token_version, "exp": expires}, settings.secret_key, algorithm="HS256")
 
@@ -32,6 +35,7 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
+    """Resolve and validate the bearer token, user record, expiry, and revocation version."""
     if credentials is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
     try:
@@ -52,6 +56,7 @@ def require_roles(*roles: str) -> Callable:
     allowed = set(roles)
 
     def dependency(user: User = Depends(get_current_user)) -> User:
+        """Reject authenticated users whose server-side role is outside the allowlist."""
         if user.role not in allowed:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient role")
         return user

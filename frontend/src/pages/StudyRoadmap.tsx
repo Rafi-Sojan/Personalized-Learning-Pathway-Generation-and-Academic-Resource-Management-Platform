@@ -4,6 +4,7 @@ import { getCourses } from '../services/courses'
 import { generateRoadmap, getRoadmap } from '../services/roadmap'
 import { RoadmapList } from '../components/roadmap/RoadmapList'
 
+/** Collect scheduling constraints and display persisted roadmap items for a course. */
 export function StudyRoadmap() {
   const courses = useAsync(useCallback(() => getCourses(), []), [])
   const initialDate = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10)
@@ -14,6 +15,7 @@ export function StudyRoadmap() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  /** Validate course selection and request a deadline-aware persisted study plan. */
   async function submit(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError(null)
     try {

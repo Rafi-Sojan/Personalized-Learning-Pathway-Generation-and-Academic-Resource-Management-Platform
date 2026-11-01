@@ -1,0 +1,15 @@
+{
+  "institution": "RVCE",
+  "source_url": "https://rvce.edu.in/rvce-scheme-syllabus",
+  "source_folder": "OneDrive/Desktop/Rvce syllabus",
+  "documents": [
+    {"relative_path": "Aerospace Engineering/Second Year/Scheme/2022/dean-II-Year-Aerospace-Engg-Syllabus-2022-Scheme.pdf", "scheme_year": 2022, "program_code": "AS", "semesters": [3, 4], "pages": 71, "bytes": 3188991, "sha256": "0e9b0c9f4f28781df8c7aa8079d1b165bf541a890d2cb7c3f6f7b17a30212089", "status": "source-inventoried"},
+    {"relative_path": "Aerospace Engineering/Second Year/Scheme/2025/AS-II-YEAR-YEAR-SCHEME-SYLLABUS.pdf", "scheme_year": 2025, "program_code": "AS", "semesters": [3, 4], "pages": 91, "bytes": 2796121, "sha256": "64c02d69e8fc0e6554501c0cd58e8dbc9b06dc5a20c249995347d886ce949b76", "status": "source-inventoried"},
+    {"relative_path": "Artificial Intelligence & Machine Learning/Second Year/Scheme/2022/AI-2022.pdf", "scheme_year": 2022, "program_code": "AI", "semesters": [3, 4], "pages": 78, "bytes": 1327401, "sha256": "410006f2fb22d339a7e792b50be0cc0b60327a113e9a61a6cc47bc87ee3b4b86", "status": "source-inventoried"},
+    {"relative_path": "Biotechnology/Second Year/Scheme/2022/BT-2022.pdf", "scheme_year": 2022, "program_code": "BT", "semesters": [3, 4], "pages": 70, "bytes": 1255086, "sha256": "250b5fc6ca2cc84b8b857c92397bd9f5cb6cbf8da4723adca622da298f5003f7", "status": "source-inventoried"},
+    {"relative_path": "Biotechnology/Second Year/Scheme/2025/BT-II-YEAR-SCHEME-SYLLABUS.pdf", "scheme_year": 2025, "program_code": "BT", "semesters": [3, 4], "pages": 83, "bytes": 2798002, "sha256": "804b4e87b05a0806a07212816d76a543f87eaba5b2d44340390388a538a6e255", "status": "source-inventoried"},
+    {"relative_path": "Civil Engineering/Second Year/Scheme/2025/CV-II-year-Scheme-Syllabus-updated-as-on-18-09-2026.pdf", "scheme_year": 2025, "program_code": "CV", "semesters": [3, 4], "pages": 81, "bytes": 2890205, "sha256": "6fe46650cb06cb864f54c6d489e603f3c44428ba66f922bb6a7349eb513039bb", "status": "source-inventoried"},
+    {"relative_path": "First Year/Scheme/2022/I-and-II-Sem-Scheme-and-Syllabus-2022-scheme-2024-Edition.pdf", "scheme_year": 2022, "program_code": "BE-UNMAPPED", "semesters": [1, 2], "pages": 152, "bytes": 8828407, "sha256": "576168671c26e872fbff3115e281778b4883ca0e0fa7c19650a60def77b51096", "status": "source-inventoried"},
+    {"relative_path": "First Year/Scheme/2025/dean-FirstYearSyllabusBook2026.pdf", "scheme_year": 2025, "program_code": "BE-UNMAPPED", "semesters": [1, 2], "pages": 126, "bytes": 3290780, "sha256": "e551d95493d30ca9761b817ddd20ad45d58376d5c12aae7b4afad8fbb225927e", "status": "source-inventoried"}
+  ]
+}

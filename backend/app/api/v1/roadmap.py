@@ -16,6 +16,7 @@ router = APIRouter()
 
 @router.get("", response_model=list[RoadmapItem])
 def get_roadmap(days: int = Query(default=14, ge=1, le=90), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[RoadmapItem]:
+    """Preview a short-horizon roadmap for the learner's first owned course."""
     course = db.scalar(select(Course).where(Course.owner_id == current_user.id))
     if course is None:
         return []
@@ -24,6 +25,7 @@ def get_roadmap(days: int = Query(default=14, ge=1, le=90), current_user: User =
 
 @router.post("/generate", response_model=StudyPlanResponse, status_code=201)
 def generate_roadmap(payload: RoadmapRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> StudyPlanResponse:
+    """Persist a feasible course plan, supersede the previous plan, and snapshot the revision."""
     course = db.scalar(select(Course).where(Course.id == payload.course_id, Course.owner_id == current_user.id))
     if course is None:
         raise HTTPException(status_code=404, detail="Course not found")
@@ -52,6 +54,7 @@ def generate_roadmap(payload: RoadmapRequest, current_user: User = Depends(get_c
 
 @router.get("/history", response_model=list[StudyPlanRevisionResponse])
 def roadmap_history(course_id: str | None = Query(default=None), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[StudyPlanRevisionResponse]:
+    """List the authenticated learner's roadmap revision history, optionally by course."""
     query = select(StudyPlanRevision).join(StudyPlan, StudyPlan.id == StudyPlanRevision.plan_id).where(StudyPlan.user_id == current_user.id)
     if course_id:
         query = query.where(StudyPlan.course_id == course_id)
@@ -60,6 +63,7 @@ def roadmap_history(course_id: str | None = Query(default=None), current_user: U
 
 
 def generate_items(db: Session, user: User, course_id: str, target_date: date, daily_minutes: int, revision_minutes: int = 0) -> list[RoadmapItem]:
+    """Order incomplete concepts by prerequisite readiness and mastery gap within capacity."""
     concepts = db.scalars(select(Concept).where(Concept.course_id == course_id, Concept.status != "completed")).all()
     edges = db.scalars(select(ConceptPrerequisite).join(Concept, Concept.id == ConceptPrerequisite.concept_id).where(Concept.course_id == course_id)).all()
     if _has_cycle({concept.id: [edge.prerequisite_id for edge in edges if edge.concept_id == concept.id] for concept in concepts}):
@@ -74,6 +78,7 @@ def generate_items(db: Session, user: User, course_id: str, target_date: date, d
         if not eligible:
             raise HTTPException(status_code=422, detail="Cannot order concepts because prerequisites contain a cycle")
         def mastery_gap(item: Concept) -> float:
+            """Translate the learner's latest concept score into a remaining mastery gap."""
             item_progress = progress.get(item.id)
             score = item_progress.score if item_progress and item_progress.score is not None else 0.0
             return 100.0 - score
@@ -93,10 +98,12 @@ def generate_items(db: Session, user: User, course_id: str, target_date: date, d
 
 
 def _has_cycle(graph: dict[str, list[str]]) -> bool:
+    """Return whether prerequisite edges contain a directed cycle."""
     visiting: set[str] = set()
     visited: set[str] = set()
 
     def visit(node: str) -> bool:
+        """Detect a back edge while tracking the active and fully explored nodes."""
         if node in visiting:
             return True
         if node in visited:

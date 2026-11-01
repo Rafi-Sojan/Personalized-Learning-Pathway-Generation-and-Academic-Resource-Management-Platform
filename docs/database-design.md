@@ -1,9 +1,9 @@
 # Database Design Specification
 
 **Document ID:** ILR-DB-001
-**Version:** 2.1
+**Version:** 2.2
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-10-28
+**Last reviewed:** 2026-11-01
 
 ## 1. Authority and persistence
 
@@ -25,11 +25,19 @@ Users own courses. Courses own concepts and resources. Prerequisite edges connec
 - Resource mappings shall be unique per resource/concept pair and use explicit proposed, accepted, or rejected states.
 - Resource processing state shall record attempts, bounded error detail, active-start time, next retry time, and successful completion time so worker recovery is auditable.
 - A worker lease that exceeds `DOCUMENT_WORKER_TIMEOUT_SECONDS` shall be reclaimed on the next worker polling cycle and recorded as retryable or terminal failure according to the attempt limit.
+- RVCE syllabus identity is unique by program, scheme year, semester, and course code. Imported rows retain source PDF filename, page, SHA-256 checksum, and a pending, verified, or rejected review state.
+- `BE-UNMAPPED` RVCE first-year rows are excluded from learner catalog and enrollment queries. An administrator must map the record to an RVCE program before approval; duplicate branch identities are rejected.
 
-## 4. File data
+## 4. RVCE syllabus records
+
+`rvce_syllabus_courses` is the source-backed syllabus table. It stores program and scheme identity, semester, course title/code, credit and contact-hour metadata, category, prerequisite/outcome JSON, source URL, source checksum, relative PDF filename, page number, verification state, and creation timestamp. Migration `0007_rvce_syllabus_courses.py` creates the table; `0008_rvce_source_page.py` adds source-page provenance. The source manifest and course-row schema are versioned under `database/`.
+
+Import validation requires the file path and checksum to match the inventoried RVCE source manifest, the page to fall within the recorded PDF page count, and the source URL to equal the official RVCE syllabus index. Academic approval remains a human review action.
+
+## 5. File data
 
 Private uploads are stored under `storage/uploads` using generated UUID filenames. Metadata, checksums, and processing lifecycle fields are stored in `academic_resources`; extracted text is written to `storage/processed` after validated PDF processing. `processed_key` tracks the derived object when S3-compatible storage is enabled. These directories/buckets are not public frontend assets and must use encrypted, access-controlled storage in production.
 
-## 5. Recovery requirements
+## 6. Recovery requirements
 
 Production must define database backup frequency, retention, encryption, restore testing, and recovery objectives. Redis data is non-authoritative and may be rebuilt; database and private file storage are authoritative and must be backed up consistently.

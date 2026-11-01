@@ -13,6 +13,7 @@ from pathlib import Path
 
 
 def main() -> int:
+    """Create a timestamped database backup using the configured database backend."""
     database_url = os.getenv("DATABASE_URL", "")
     if not database_url.startswith("postgresql"):
         raise SystemExit("DATABASE_URL must point to PostgreSQL for a logical backup")

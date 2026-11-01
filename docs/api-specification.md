@@ -1,9 +1,9 @@
 # API Specification
 
 **Document ID:** ILR-API-001
-**Version:** 2.1
+**Version:** 2.2
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-10-28
+**Last reviewed:** 2026-11-01
 
 ## 1. Contract conventions
 
@@ -47,6 +47,12 @@ Successful responses use the route-specific JSON schema. Validation and authoriz
 | GET | `/catalog/rvce` | No | Read validated RVCE program, scheme, and source metadata |
 | GET | `/catalog/rvce/courses` | No | List academically verified RVCE course records with program/scheme/semester filters |
 | POST | `/catalog/rvce/courses` | Instructor/admin | Add a source-backed RVCE course record; only admins can mark it academically verified |
+| POST | `/catalog/rvce/courses/import` | Admin | Bulk import up to 500 source-backed candidates as pending review |
+| GET | `/catalog/rvce/courses/review` | Instructor/admin | List pending RVCE syllabus records for academic review |
+| PATCH | `/catalog/rvce/courses/{id}/verification` | Admin | Approve, reject, or return a record to pending review |
+| POST | `/catalog/rvce/enroll` | Authenticated user | Add academically verified semester courses and initial concepts to the learner's course list |
+
+First-year records whose branch applicability has not been academically mapped use `program_code=BE-UNMAPPED`. They may be imported and reviewed, but the learner listing and enrollment operations only include the selected branch code. An administrator must include a valid `program_code` in the verification request to record the branch mapping and approve such a row; approval without that mapping returns `422`.
 
 ## 3. Authorization rules
 

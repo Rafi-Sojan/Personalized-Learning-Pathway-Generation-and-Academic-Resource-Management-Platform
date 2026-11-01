@@ -7,6 +7,7 @@ import { getCourses } from '../services/courses'
 import { getProgress } from '../services/progress'
 import { getRoadmap } from '../services/roadmap'
 
+/** Combine course, progress, and roadmap summaries into the learner home screen. */
 export function Dashboard() {
   const courses = useAsync(useCallback(() => getCourses(), []), [])
   const progress = useAsync(useCallback(() => getProgress(), []), { completed_concepts: 0, total_concepts: 1, updates: {} })

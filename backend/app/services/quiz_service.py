@@ -2,6 +2,7 @@ from app.repositories.in_memory import repository
 
 
 def quiz_for_concept(concept_id: str) -> list[dict]:
+    """Return the deterministic development quiz prompts for a concept."""
     concept = next((item for item in repository.concepts if item["id"] == concept_id), None)
     if not concept:
         return []

@@ -11,12 +11,14 @@ DEFAULT_CATALOG_PATH = Path(__file__).resolve().parents[1].parent / "database" /
 
 
 def load_rvce_catalog(path: Path = DEFAULT_CATALOG_PATH) -> dict[str, Any]:
+    """Load a JSON RVCE catalog and validate its institutional and document metadata."""
     catalog = json.loads(path.read_text(encoding="utf-8"))
     validate_rvce_catalog(catalog)
     return catalog
 
 
 def validate_rvce_catalog(catalog: dict[str, Any]) -> None:
+    """Reject missing source identity, duplicate programs, or incomplete scheme metadata."""
     institution = catalog.get("institution", {})
     if institution.get("short_name") != "RVCE" or not institution.get("source_url"):
         raise ValueError("RVCE catalog must include institution identity and source provenance")

@@ -12,6 +12,7 @@ from pathlib import Path
 
 
 def main() -> int:
+    """Restore a selected backup into the configured database target."""
     database_url = os.getenv("DATABASE_URL", "")
     if not database_url.startswith("postgresql"):
         raise SystemExit("DATABASE_URL must point to PostgreSQL for a restore")

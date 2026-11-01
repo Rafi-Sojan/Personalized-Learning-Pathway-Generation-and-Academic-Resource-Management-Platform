@@ -14,4 +14,5 @@ class SyllabusRequest(BaseModel):
 
 @router.post("/analyze")
 def analyze_syllabus(payload: SyllabusRequest, _: User = Depends(get_current_user)) -> dict:
+    """Classify syllabus text and return candidate topic-to-concept matches."""
     return map_syllabus(payload.text)

@@ -5,6 +5,7 @@ class RedisClient:
     """Redis client with an in-memory fallback for local development."""
 
     def __init__(self) -> None:
+        """Create a Redis connection when configured and prepare the local fallback store."""
         self._values: dict[str, str] = {}
         self._redis = None
         try:
@@ -16,6 +17,7 @@ class RedisClient:
             self._redis = None
 
     def get(self, key: str) -> str | None:
+        """Read a key from Redis or return its non-expired process-local fallback value."""
         if self._redis is not None:
             try:
                 value = self._redis.get(key)
@@ -25,6 +27,7 @@ class RedisClient:
         return self._values.get(key)
 
     def set(self, key: str, value: str, expire: int | None = None) -> None:
+        """Write a value with an optional expiry, preserving fallback behavior on Redis errors."""
         if self._redis is not None:
             try:
                 self._redis.set(key, value, ex=expire)
@@ -34,6 +37,7 @@ class RedisClient:
         self._values[key] = value
 
     def delete(self, key: str) -> None:
+        """Delete a key from the remote cache and local fallback store."""
         if self._redis is not None:
             try:
                 self._redis.delete(key)
@@ -43,6 +47,7 @@ class RedisClient:
         self._values.pop(key, None)
 
     def increment(self, key: str, expire: int | None = None) -> int:
+        """Atomically increment a key when possible and maintain its configured expiry."""
         if self._redis is not None:
             try:
                 value = int(self._redis.incr(key))

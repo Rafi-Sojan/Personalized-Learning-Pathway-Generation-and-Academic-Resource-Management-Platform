@@ -21,6 +21,7 @@ from ml.evaluation.benchmark import evaluate_cases  # noqa: E402
 
 
 def main() -> int:
+    """Evaluate the supplied learning benchmark and enforce requested metric thresholds."""
     parser = argparse.ArgumentParser()
     parser.add_argument("benchmark", type=Path)
     parser.add_argument("--minimum", action="append", default=[], metavar="METRIC=VALUE", help="Fail unless a reported metric meets the minimum value.")

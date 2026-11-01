@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS rvce_syllabus_courses (
   outcomes_json TEXT NOT NULL DEFAULT '[]',
   source_url TEXT NOT NULL,
   source_checksum TEXT NOT NULL,
+  source_filename TEXT NOT NULL DEFAULT '',
+  source_page INTEGER,
   verification_status TEXT NOT NULL DEFAULT 'pending_review',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (program_code, scheme_year, semester, course_code)

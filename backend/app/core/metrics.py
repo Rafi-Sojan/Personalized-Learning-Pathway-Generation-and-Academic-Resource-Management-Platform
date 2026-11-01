@@ -13,21 +13,25 @@ def normalize_path(path: str) -> str:
 
 class Metrics:
     def __init__(self) -> None:
+        """Create synchronized counters for requests, response codes, and worker outcomes."""
         self._lock = Lock()
         self.requests = Counter()
         self.statuses = Counter()
         self.worker = Counter()
 
     def observe_request(self, method: str, path: str, status_code: int) -> None:
+        """Record a request using a normalized path to bound metric-label cardinality."""
         with self._lock:
             self.requests[f'{method}|{normalize_path(path)}'] += 1
             self.statuses[str(status_code)] += 1
 
     def observe_worker(self, outcome: str) -> None:
+        """Increment the counter for one document-worker outcome."""
         with self._lock:
             self.worker[outcome] += 1
 
     def render_prometheus(self) -> str:
+        """Render a consistent Prometheus text snapshot of all process-local counters."""
         with self._lock:
             lines = ["# HELP roadmap_http_requests_total Total HTTP requests.", "# TYPE roadmap_http_requests_total counter"]
             lines.extend(f'roadmap_http_requests_total{{method="{method}",path="{path}"}} {count}' for (method, path), count in self.requests.items())

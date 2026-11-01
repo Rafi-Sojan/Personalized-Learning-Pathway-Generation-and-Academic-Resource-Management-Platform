@@ -3,6 +3,7 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'rec
 import { useAsync } from '../hooks/useAsync'
 import { getProgress } from '../services/progress'
 
+/** Summarize learner completion and visualize the current weekly mastery trend. */
 export function Progress() {
   const { data, loading } = useAsync(useCallback(() => getProgress(), []), { completed_concepts: 0, total_concepts: 1, updates: {} })
   const percent = Math.round((data.completed_concepts / Math.max(data.total_concepts, 1)) * 100)

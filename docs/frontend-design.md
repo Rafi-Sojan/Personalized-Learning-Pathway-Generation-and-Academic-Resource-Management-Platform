@@ -1,9 +1,9 @@
 # Frontend Design Specification
 
 **Document ID:** ILR-FE-001
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-10-28
+**Last reviewed:** 2026-11-01
 
 ## 1. Scope
 
@@ -30,7 +30,7 @@ The frontend is a React, Vite, and TypeScript single-page application. It provid
 5. The learner requests or reviews a dated study roadmap.
 6. Progress updates are submitted to the authenticated API and reflected in progress views.
 7. Instructors can import historical exam questions and review document/resource mappings.
-8. Administrators can provision users with server-enforced roles.
+8. Administrators can provision users with server-enforced roles and review RVCE syllabus candidates with their source provenance. A first-year `BE-UNMAPPED` candidate requires an RVCE program mapping before approval.
 
 ## 4. Client behavior requirements
 

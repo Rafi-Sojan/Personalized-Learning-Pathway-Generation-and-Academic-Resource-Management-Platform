@@ -12,6 +12,7 @@ router = APIRouter()
 
 @router.get("/{concept_id}", response_model=list[QuizQuestion])
 def get_quiz(concept_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[QuizQuestion]:
+    """Return the development quiz for a concept owned by the authenticated learner."""
     concept = db.scalar(select(Concept).join(Course, Course.id == Concept.course_id).where(Concept.id == concept_id, Course.owner_id == current_user.id))
     if concept is None:
         raise HTTPException(status_code=404, detail="Concept not found")
@@ -20,6 +21,7 @@ def get_quiz(concept_id: str, current_user: User = Depends(get_current_user), db
 
 @router.post("/{concept_id}/attempts", response_model=QuizAttemptResponse, status_code=201)
 def submit_attempt(concept_id: str, payload: QuizAttemptRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> QuizAttemptResponse:
+    """Record an answer and update the learner's score, completion, and concept status."""
     concept = db.scalar(select(Concept).join(Course, Course.id == Concept.course_id).where(Concept.id == concept_id, Course.owner_id == current_user.id))
     if concept is None:
         raise HTTPException(status_code=404, detail="Concept not found")

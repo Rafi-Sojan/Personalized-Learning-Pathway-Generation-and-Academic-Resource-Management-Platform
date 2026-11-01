@@ -13,6 +13,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Create uniquely keyed resource-to-concept mapping review records."""
     op.create_table(
         "resource_concept_mappings",
         sa.Column("id", sa.String(length=36), primary_key=True),
@@ -30,6 +31,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Remove resource mapping indexes and the mapping table."""
     op.drop_index("ix_resource_concept_mappings_concept_id", table_name="resource_concept_mappings")
     op.drop_index("ix_resource_concept_mappings_resource_id", table_name="resource_concept_mappings")
     op.drop_table("resource_concept_mappings")

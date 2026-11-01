@@ -7,6 +7,10 @@ on:
       - 'backend/**'
       - 'ml/**'
       - 'tests/**'
+      - 'database/rvce*.json'
+      - 'database/rvce-course-record.schema.json'
+      - 'docs/code-commenting-standard.md'
+      - 'docs/implementation-record.md'
       - 'scripts/**'
       - '.github/workflows/backend-tests.yml'
   pull_request:
@@ -14,6 +18,10 @@ on:
       - 'backend/**'
       - 'ml/**'
       - 'tests/**'
+      - 'database/rvce*.json'
+      - 'database/rvce-course-record.schema.json'
+      - 'docs/code-commenting-standard.md'
+      - 'docs/implementation-record.md'
       - 'scripts/**'
       - '.github/workflows/backend-tests.yml'
   workflow_dispatch:
@@ -51,6 +59,12 @@ jobs:
 
       - name: Run mypy checks
         run: python -m mypy backend/app --ignore-missing-imports
+
+      - name: Validate RVCE course candidates
+        run: python scripts/validate_rvce_courses.py database/rvce_course_candidates.json
+
+      - name: Verify controlled release artifacts
+        run: python scripts/verify_release.py
 
       - name: Audit Python dependencies
         run: |

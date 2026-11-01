@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { submitQuizAttempt } from '../services/quizzes'
 
+/** Present a concept check and reflect the persisted attempt result to the learner. */
 export function Quizzes() {
   const [answer, setAnswer] = useState<number | null>(null)
   const [result, setResult] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  /** Submit the selected answer and show the resulting progress update. */
   async function submit() {
     if (answer === null) return
     setBusy(true)

@@ -3,6 +3,7 @@ import { getCourses } from '../services/courses'
 import { getExamQuestions, getExamRankings, importExamQuestions } from '../services/exams'
 import type { Course, HistoricalQuestion, HistoricalRanking } from '../types'
 
+/** Import historical papers and show question coverage and concept rankings. */
 export function Exams() {
   const [courses, setCourses] = useState<Course[]>([])
   const [courseId, setCourseId] = useState('')
@@ -14,6 +15,7 @@ export function Exams() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  /** Refresh question and ranking data together for the currently selected course. */
   const refresh = useCallback(async (selected: string) => {
     if (!selected) return
     try { const [loadedQuestions, loadedRankings] = await Promise.all([getExamQuestions(selected), getExamRankings(selected)]); setQuestions(loadedQuestions); setRankings(loadedRankings) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to load exam data') }
@@ -22,6 +24,7 @@ export function Exams() {
   useEffect(() => { getCourses().then((items) => { setCourses(items); if (items[0]) setCourseId(items[0].id) }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to load courses')) }, [])
   useEffect(() => { void refresh(courseId) }, [courseId, refresh])
 
+  /** Submit the paper metadata and text, then refresh the selected course's evidence. */
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setError(null); setMessage(null)
     try { await importExamQuestions({ course_id: courseId, source, exam_year: Number(year), text }); setMessage('Question paper imported.'); setText(''); await refresh(courseId) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to import questions') }

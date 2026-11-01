@@ -11,6 +11,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Add retry, lease, failure, and completion metadata to document resources."""
     inspector = sa.inspect(op.get_bind())
     columns = {column["name"] for column in inspector.get_columns("academic_resources")}
     additions = (
@@ -26,5 +27,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Remove the document-processing lifecycle columns added by this revision."""
     for name in ("processed_at", "processing_next_attempt_at", "processing_started_at", "processing_error", "processing_attempts"):
         op.drop_column("academic_resources", name)

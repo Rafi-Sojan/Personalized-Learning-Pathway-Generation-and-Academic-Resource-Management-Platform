@@ -16,6 +16,8 @@ class RvceSyllabusCourseCreate(BaseModel):
     outcomes: list[str] = Field(default_factory=list)
     source_url: HttpUrl
     source_checksum: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
+    source_filename: str = Field(min_length=1, max_length=500)
+    source_page: int = Field(ge=1)
     verification_status: str = Field(default="pending_review", pattern="^(pending_review|academic_verified|rejected)$")
 
 
@@ -34,5 +36,19 @@ class RvceSyllabusCourseResponse(BaseModel):
     outcomes: list[str]
     source_url: str
     source_checksum: str
+    source_filename: str
+    source_page: int | None
     verification_status: str
     created_at: datetime
+
+
+class RvceEnrollmentRequest(BaseModel):
+    program_code: str = Field(min_length=2, max_length=20)
+    scheme_year: int = Field(ge=2016, le=2100)
+    semester: int = Field(ge=1, le=8)
+
+
+class RvceEnrollmentResponse(BaseModel):
+    created: int
+    existing: int
+    course_ids: list[str]

@@ -4,6 +4,7 @@ from app.main import app
 
 
 def test_login_and_progress_flow() -> None:
+    """Verify the registered learner can authenticate and persist concept progress."""
     client = TestClient(app)
     login = client.post("/api/v1/auth/login", json={"email": "demo@example.com", "password": "demo-password"})
     assert login.status_code == 200

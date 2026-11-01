@@ -10,21 +10,25 @@ client = TestClient(app)
 
 
 def auth_headers() -> dict[str, str]:
+    """Register and authenticate a test student, returning bearer authorization headers."""
     response = client.post("/api/v1/auth/login", json={"email": "demo@example.com", "password": "demo-password"})
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
 def test_health() -> None:
+    """Check the liveness endpoint reports the API service identity."""
     assert client.get("/health").json()["status"] == "ok"
 
 
 def test_private_routes_require_authentication() -> None:
+    """Ensure learner-owned API routes reject requests without a valid token."""
     assert client.get("/api/v1/courses").status_code == 401
     assert client.get("/api/v1/progress").status_code == 401
     assert client.post("/api/v1/auth/login", json={"email": "demo@example.com", "password": "wrong-password"}).status_code == 401
 
 
 def test_logout_revokes_existing_token_and_metrics_are_exposed() -> None:
+    """Ensure logout invalidates the current token and metrics remain scrapeable."""
     headers = auth_headers()
     assert client.get("/api/v1/auth/me", headers=headers).status_code == 200
     assert client.post("/api/v1/auth/logout", headers=headers).status_code == 204
@@ -35,6 +39,7 @@ def test_logout_revokes_existing_token_and_metrics_are_exposed() -> None:
 
 
 def test_courses_and_roadmap() -> None:
+    """Exercise owned course listing and authenticated roadmap generation."""
     headers = auth_headers()
     assert client.get("/api/v1/courses", headers=headers).status_code == 200
     roadmap = client.get("/api/v1/roadmap", headers=headers).json()
@@ -42,11 +47,13 @@ def test_courses_and_roadmap() -> None:
 
 
 def test_syllabus_analysis() -> None:
+    """Check syllabus text analysis returns extracted topic mappings."""
     response = client.post("/api/v1/syllabus/analyze", headers=auth_headers(), json={"text": "# Variables\n- Functions"})
     assert response.json()["count"] == 2
 
 
 def test_account_export_and_roadmap_history() -> None:
+    """Check account export and persisted roadmap revision history responses."""
     headers = auth_headers()
     exported = client.get("/api/v1/auth/export", headers=headers)
     assert exported.status_code == 200
@@ -60,12 +67,14 @@ def test_account_export_and_roadmap_history() -> None:
 
 
 def test_upload_rejects_pdf_with_invalid_magic_bytes() -> None:
+    """Reject uploads whose contents do not begin with the PDF file signature."""
     course_id = client.get("/api/v1/courses", headers=auth_headers()).json()[0]["id"]
     response = client.post("/api/v1/resources/upload", headers=auth_headers(), params={"course_id": course_id}, files={"file": ("document.pdf", b"not-a-pdf", "application/pdf")})
     assert response.status_code == 415
 
 
 def instructor_headers() -> dict[str, str]:
+    """Create and authenticate an instructor for role-protected endpoint checks."""
     db = SessionLocal()
     try:
         user = db.scalar(select(UserModel).where(UserModel.email == "exam-instructor@example.com"))
@@ -82,6 +91,7 @@ def instructor_headers() -> dict[str, str]:
 
 
 def test_roles_protect_admin_and_exam_import_is_rankable() -> None:
+    """Check role boundaries and the historical-question import-to-ranking flow."""
     student = auth_headers()
     assert client.get("/api/v1/admin/users", headers=student).status_code == 403
     course_id = client.get("/api/v1/courses", headers=student).json()[0]["id"]
@@ -92,6 +102,7 @@ def test_roles_protect_admin_and_exam_import_is_rankable() -> None:
 
 
 def test_admin_can_read_processing_queue_summary() -> None:
+    """Verify an administrator can read worker queue status and other roles cannot."""
     db = SessionLocal()
     try:
         user = db.scalar(select(UserModel).where(UserModel.email == "processing-admin@example.com"))

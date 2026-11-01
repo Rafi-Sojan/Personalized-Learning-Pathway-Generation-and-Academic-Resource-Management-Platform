@@ -20,6 +20,7 @@ router = APIRouter()
 
 @router.get("", response_model=list[Resource])
 def get_resources(concept_id: str | None = Query(default=None), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[Resource]:
+    """List public and caller-owned resources, optionally filtered by concept."""
     query = select(ResourceModel).join(Course, Course.id == ResourceModel.course_id, isouter=True).where((ResourceModel.course_id.is_(None)) | (Course.owner_id == current_user.id))
     if concept_id:
         query = query.where(ResourceModel.concept_id == concept_id)
@@ -28,6 +29,7 @@ def get_resources(concept_id: str | None = Query(default=None), current_user: Us
 
 @router.post("/upload", response_model=Resource, status_code=201)
 async def upload_resource(request: Request, file: UploadFile = File(...), course_id: str = Query(...), concept_id: str | None = None, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Resource:
+    """Validate and store a bounded private PDF associated with an owned course."""
     enforce_rate_limit(request, expensive_limiter)
     if file.content_type != "application/pdf" or Path(file.filename or "").suffix.lower() != ".pdf":
         raise HTTPException(status_code=415, detail="Only PDF uploads are supported")
@@ -53,6 +55,7 @@ async def upload_resource(request: Request, file: UploadFile = File(...), course
 
 @router.post("/{resource_id}/process", response_model=Resource)
 def process_resource(resource_id: str, background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Resource:
+    """Reset an owned resource's processing lifecycle and enqueue background extraction."""
     resource = db.scalar(select(ResourceModel).join(Course, Course.id == ResourceModel.course_id, isouter=True).where(ResourceModel.id == resource_id, (ResourceModel.course_id.is_(None)) | (Course.owner_id == current_user.id)))
     if resource is None:
         raise HTTPException(status_code=404, detail="Resource not found")
@@ -73,11 +76,13 @@ def process_resource(resource_id: str, background_tasks: BackgroundTasks, curren
 
 
 def _process_resource_in_background(resource_id: str) -> None:
+    """Run the durable document worker for the resource after the HTTP response."""
     process_resource_by_id(resource_id)
 
 
 @router.get("/{resource_id}/mappings", response_model=list[ResourceMappingResponse])
 def get_resource_mappings(resource_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[ResourceMappingResponse]:
+    """List concept mappings after confirming access to the associated resource."""
     resource = db.scalar(select(ResourceModel).join(Course, Course.id == ResourceModel.course_id, isouter=True).where(ResourceModel.id == resource_id, (ResourceModel.course_id.is_(None)) | (Course.owner_id == current_user.id)))
     if resource is None:
         raise HTTPException(status_code=404, detail="Resource not found")
@@ -87,6 +92,7 @@ def get_resource_mappings(resource_id: str, current_user: User = Depends(get_cur
 
 @router.post("/{resource_id}/mappings", response_model=ResourceMappingResponse, status_code=201)
 def create_resource_mapping(resource_id: str, payload: ResourceMappingRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ResourceMappingResponse:
+    """Create or review a resource-to-owned-concept mapping and record reviewer state."""
     resource = db.scalar(select(ResourceModel).join(Course, Course.id == ResourceModel.course_id, isouter=True).where(ResourceModel.id == resource_id, (ResourceModel.course_id.is_(None)) | (Course.owner_id == current_user.id)))
     if resource is None:
         raise HTTPException(status_code=404, detail="Resource not found")

@@ -9,6 +9,7 @@ redis_cache = RedisClient()
 
 
 def get_json(key: str) -> object | None:
+    """Read and decode a cached JSON value, returning no value on cache failure or miss."""
     value = redis_cache.get(key)
     if value is None:
         return None
@@ -20,10 +21,12 @@ def get_json(key: str) -> object | None:
 
 
 def set_json(key: str, value: object, expire: int = 60) -> None:
+    """Serialize and store a cache value with a bounded lifetime."""
     redis_cache.set(key, json.dumps(value, default=str, sort_keys=True), expire=expire)
 
 
 def invalidate_prefix(prefix: str) -> None:
+    """Remove cache entries associated with a write-invalidated key prefix."""
     # Redis key scans are deliberately optional; local fallback values are cleared by exact keys.
     client = getattr(redis_cache, "_redis", None)
     if client is not None:
@@ -32,4 +35,5 @@ def invalidate_prefix(prefix: str) -> None:
 
 
 def cached(func: Callable[..., T]) -> Callable[..., T]:
+    """Wrap a JSON-returning function with a best-effort cache and transparent fallback."""
     return lru_cache(maxsize=128)(func)

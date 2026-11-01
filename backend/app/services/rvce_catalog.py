@@ -9,6 +9,7 @@ from ml.preprocessing.rvce_catalog import load_rvce_catalog
 
 @lru_cache(maxsize=1)
 def get_rvce_catalog() -> dict[str, Any]:
+    """Load the repository's validated RVCE manifest from supported package layouts."""
     service_path = Path(__file__).resolve()
     candidates = (
         service_path.parents[3] / "database" / "rvce_catalog.json",

@@ -9,6 +9,7 @@ from urllib.request import Request, urlopen
 
 
 def request_once(url: str) -> tuple[bool, float]:
+    """Make one readiness request and return success with elapsed time in seconds."""
     started = time.perf_counter()
     try:
         request = Request(url, headers={"Accept": "application/json"})
@@ -20,6 +21,7 @@ def request_once(url: str) -> tuple[bool, float]:
 
 
 def main() -> int:
+    """Run bounded concurrent readiness requests and summarize latency and failures."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", default="http://localhost:8000/health")
     parser.add_argument("--requests", type=int, default=50)

@@ -8,6 +8,7 @@ from app.core.config import settings
 
 class RateLimiter:
     def __init__(self, limit: int = 60, window_seconds: int = 60) -> None:
+        """Configure the request limit and fixed-window duration for this limiter."""
         self.limit = limit
         self.window_seconds = window_seconds
         self._requests: dict[str, list[float]] = defaultdict(list)
@@ -21,6 +22,7 @@ class RateLimiter:
             self._redis = None
 
     def allow(self, key: str) -> bool:
+        """Consume one request for a key and report whether it remains within quota."""
         if self._redis is not None:
             try:
                 redis_key = f"roadmap:rate:{id(self)}:{key}"
@@ -44,6 +46,7 @@ expensive_limiter = RateLimiter(limit=30, window_seconds=60)
 
 
 def enforce_rate_limit(request: Request, limiter: RateLimiter) -> None:
+    """Raise HTTP 429 when the caller exceeds the selected limiter's quota."""
     client = request.client.host if request.client else "unknown"
     if not limiter.allow(client):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many requests")

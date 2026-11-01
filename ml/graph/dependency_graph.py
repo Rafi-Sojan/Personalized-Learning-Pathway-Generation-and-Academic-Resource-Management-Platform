@@ -2,6 +2,7 @@ from collections import defaultdict, deque
 
 
 def topological_order(edges: dict[str, list[str]]) -> list[str]:
+    """Return prerequisite-first order or raise when the dependency graph is cyclic."""
     incoming = defaultdict(int)
     for node, prerequisites in edges.items():
         incoming.setdefault(node, 0)

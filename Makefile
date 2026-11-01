@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: install backend frontend test quality security cpp compose-up compose-down migrate evaluate validate-rvce release-verify load-test clean
+.PHONY: install backend frontend test quality security cpp compose-up compose-down migrate evaluate validate-rvce extract-rvce release-verify load-test clean
 
 install:
 	$(PYTHON) -m pip install -r backend/requirements.txt -r ml/requirements.txt
@@ -39,6 +39,10 @@ evaluate:
 
 validate-rvce:
 	$(PYTHON) scripts/validate_rvce_courses.py database/rvce_courses.json
+
+extract-rvce:
+	$(PYTHON) scripts/extract_rvce_candidates.py --source-root "$(RVCE_SYLLABUS_DIR)"
+	$(PYTHON) scripts/validate_rvce_courses.py database/rvce_course_candidates.json
 
 release-verify:
 	$(PYTHON) scripts/verify_release.py
