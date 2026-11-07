@@ -5,6 +5,13 @@ export type Course = {
   description: string
   progress: number
   concept_count: number
+  program_code: string | null
+  scheme_year: number | null
+  semester: number | null
+  origin: 'personal' | 'rvce_catalog'
+  catalog_course_id: string | null
+  syllabus_source_count: number
+  syllabus_status: string
 }
 
 export type Concept = {

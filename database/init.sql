@@ -13,15 +13,6 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS courses (
-  id TEXT PRIMARY KEY,
-  owner_id TEXT NOT NULL REFERENCES users(id),
-  code TEXT NOT NULL,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL DEFAULT '',
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE TABLE IF NOT EXISTS rvce_syllabus_courses (
   id TEXT PRIMARY KEY,
   program_code TEXT NOT NULL,
@@ -41,6 +32,22 @@ CREATE TABLE IF NOT EXISTS rvce_syllabus_courses (
   verification_status TEXT NOT NULL DEFAULT 'pending_review',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (program_code, scheme_year, semester, course_code)
+);
+
+CREATE TABLE IF NOT EXISTS courses (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES users(id),
+  code TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  program_code TEXT,
+  scheme_year INTEGER,
+  semester INTEGER CHECK (semester BETWEEN 1 AND 8),
+  origin TEXT NOT NULL DEFAULT 'personal',
+  catalog_course_id TEXT REFERENCES rvce_syllabus_courses(id),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (owner_id, program_code, scheme_year, semester, code),
+  UNIQUE (owner_id, catalog_course_id)
 );
 
 -- These nullable provenance links form a cycle. SQLite permits forward
@@ -213,6 +220,9 @@ CREATE TABLE IF NOT EXISTS study_plan_revisions (
 CREATE UNIQUE INDEX IF NOT EXISTS ix_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS ix_courses_owner_id ON courses(owner_id);
 CREATE INDEX IF NOT EXISTS ix_courses_code ON courses(code);
+CREATE INDEX IF NOT EXISTS ix_courses_program_code ON courses(program_code);
+CREATE INDEX IF NOT EXISTS ix_courses_origin ON courses(origin);
+CREATE INDEX IF NOT EXISTS ix_courses_catalog_course_id ON courses(catalog_course_id);
 CREATE INDEX IF NOT EXISTS ix_rvce_syllabus_courses_program_code ON rvce_syllabus_courses(program_code);
 CREATE INDEX IF NOT EXISTS ix_rvce_syllabus_courses_scheme_year ON rvce_syllabus_courses(scheme_year);
 CREATE INDEX IF NOT EXISTS ix_rvce_syllabus_courses_semester ON rvce_syllabus_courses(semester);

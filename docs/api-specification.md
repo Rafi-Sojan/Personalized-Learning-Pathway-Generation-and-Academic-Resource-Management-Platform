@@ -1,7 +1,7 @@
 # API Specification
 
 **Document ID:** ILR-API-001
-**Version:** 2.8
+**Version:** 2.9
 **Status:** Implementation-complete development baseline
 **Last reviewed:** 2026-11-07
 
@@ -23,7 +23,8 @@ Successful responses use the route-specific JSON schema. Validation and authoriz
 | POST | `/auth/logout` | Yes | Revoke all issued tokens for the authenticated user |
 | GET | `/auth/export` | Yes | Export the authenticated user's profile, owned academic provenance, learning records, plans/revisions, review records, and audit events |
 | POST | `/auth/delete` | Yes | Permanently delete the authenticated user's dependent database rows and private files after email confirmation |
-| GET/POST | `/courses` | Yes | List or create owned courses |
+| GET | `/courses` | Yes | List owned subject workspaces with academic scope, origin, mapped-topic count, and latest syllabus status |
+| POST | `/courses` | Yes | Create a personal subject workspace in an optional validated RVCE branch/scheme/semester scope |
 | GET | `/concepts?course_id={id}&syllabus_only={bool}` | Yes | List owned concepts, hierarchy, review state, and prerequisites; syllabus-only output omits rejected current topics |
 | POST | `/syllabus/analyze` | Yes | Extract bounded topic names plus additive unit/page metadata when present |
 | GET | `/syllabus/sources?course_id={id}` | Yes | List stored syllabus PDF copies for an owned course |
@@ -63,6 +64,12 @@ Successful responses use the route-specific JSON schema. Validation and authoriz
 | PATCH | `/catalog/rvce/courses/{id}/verification` | Admin | Approve, reject, or return a record to pending review |
 | POST | `/catalog/rvce/enroll` | Authenticated user | Add academically verified semester subjects; topics are created only from a stored syllabus copy |
 
+### 2.1 Subject-workspace contract
+
+`POST /courses` accepts `code`, `title`, optional `description`, and an all-or-none academic scope of `program_code`, `scheme_year`, and `semester`. Program aliases are normalized through the controlled RVCE manifest. The scheme must be listed for the selected branch, or in the common first-year scheme list for semesters 1 and 2. Unsupported combinations return `422`; a duplicate code in the same owner/scope returns `409`.
+
+The endpoint creates `origin=personal` and never creates or approves an `rvce_syllabus_courses` row. Course responses add `program_code`, `scheme_year`, `semester`, `origin`, optional `catalog_course_id`, `syllabus_source_count`, and latest `syllabus_status`. Existing unscoped courses remain readable for compatibility. `POST /catalog/rvce/enroll` is the separate path that materializes academically verified rows with `origin=rvce_catalog` and their source catalog identifier. If an exact personal branch/scheme/semester/course-code workspace already exists, enrollment links and promotes that workspace in place, preserving its private notes, syllabus copies, and derived data instead of creating a duplicate.
+
 First-year records whose branch applicability has not been academically mapped use `program_code=BE-UNMAPPED`. They may be imported and reviewed, but the learner listing and enrollment operations only include the selected branch code. An administrator must include a valid `program_code` in the verification request to record the branch mapping and approve such a row; approval without that mapping returns `422`.
 
 ## 3. Authorization rules
@@ -71,7 +78,7 @@ The authenticated user ID is obtained from the verified token and applied server
 
 ## 4. Resource processing contract
 
-Upload requests must identify a PDF and remain below the configured size limit. The server generates the storage filename, records a checksum, and writes extracted text to private processed storage. Processing moves through `uploaded`, `queued`, `processing`, `retryable`, `processed`, or terminal `failed` states. The worker applies the configured attempt, delay, and lease-timeout limits; stale `processing` leases are recovered before the next polling cycle. Manual processing requests reset the retry state. Local background tasks remain available for development.
+Upload requests must identify a PDF and remain below the configured size limit. The server generates the storage filename, records a checksum, and writes extracted text to private processed storage. Processing moves through `uploaded`, `queued`, `processing`, `retryable`, `processed`, or terminal `failed` states. The worker applies the configured attempt, delay, page, extracted-text, and lease-timeout limits; stale `processing` leases are recovered before the next polling cycle. `MAX_PDF_PAGES` defaults to 200 to cover the inventoried 126- and 152-page first-year syllabus books while retaining a finite processing boundary. Manual processing requests reset the retry state. Local background tasks remain available for development.
 
 Syllabus copies use the private PDF lifecycle and are labeled `syllabus_pdf`. Extracted text retains page markers. Versioned records preserve source wording, normalized text, page, confidence, source resource, hierarchy, and review state. Every newly extracted record begins pending review. Labeled outcomes, labs, assessment policy, rubrics, references, and course metadata remain facts or non-topic content and do not become concept nodes. Combined scheme documents are scoped to the selected course code. Prerequisite suggestions are created only from explicit supported language and exact topic matches; they remain proposed until accepted, and acceptance checks for cycles.
 

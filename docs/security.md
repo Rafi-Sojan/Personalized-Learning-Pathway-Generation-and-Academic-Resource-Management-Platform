@@ -1,9 +1,9 @@
 # Security Baseline
 
 **Document ID:** ILR-SEC-001
-**Version:** 2.2
+**Version:** 2.3
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-11-06
+**Last reviewed:** 2026-11-07
 
 The development API uses short-lived signed JWTs, Argon2 password hashing, ownership checks, upload limits, request throttling, and baseline security headers. The production frontend Nginx configuration adds a restrictive content security policy, frame denial, MIME sniffing protection, referrer policy, permissions policy, and cross-origin opener isolation. Fresh local startup creates no sample account or course; learners register through the login screen, and an initial administrator is created only when explicit credentials are configured.
 
@@ -12,6 +12,7 @@ The development API uses short-lived signed JWTs, Argon2 password hashing, owner
 - Provide a high-entropy secret through a secret manager or protected environment configuration.
 - Use PostgreSQL with restricted network access and TLS where supported.
 - Keep uploads outside public executable paths and process them in an isolated, resource-limited worker.
+- Retain upload-size, extracted-text, attempt, lease, and PDF-page ceilings. The 200-page development default covers the inventoried first-year syllabus books and remains an upper bound, not a trust exemption.
 - Place Redis behind a private network and treat it as non-authoritative.
 - Terminate TLS at the edge and configure a strict frontend origin.
 - Pin container and action dependencies and scan images before release.

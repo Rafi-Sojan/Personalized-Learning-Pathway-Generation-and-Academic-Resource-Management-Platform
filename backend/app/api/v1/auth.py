@@ -77,7 +77,7 @@ def export_account(current_user: UserModel = Depends(get_current_user), db: Sess
     audit_events = db.scalars(select(AuditEvent).where(AuditEvent.actor_id == current_user.id)).all()
     return JSONResponse({
         "user": {"id": current_user.id, "email": current_user.email, "name": current_user.name, "role": current_user.role},
-        "courses": [{"id": item.id, "code": item.code, "title": item.title, "description": item.description} for item in courses],
+        "courses": [{"id": item.id, "code": item.code, "title": item.title, "description": item.description, "program_code": item.program_code, "scheme_year": item.scheme_year, "semester": item.semester, "origin": item.origin, "catalog_course_id": item.catalog_course_id} for item in courses],
         "concepts": [{"id": item.id, "course_id": item.course_id, "name": item.name, "difficulty": item.difficulty, "status": item.status, "unit_label": item.unit_label, "source_page": item.source_page, "syllabus_version_id": item.syllabus_version_id, "parent_concept_id": item.parent_concept_id, "estimated_minutes": item.estimated_minutes} for item in concepts],
         "concept_prerequisites": [{"concept_id": item.concept_id, "prerequisite_id": item.prerequisite_id, "status": item.status, "source_page": item.source_page, "confidence": item.confidence, "rationale": item.rationale} for item in prerequisites],
         "progress": [{"concept_id": item.concept_id, "completed": item.completed, "score": item.score} for item in progress if item.concept_id in concept_ids],

@@ -68,6 +68,8 @@ REQUIRED_FILES = (
     "backend/migrations/versions/0008_rvce_source_page.py",
     "backend/migrations/versions/0009_concept_syllabus_provenance.py",
     "backend/migrations/versions/0010_exam_question_sections.py",
+    "backend/migrations/versions/0011_ingestion_provenance_review.py",
+    "backend/migrations/versions/0012_course_academic_scope.py",
     "backend/app/services/syllabus_service.py",
 )
 REQUIRED_ENV = (

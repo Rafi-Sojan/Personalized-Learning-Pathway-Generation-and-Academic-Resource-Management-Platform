@@ -1,7 +1,7 @@
 # Project Plan and Outstanding Targets
 
 **Document type:** Cross-model project plan  
-**Version:** 1.2  
+**Version:** 1.3
 **Plan snapshot:** 2026-11-07  
 **Status:** Local repository regression baseline verified; candidate workflow and external acceptance remain open  
 **Status authority:** [`docs/remaining-targets.md`](docs/remaining-targets.md)
@@ -11,6 +11,8 @@
 Deliver an RVCE-focused learning platform whose syllabus-derived concepts, roadmaps, and historical question frequencies have traceable sources and have been validated by the appropriate academic, data, security, privacy, accessibility, and operations owners.
 
 The repository contains a broad development implementation. Work is complete only when both repository checks and required external evidence are recorded. Do not describe the project as production-ready solely because the application builds or runs locally.
+
+The learner onboarding implementation now supports private branch/scheme/semester subject creation and immediate syllabus attachment. This closes the repository UI/API gap for adding a learner subject, but it does not close RVCE-01 through RVCE-04: official branch definitions and verified course publication remain controlled by the source manifest and academic review process.
 
 ## 2. Recommended work sequence
 
@@ -79,7 +81,7 @@ External scope and source authorization should be settled before academic conclu
 ## 4. Immediate maintainer actions
 
 1. Preserve and review the broad uncommitted working tree before creating a release candidate; do not reset prior work.
-2. Upgrade the local Node/npm toolchain to the declared minimum or rely on the pinned CI image, then confirm a clean Playwright process exit.
+2. Repeat the seven-scenario Playwright pass in the declared Node 24.22.1/npm 11.21.1 CI toolchain; every local scenario reported `ok`, but the below-policy full runner required termination after reporting.
 3. Run the repository Release gates workflow on a named candidate and preserve its test, build, audit, runtime, and restore artifacts.
 4. Obtain the RVCE-01 scope decision and DATA-01 source authorization/completeness statement.
 5. Arrange academic reviewers and prepare row-level review sheets for the 207 catalog candidates and two quarantined conflicts.

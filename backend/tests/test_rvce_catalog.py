@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 
 from app.api.v1.catalog import _validate_source_provenance
+from app.core.config import settings
 from app.core.security import create_access_token, hash_password
 from app.db.session import SessionLocal
 from app.main import app
@@ -68,12 +69,14 @@ def test_rvce_source_provenance_requires_known_file_checksum_and_page() -> None:
     with pytest.raises(HTTPException) as invalid_page:
         _validate_source_provenance(source["relative_path"], source["pages"] + 1, source["sha256"], manifest["source_url"])
     assert invalid_page.value.status_code == 422
+    assert settings.max_pdf_pages >= max(item["pages"] for item in manifest["documents"])
 
 
 def test_rvce_unmapped_first_year_course_requires_branch_review_and_enrolls_idempotently() -> None:
     """Exercise admin import, mandatory branch mapping, publication, and repeated enrollment."""
     admin_headers, admin_id = _create_user_headers("admin")
     student_headers, student_id = _create_user_headers("student")
+    personal_headers, personal_student_id = _create_user_headers("student")
     manifest = json.loads((ROOT / "database" / "rvce_source_documents.json").read_text(encoding="utf-8"))
     first_year = next(item for item in manifest["documents"] if item["relative_path"].startswith("First Year/Scheme/2025/"))
     identity = uuid4().hex[:8].upper()
@@ -125,9 +128,42 @@ def test_rvce_unmapped_first_year_course_requires_branch_review_and_enrolls_idem
         assert first_enrollment.status_code == 200, first_enrollment.text
         course_ids.extend(first_enrollment.json()["course_ids"])
         assert first_enrollment.json()["created"] == 1
+        db = SessionLocal()
+        try:
+            enrolled = db.get(Course, course_ids[0])
+            assert enrolled is not None
+            assert (enrolled.program_code, enrolled.scheme_year, enrolled.semester) == ("AS", 2025, 1)
+            assert enrolled.origin == "rvce_catalog"
+            assert enrolled.catalog_course_id == record["id"]
+        finally:
+            db.close()
         repeated_enrollment = client.post("/api/v1/catalog/rvce/enroll", headers=student_headers, json=enrollment)
         assert repeated_enrollment.status_code == 200, repeated_enrollment.text
         assert repeated_enrollment.json()["created"] == 0
         assert repeated_enrollment.json()["existing"] == 1
+
+        personal = client.post("/api/v1/courses", headers=personal_headers, json={
+            "program_code": "AS",
+            "scheme_year": 2025,
+            "semester": 1,
+            "code": record["course_code"],
+            "title": record["title"],
+            "description": "Private notes retained when the catalog row becomes available.",
+        })
+        assert personal.status_code == 201, personal.text
+        personal_course_id = personal.json()["id"]
+        course_ids.append(personal_course_id)
+        linked_enrollment = client.post("/api/v1/catalog/rvce/enroll", headers=personal_headers, json=enrollment)
+        assert linked_enrollment.status_code == 200, linked_enrollment.text
+        assert linked_enrollment.json() == {"created": 0, "existing": 1, "course_ids": [personal_course_id]}
+        db = SessionLocal()
+        try:
+            linked = db.get(Course, personal_course_id)
+            assert linked is not None
+            assert linked.origin == "rvce_catalog"
+            assert linked.catalog_course_id == record["id"]
+            assert linked.description.startswith("Private notes retained")
+        finally:
+            db.close()
     finally:
-        _remove_test_records(course_ids, imported_ids, [admin_id, student_id])
+        _remove_test_records(course_ids, imported_ids, [admin_id, student_id, personal_student_id])

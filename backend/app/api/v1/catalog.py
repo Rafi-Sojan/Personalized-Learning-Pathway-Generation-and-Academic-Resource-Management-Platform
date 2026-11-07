@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import require_roles
 from app.db.session import get_db
+from app.infrastructure.cache import redis_cache
 from app.models import Course, RvceSyllabusCourse, SyllabusVersion, User
 from app.schemas.rvce import RvceEnrollmentRequest, RvceEnrollmentResponse, RvceSyllabusCourseCreate, RvceSyllabusCourseResponse
 from app.services.rvce_catalog import get_rvce_catalog
@@ -273,15 +274,35 @@ def enroll_rvce_semester(
     ).order_by(RvceSyllabusCourse.course_code)).all()
     created = 0
     existing = 0
+    updated = 0
     course_ids: list[str] = []
     for row in rows:
         course_scope = f"RVCE {program_code} | {payload.scheme_year} scheme | Semester {payload.semester}"
-        course = db.scalar(select(Course).where(
-            Course.owner_id == current_user.id,
-            Course.code == row.course_code,
-            Course.description.like(f"{course_scope}%"),
-        ))
+        course = db.scalar(select(Course).where(Course.owner_id == current_user.id, Course.catalog_course_id == row.id))
+        if course is None:
+            course = db.scalar(select(Course).where(
+                Course.owner_id == current_user.id,
+                Course.program_code == program_code,
+                Course.scheme_year == payload.scheme_year,
+                Course.semester == payload.semester,
+                Course.code == row.course_code,
+            ))
+        if course is None:
+            course = db.scalar(select(Course).where(
+                Course.owner_id == current_user.id,
+                Course.code == row.course_code,
+                Course.description.like(f"{course_scope}%"),
+            ))
         if course is not None:
+            if course.catalog_course_id is None:
+                course.program_code = program_code
+                course.scheme_year = payload.scheme_year
+                course.semester = payload.semester
+                course.origin = "rvce_catalog"
+                course.catalog_course_id = row.id
+                if db.scalar(select(SyllabusVersion.id).where(SyllabusVersion.course_id == course.id)) is None:
+                    db.add(SyllabusVersion(course_id=course.id, label=f"RVCE {payload.scheme_year} scheme, semester {payload.semester}"))
+                updated += 1
             existing += 1
             course_ids.append(course.id)
             continue
@@ -290,6 +311,11 @@ def enroll_rvce_semester(
             code=row.course_code,
             title=row.title,
             description=f"{course_scope} | {row.credits:g} credits | syllabus record {row.id}",
+            program_code=program_code,
+            scheme_year=payload.scheme_year,
+            semester=payload.semester,
+            origin="rvce_catalog",
+            catalog_course_id=row.id,
         )
         db.add(course)
         db.flush()
@@ -297,7 +323,8 @@ def enroll_rvce_semester(
         db.add(SyllabusVersion(course_id=course.id, label=f"RVCE {payload.scheme_year} scheme, semester {payload.semester}"))
         created += 1
         course_ids.append(course.id)
-    if created:
-        record_event(db, "rvce_semester_enrolled", current_user.id, metadata={"program_code": program_code, "scheme_year": payload.scheme_year, "semester": payload.semester, "created": created})
+    if created or updated:
+        record_event(db, "rvce_semester_enrolled", current_user.id, metadata={"program_code": program_code, "scheme_year": payload.scheme_year, "semester": payload.semester, "created": created, "linked_existing": updated})
         db.commit()
+        redis_cache.delete(f"courses:{current_user.id}")
     return RvceEnrollmentResponse(created=created, existing=existing, course_ids=course_ids)

@@ -114,6 +114,7 @@ async def upload_syllabus_source(
     db.add(resource)
     db.commit()
     db.refresh(resource)
+    redis_cache.delete(f"courses:{current_user.id}")
     return Resource.model_validate(resource)
 
 
@@ -136,6 +137,7 @@ def process_syllabus_source(
     resource.processed_at = None
     db.commit()
     db.refresh(resource)
+    redis_cache.delete(f"courses:{current_user.id}")
     background_tasks.add_task(process_resource_by_id, resource.id)
     return Resource.model_validate(resource)
 

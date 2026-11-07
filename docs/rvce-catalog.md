@@ -1,9 +1,9 @@
 # RVCE Syllabus Catalog Specification
 
 **Document ID:** ILR-RVCE-001  
-**Version:** 1.1
+**Version:** 1.2
 **Status:** PDF candidates extracted; academic verification pending
-**Last reviewed:** 2026-11-01
+**Last reviewed:** 2026-11-07
 
 ## 1. Authority
 
@@ -21,7 +21,8 @@ The catalog uses the official [RVCE scheme and syllabus page](https://rvce.edu.i
 - The administrator screen exposes the review queue with source provenance and requires a branch choice before approving a `BE-UNMAPPED` first-year record.
 - Extracted candidates retain the supplied PDF's relative filename, page, SHA-256 checksum, and official RVCE source index. First-year records use `BE-UNMAPPED` until an academic reviewer reconciles branch applicability against the stream tables; they cannot be enrolled into a learner's branch-specific course list.
 - `POST /api/v1/catalog/rvce/courses/import` accepts candidate batches of at most 500 and forces every record into `pending_review`; `PATCH` is required for admin approval.
-- `scripts/import_rvce_candidates.py --token <admin-token>` submits the generated candidate file in bounded batches. Once approved, a learner can use `POST /api/v1/catalog/rvce/enroll` to materialize semester courses and initial concepts for roadmap generation.
+- `scripts/import_rvce_candidates.py --token <admin-token>` submits the generated candidate file in bounded batches. Once approved, a learner can use `POST /api/v1/catalog/rvce/enroll` to materialize source-linked subject workspaces. Enrollment creates no placeholder concepts; concepts still require the learner's stored and processed syllabus copy.
+- **My subjects** also permits a learner to create a private branch/scheme/semester workspace and attach a syllabus. That record has `origin=personal`, does not insert into this catalog, and must not be cited as academic verification. The branch and scheme choices still come from the controlled manifest.
 - ET/TE is represented as one normalized application code with the source variation retained as an alias; no subject data is inferred from that normalization.
 - `database/rvce-course-record.schema.json` defines the source-backed course-row contract.
 - `scripts/validate_rvce_courses.py` rejects unknown programs, unsupported schemes, duplicate course identities, invalid credits, missing SHA-256 source checksums, and unverified status values.

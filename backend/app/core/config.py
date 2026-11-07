@@ -18,7 +18,7 @@ class Settings:
     upload_dir: str = os.getenv("UPLOAD_DIR", "storage/uploads")
     processed_dir: str = os.getenv("PROCESSED_DIR", "storage/processed")
     max_upload_size_mb: int = int(os.getenv("MAX_UPLOAD_SIZE_MB", "10"))
-    max_pdf_pages: int = int(os.getenv("MAX_PDF_PAGES", "100"))
+    max_pdf_pages: int = int(os.getenv("MAX_PDF_PAGES", "200"))
     max_extracted_text_chars: int = int(os.getenv("MAX_EXTRACTED_TEXT_CHARS", "500000"))
     worker_timeout_seconds: int = int(os.getenv("DOCUMENT_WORKER_TIMEOUT_SECONDS", "120"))
     max_processing_attempts: int = int(os.getenv("DOCUMENT_MAX_PROCESSING_ATTEMPTS", "3"))

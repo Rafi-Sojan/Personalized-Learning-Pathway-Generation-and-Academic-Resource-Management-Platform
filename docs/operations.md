@@ -1,9 +1,9 @@
 # Operations and Runbook
 
 **Document ID:** ILR-OPS-001
-**Version:** 2.2
+**Version:** 2.3
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-11-03
+**Last reviewed:** 2026-11-07
 
 ## 1. Operational responsibility
 
@@ -64,6 +64,7 @@ Copy `.env.example` to `.env` for local overrides. Important values include:
 - `UPLOAD_DIR`
 - `PROCESSED_DIR`
 - `MAX_UPLOAD_SIZE_MB`
+- `MAX_PDF_PAGES` and `MAX_EXTRACTED_TEXT_CHARS` for bounded syllabus and paper processing
 - `STORAGE_BACKEND`, `STORAGE_BUCKET`, `STORAGE_PREFIX`, and `STORAGE_ENDPOINT_URL`
 - `AUDIT_RETENTION_DAYS`
 - `DOCUMENT_MAX_PROCESSING_ATTEMPTS` and `DOCUMENT_RETRY_DELAY_SECONDS`
@@ -94,7 +95,7 @@ The restore script requires explicit `RESTORE` confirmation. Backup files are ig
 
 ## Health verification
 
-After startup, verify that the API responds, the interactive documentation loads, the frontend can reach the configured API origin, database migrations are current, and Redis connectivity is either healthy or intentionally operating in fallback mode. Perform an authenticated smoke test for learner registration/login, subject selection, syllabus upload and processing, concept-map generation, roadmap creation, and question-frequency access. Progress and quiz endpoints remain compatibility APIs and are not part of the learner UI flow.
+After startup, verify that the API responds, the interactive documentation loads, the frontend can reach the configured API origin, database migrations are current, and Redis connectivity is either healthy or intentionally operating in fallback mode. Perform an authenticated smoke test for learner registration/login, branch/scheme/semester subject creation, optional syllabus attachment, syllabus processing, concept-map generation, roadmap creation, and question-frequency access. Confirm that personal subjects are labeled personal and that verified catalog enrollment is unavailable when the selected scope has no approved rows. Progress and quiz endpoints remain compatibility APIs and are not part of the learner UI flow.
 
 The readiness endpoint is `GET /health/ready`; it confirms database connectivity and reports whether Redis is available or the process-local fallback is active. `GET /metrics` exposes normalized request/status and document-worker counters for an internal Prometheus scraper. Set `METRICS_AUTH_TOKEN` and enforce private network access before enabling production scraping; the endpoint must not be published directly to the internet. Authorized administrators can inspect queue counts and the oldest active job at `/api/v1/admin/processing`.
 

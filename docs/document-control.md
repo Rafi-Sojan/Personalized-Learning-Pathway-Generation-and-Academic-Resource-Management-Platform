@@ -2,7 +2,7 @@
 
 **Document ID:** ILR-DOC-001
 **System:** Intelligent Learning Roadmap
-**Version:** 2.6
+**Version:** 2.7
 **Status:** Implementation-complete development baseline
 **Owner:** Project maintainer
 **Last reviewed:** 2026-11-07
@@ -11,7 +11,7 @@
 
 This document defines the controlled documentation set for the Intelligent Learning Roadmap platform. It establishes the authoritative location of system requirements, design decisions, operational procedures, security controls, test evidence, and known limitations.
 
-The repository is an implementation-complete development baseline. A production release still requires operator-owned infrastructure, external security acceptance, and formal release approval identified in the traceability, security, operations, and testing documents.
+The repository is an implementation-complete development baseline. The learner can create private branch-scoped subjects and attach syllabus copies, while verified RVCE catalog publication remains source- and review-controlled. A production release still requires operator-owned infrastructure, external security acceptance, and formal release approval identified in the traceability, security, operations, and testing documents.
 
 ## 2. Document hierarchy
 

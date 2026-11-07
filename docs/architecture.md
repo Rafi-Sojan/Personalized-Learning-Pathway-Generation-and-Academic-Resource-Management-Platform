@@ -1,9 +1,9 @@
 # Architecture Specification
 
 **Document ID:** ILR-ARC-001
-**Version:** 2.1
+**Version:** 2.2
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-11-03
+**Last reviewed:** 2026-11-07
 
 ## 1. Architectural style
 
@@ -11,9 +11,9 @@ The platform is a modular monolith with separately testable frontend, API, learn
 
 ## 2. Logical components
 
-1. **Frontend:** React/Vite presents RVCE subjects, stored syllabus copies, source-aware concept maps and roadmaps, and past-paper frequency analysis. Quiz and progress screens are outside the current learner UI.
+1. **Frontend:** React/Vite presents guided personal-subject setup, verified RVCE catalog enrollment, stored syllabus copies, source-aware concept maps and roadmaps, and past-paper frequency analysis. Quiz and progress screens are outside the current learner UI.
 2. **API:** FastAPI owns HTTP contracts, authentication, ownership checks, validation, and application orchestration.
-3. **Persistence:** SQLAlchemy models and repositories persist users, courses, concepts with syllabus-version/unit/page provenance, prerequisites, private syllabus source documents, parsed historical exam questions, audit events, compatibility progress data, and study plans.
+3. **Persistence:** SQLAlchemy models and repositories persist users; learner courses with academic scope and personal/catalog origin; concepts with syllabus-version/unit/page provenance; prerequisites; private syllabus source documents; parsed historical exam questions; audit events; compatibility progress data; and study plans.
 4. **Learning logic:** The ML package provides deterministic preprocessing, concept mapping, graph, scheduling, and evaluation primitives.
 5. **Scoring:** The C++ engine provides a fast ranking primitive and a command-line testable boundary.
 6. **Infrastructure:** PostgreSQL is the Compose persistence service; Redis supports rate limits and JSON response caching; local or S3-compatible storage holds private documents.
@@ -55,3 +55,4 @@ SQLite is the zero-service development default. Docker Compose provisions Postgr
 | Redis fallback | Local development remains usable without Redis | Distributed rate-limit consistency requires Redis |
 | Storage abstraction | Local files remain simple while S3-compatible storage supports production durability | Production requires bucket encryption, lifecycle, and credential management |
 | Durable audit events | Security/product changes survive process restarts and support retention | Operators must schedule retention cleanup and protect audit access |
+| Separate personal and verified subject origins | Learners need immediate private workspaces without weakening academic catalog controls | Personal records use manifest-validated scope but do not publish or approve institutional course rows |

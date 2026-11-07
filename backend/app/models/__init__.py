@@ -31,11 +31,20 @@ class User(Base):
 
 class Course(Base):
     __tablename__ = "courses"
+    __table_args__ = (
+        UniqueConstraint("owner_id", "program_code", "scheme_year", "semester", "code", name="uq_course_owner_academic_scope"),
+        UniqueConstraint("owner_id", "catalog_course_id", name="uq_course_owner_catalog_record"),
+    )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     code: Mapped[str] = mapped_column(String(20), index=True)
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text, default="")
+    program_code: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, index=True)
+    scheme_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    semester: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    origin: Mapped[str] = mapped_column(String(24), default="personal", index=True)
+    catalog_course_id: Mapped[Optional[str]] = mapped_column(ForeignKey("rvce_syllabus_courses.id"), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 

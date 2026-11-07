@@ -1,7 +1,7 @@
 # Project Context for Model Handoffs
 
 **Document type:** Continuation brief  
-**Version:** 1.2  
+**Version:** 1.3
 **Last reviewed:** 2026-11-07  
 **Use with:** [`AGENTS.md`](AGENTS.md) and [`plan.md`](plan.md)
 
@@ -9,7 +9,7 @@
 
 Intelligent Learning Roadmap is an RVCE-focused learning platform. Learners select subjects, upload and process syllabus copies, review source-aware concept maps, generate dated study roadmaps, and inspect question frequency from past papers. The platform is a development baseline; academic validation and production acceptance are still open.
 
-The product uses uploaded RVCE syllabus copies and question papers as its primary academic material. The learner UI does not manage a generic resource library. AI-generated links to learning websites are deferred by product decision. The user clarified that Part A is quiz material and Part B is the main questions. Quiz and Progress pages were removed from the learner interface; compatibility APIs may remain.
+The product uses uploaded RVCE syllabus copies and question papers as its primary academic material. Learners may create a private subject workspace by selecting a validated RVCE branch, scheme, and semester, then attach its syllabus immediately or later. A personal workspace is not an academically verified RVCE catalog row; catalog publication still requires source provenance and authorized review. The learner UI does not manage a generic resource library. AI-generated links to learning websites are deferred by product decision. The user clarified that Part A is quiz material and Part B is the main questions. Quiz and Progress pages were removed from the learner interface; compatibility APIs may remain.
 
 ## 2. Architecture and repository map
 
@@ -34,6 +34,7 @@ The system is a modular monolith: the browser calls FastAPI; the API enforces au
 - Preserve printed assessment sections. Apply Part A/Part B classification only when source metadata or uploader input establishes it.
 - Prerequisite proposals require review and cycle checks before they influence roadmap ordering.
 - RVCE catalog candidates are not authoritative until reviewed. The formal register records 207 candidate rows, two quarantined title conflicts, and unresolved first-year branch mapping.
+- Branch choices for personal subjects come from the controlled catalog manifest. Do not add arbitrary institutional branches or represent a learner-created subject as catalog-verified.
 - The currently inventoried eight PDFs do not establish complete RVCE institutional coverage. The target admission cohort, branch set, scheme, and semester scope are undecided.
 - AI link generation is deferred. Do not add provider credentials or place secrets in the browser.
 
@@ -75,7 +76,8 @@ For a local verification request, the documented Python command is `python -m py
 - The 2026-11-06 repository correction pass removed seed-data assumptions from tests, completed account export/deletion coverage, split full roadmap estimates across days, added failed-paper object cleanup, aligned Python/native scoring, replaced the demo leaderboard with a private learner summary, synchronized `database/init.sql`, normalized frontend API errors, and added frontend security headers.
 - Local evidence for that pass is 32 passed and one skipped Python test, passing Ruff/mypy/release verification, a passing frontend production build, a 16-table model/schema match, and a strict-warning native scorer test. Five browser scenarios reported `ok`, but the unsupported local Node 24.11.1 runner required termination after reporting; clean completion remains a pinned CI requirement.
 - The 2026-11-07 ingestion correction made question parsing page-aware, excludes solution/scheme ranges, recognizes RVCE numbering and structural CIE/SEE headings, rejects explicit paper/course-code mismatches, maps only to verified current-syllabus concepts, exposes manual remapping, and reports mapped/unmapped frequency totals. Syllabus parsing now builds unit-scoped heading/child hierarchies, excludes non-teaching tails, and leaves every extracted row pending review. The concept map displays unit, page, hierarchy, and review state.
-- Read-only checks on the two supplied files produced 64 clean `21CS45` questions (19 quiz, 45 main; 32 CIE/test, 32 SEE) and 106 separate `AI253IA` concepts (19 roots, 87 children) without scheme/rubric contamination. These are different subjects and the API now prevents combining them. The full local suite recorded 37 passed/1 skipped, with passing Ruff, mypy, release verification, frontend build, and bundle checks. These are implementation checks, not academic acceptance.
+- The 2026-11-07 onboarding slice added learner-created branch/scheme/semester subject workspaces, optional syllabus attachment during creation, syllabus deep links, verified-catalog availability previews, course-origin provenance, and migration `0012_course_academic_scope`. The configured PDF ceiling is 200 pages so both inventoried first-year syllabus books fit within the bounded processor.
+- Read-only checks on the two supplied files produced 64 clean `21CS45` questions (19 quiz, 45 main; 32 CIE/test, 32 SEE) and 106 separate `AI253IA` concepts (19 roots, 87 children) without scheme/rubric contamination. These are different subjects and the API now prevents combining them. After the onboarding slice, the full local suite recorded 39 passed/1 skipped, with passing Ruff, mypy, release verification, frontend build/bundle checks, schema consistency, and migration lifecycle checks. Seven Playwright scenarios reported `ok`, but the below-policy Node/npm runner required termination after reporting; the targeted subject scenario exited cleanly, and the isolated live walkthrough succeeded. Pinned CI remains required. These are implementation checks, not academic acceptance.
 - The root local database was not changed by the 2026-11-07 correction. It may still contain a legacy multi-course map created under an unrelated course code; do not delete it automatically. Regenerate from a correctly coded enrolled subject and review the new syllabus/question rows before treating UI counts as current.
 
 ### Recent local runtime note
@@ -85,6 +87,8 @@ On 2026-11-03, the local root `learning.db` was found at revision `0010` while t
 A pre-migration copy was created as `learning.db.before-0011.bak`; `.gitignore` excludes `*.bak`. Keep database backups local and protected.
 
 On 2026-11-06 no API or frontend service was running during the initial repository inspection. The correction pass used isolated temporary test storage/database state and did not mutate the root `learning.db`. Recheck live services and migration identity before relying on the earlier 2026-11-03 runtime observation.
+
+On 2026-11-07, after fresh and legacy migration lifecycle checks passed, the root `learning.db` was copied to `learning.db.before-0012.bak` and upgraded from `0011_ingestion_provenance_review` to `0012_course_academic_scope`. The post-migration check reported head `0012`, retained the existing single course, and backfilled it with `origin=personal`. Both local servers used for the isolated live walkthrough were stopped afterward.
 
 ## 6. Source documents to consult
 

@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { getCourses } from '../services/courses'
 import { generateConceptMap, getSyllabusRecords, getSyllabusSources, processSyllabusSource, reviewSyllabusRecord, uploadSyllabusSource, type SyllabusRecord } from '../services/syllabus'
 import type { Course, Resource } from '../types'
 
 /** Store course syllabus copies, extract their topics, and create roadmap concepts. */
 export function SyllabusSources() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedCourseId = searchParams.get('course_id') ?? ''
   const [courses, setCourses] = useState<Course[]>([])
   const [courseId, setCourseId] = useState('')
   const [sources, setSources] = useState<Resource[]>([])
@@ -14,13 +17,21 @@ export function SyllabusSources() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
-  /** Load learner courses once and select the first available syllabus scope. */
+  /** Load learner courses and honor a subject deep link when it belongs to the caller. */
   useEffect(() => {
     getCourses().then((items) => {
       setCourses(items)
-      if (items[0]) setCourseId(items[0].id)
+      const nextCourseId = items.some((item) => item.id === requestedCourseId) ? requestedCourseId : items[0]?.id ?? ''
+      setCourseId(nextCourseId)
+      if (nextCourseId && nextCourseId !== requestedCourseId) setSearchParams({ course_id: nextCourseId }, { replace: true })
     }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to load courses'))
-  }, [])
+  }, [requestedCourseId, setSearchParams])
+
+  /** Change the active course and preserve it in the URL for direct navigation. */
+  function selectCourse(nextCourseId: string) {
+    setCourseId(nextCourseId)
+    setSearchParams(nextCourseId ? { course_id: nextCourseId } : {}, { replace: true })
+  }
 
   /** Refresh stored syllabus copies when the learner changes the course. */
   const refreshSources = useCallback(async () => {
@@ -111,13 +122,13 @@ export function SyllabusSources() {
     <section className="panel">
       <div className="panel-heading"><div><span className="section-kicker">Source document</span><h2>Add a syllabus PDF</h2></div></div>
       <form className="form-grid" onSubmit={upload}>
-        <label>Course<select required value={courseId} onChange={(event) => setCourseId(event.target.value)}>
-          {courses.map((course) => <option key={course.id} value={course.id}>{course.code} · {course.title}</option>)}
+        <label>Subject<select required value={courseId} onChange={(event) => selectCourse(event.target.value)}>
+          {courses.map((course) => <option key={course.id} value={course.id}>{course.code} · {course.title}{course.program_code && course.scheme_year && course.semester ? ` · ${course.program_code}/${course.scheme_year}/S${course.semester}` : ''}</option>)}
         </select></label>
         <label>PDF copy<input required type="file" accept="application/pdf,.pdf" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></label>
         <button className="primary" type="submit" disabled={!courseId || !file || Boolean(busyId)}>{busyId === 'upload' ? 'Uploading…' : 'Store syllabus copy'}</button>
       </form>
-      {!courses.length && <p className="empty-state">Add or enroll in a course before uploading its syllabus.</p>}
+      {!courses.length && <p className="empty-state">Create a subject before uploading its syllabus. <Link to="/courses">Add a subject</Link></p>}
     </section>
     {records.length > 0 && <section className="panel">
       <div className="panel-heading"><div><span className="section-kicker">Source-backed extraction</span><h2>{records.length} syllabus records</h2></div><span className="section-kicker">Versioned · page-linked</span></div>

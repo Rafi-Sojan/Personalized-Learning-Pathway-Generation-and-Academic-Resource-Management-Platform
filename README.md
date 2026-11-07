@@ -2,18 +2,19 @@
 
 **Project document:** ILR-DOC-001
 **Release status:** Development baseline verified locally; release acceptance open
-**Documentation version:** 2.7
+**Documentation version:** 2.8
 **Last reviewed:** 2026-11-07
 
 Intelligent Learning Roadmap is an RVCE-focused platform that turns stored syllabus copies into source-aware concept maps and study roadmaps, and identifies topic frequency in historical question papers. It combines a web dashboard, a typed API, explainable learning utilities, and a native scoring engine.
 
 ## 1. Project status
 
-This repository provides an implementation-complete development baseline for an RVCE-focused learning platform with signed authentication, Argon2 password hashing, role-gated administration, ownership-aware SQLAlchemy persistence, secure asynchronous document processing, optional OCR, object-storage abstraction, syllabus-derived maps and roadmaps, past-paper parsing and topic frequency, Redis-backed caching/throttling, privacy workflows, and a native scoring boundary. Learner academic workflows center on syllabus PDFs and question papers; manual learning-resource catalog management is not in scope. AI-generated concept links are deferred. The RVCE program/scheme catalog is source-provenance validated. Eight supplied PDFs have been inventoried; extracted course candidates remain pending academic verification, conflict resolution, and first-year branch mapping. SQLite is used for a no-service local run; Docker Compose provisions PostgreSQL, Redis, a worker, private storage, and the frontend/backend services.
+This repository provides an implementation-complete development baseline for an RVCE-focused learning platform with signed authentication, Argon2 password hashing, role-gated administration, ownership-aware SQLAlchemy persistence, secure asynchronous document processing, optional OCR, object-storage abstraction, syllabus-derived maps and roadmaps, past-paper parsing and topic frequency, Redis-backed caching/throttling, privacy workflows, and a native scoring boundary. Learners can create private subject workspaces under a validated RVCE branch, scheme, and semester and attach a syllabus during setup. These personal records remain explicitly distinct from source-backed, academically verified RVCE catalog entries. Learner academic workflows center on syllabus PDFs and question papers; manual learning-resource catalog management is not in scope. AI-generated concept links are deferred. The RVCE program/scheme catalog is source-provenance validated. Eight supplied PDFs have been inventoried; extracted course candidates remain pending academic verification, conflict resolution, and first-year branch mapping. SQLite is used for a no-service local run; Docker Compose provisions PostgreSQL, Redis, a worker, private storage, and the frontend/backend services.
 
 ## 2. Capabilities
 
 - RVCE subject selection and review-gated syllabus concept maps with unit/page provenance and parent-child topic hierarchy.
+- Guided personal-subject onboarding with controlled RVCE branch/scheme/semester selection, optional immediate syllabus attachment, and visible personal-versus-verified provenance.
 - Syllabus topic extraction through a FastAPI endpoint.
 - Dated roadmap generation that splits full concept estimates across bounded daily study segments.
 - Stored syllabus PDFs processed into course concepts and roadmap inputs.
@@ -86,6 +87,8 @@ npm run dev
 
 The dashboard is available at `http://localhost:5173`. Interactive API documentation is available at `http://localhost:8000/docs`.
 
+After signing in, open **My subjects** to create a private subject workspace. Select the RVCE branch, semester, and supported scheme, enter the subject code and title, and optionally attach the syllabus PDF in the same form. Open **RVCE syllabus** only when enrolling academically verified catalog rows; a personal workspace does not create or approve an institutional catalog record.
+
 For the full local stack, including PostgreSQL, Redis, private upload storage, the API worker, and the containerized frontend/backend, copy `.env.example` to `.env`, replace the development placeholders, and run:
 
 ```bash
@@ -136,7 +139,7 @@ python scripts/verify_release.py
 python scripts/load_test.py --url http://localhost:8000/health/ready --requests 100 --workers 10
 ```
 
-The 2026-11-07 local repository verification recorded 37 passing Python tests and one skipped service-container integration test, a successful frontend production build and bundle check, and passing Ruff, mypy, and release-invariant checks. The prior 2026-11-06 pass recorded a synchronized 16-table SQL reference snapshot and a successful strict-warning native scorer build. All five Playwright scenarios previously reported `ok`; the unsupported local Node 24.11.1 runner did not exit after reporting and was terminated, so a clean browser-suite exit must still be confirmed with the pinned Node 24.22.1 CI toolchain.
+The 2026-11-07 local repository verification recorded 39 passing Python tests and one skipped service-container integration test, a successful frontend production build with 20 JavaScript assets inside the bundle budget, passing Ruff and mypy checks, 62 controlled artifacts accepted by the release verifier, and a synchronized SQL reference snapshot covering 16 tables and 45 indexes. Migration `0012` passed fresh-database, legacy-row preservation, downgrade, and re-upgrade checks. All seven Playwright scenarios reported `ok`, including successful-login redirect and branch-scoped subject creation; under the below-policy local Node 24.11.1/npm 11.6.2 toolchain, the full runner again required termination after reporting. The targeted subject scenario exited cleanly, the targeted login scenario reported `ok`, and a live isolated-database walkthrough completed successfully. The declared Node 24.22.1/npm 11.21.1 CI run remains required for clean candidate evidence. The prior 2026-11-06 pass recorded a successful strict-warning native scorer build.
 
 RVCE course extraction reads the source PDFs in place, verifies their SHA-256 fingerprints, and writes pending-review candidates plus conflicts under `database/`. Set `RVCE_SYLLABUS_DIR` to the supplied syllabus directory and run `make extract-rvce` to regenerate and validate the files. After the backend is running and an administrator is logged in, submit candidates with `python scripts/import_rvce_candidates.py --token <admin-token>`. Imported candidates stay hidden from learners until an administrator approves them. First-year candidates are labeled `BE-UNMAPPED` and remain unavailable for branch enrollment until reviewed.
 
@@ -152,7 +155,8 @@ The API is mounted under `/api/v1`:
 | `GET` | `/auth/export` | Export authenticated account data |
 | `POST` | `/auth/delete` | Delete authenticated account after email confirmation |
 | `POST` | `/auth/logout` | Revoke the authenticated user's existing tokens |
-| `GET` | `/courses` | List or create courses |
+| `GET` | `/courses` | List owned subject workspaces with academic scope, origin, and syllabus status |
+| `POST` | `/courses` | Create a personal subject workspace under a validated branch, scheme, and semester |
 | `GET` | `/concepts?course_id={id}&syllabus_only=true` | List syllabus-derived concepts with unit/page provenance |
 | `POST` | `/syllabus/analyze` | Extract topics from syllabus text |
 | `GET` | `/syllabus/sources?course_id={id}` | List stored course syllabus PDF copies |
@@ -181,7 +185,7 @@ The API is mounted under `/api/v1`:
 
 ## 8. Configuration
 
-Copy `.env.example` to `.env` when local overrides are required. The most relevant settings are `FRONTEND_ORIGIN`, `API_PREFIX`, `DATABASE_URL`, `REDIS_URL`, and `SECRET_KEY`. The current development repository does not require a database or Redis connection. Production-style storage is enabled with `STORAGE_BACKEND=s3`, `STORAGE_BUCKET`, and the related object-storage settings.
+Copy `.env.example` to `.env` when local overrides are required. The most relevant settings are `FRONTEND_ORIGIN`, `API_PREFIX`, `DATABASE_URL`, `REDIS_URL`, and `SECRET_KEY`. `MAX_PDF_PAGES` defaults to 200 so the inventoried 126- and 152-page first-year syllabus books remain processable while document work stays bounded by page, upload-size, and extracted-text limits. The current development repository does not require a database or Redis connection. Production-style storage is enabled with `STORAGE_BACKEND=s3`, `STORAGE_BUCKET`, and the related object-storage settings.
 
 ## 9. Controlled documentation
 

@@ -1,7 +1,7 @@
 # Requirements Traceability Matrix
 
 **Document ID:** ILR-REQ-001
-**Version:** 2.7
+**Version:** 2.8
 **Status:** Implementation-complete development baseline
 **Last reviewed:** 2026-11-07
 
@@ -15,7 +15,8 @@ An item is marked **Implemented** only when the repository contains the behavior
 
 | Requirement | Status | Implementation |
 |---|---|---|
-| Course and concept management | Implemented | SQLAlchemy course/concept models and authenticated course/concept routes |
+| Course and concept management | Implemented | Authenticated API and UI create private subjects under a validated branch/scheme/semester, distinguish personal and verified-catalog origins, expose syllabus state, and manage owned concepts |
+| Learner branch and syllabus onboarding | Implemented | **My subjects** provides controlled branch/scheme/semester selection, subject identity, optional immediate PDF attachment, failure recovery, and direct syllabus-workflow navigation |
 | Syllabus versions | Implemented | `POST/GET /api/v1/courses/{course_id}/syllabus-versions` |
 | Text-based syllabus analysis | Implemented | `POST /api/v1/syllabus/analyze` with bounded input |
 | Stored syllabus PDF copies | Implemented | Course-owned `/syllabus/sources/upload`, private storage, checksum, and source listing |
@@ -53,7 +54,7 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Private file storage | Implemented | UUID filenames, non-public storage paths, checksum metadata, account cleanup, and compensating deletion for failed/duplicate paper imports |
 | Docker Compose | Implemented | Frontend, backend, worker, PostgreSQL, Redis, configurable storage, health checks, and corrected development mounts |
 | Non-root backend container | Implemented | Backend image runs as `appuser` |
-| Alembic migrations | Implemented | Configured environment plus lifecycle, resource mapping, exam, storage metadata, and audit-event migrations |
+| Alembic migrations | Implemented | Configured environment plus lifecycle, resource mapping, exam, storage metadata, audit-event, ingestion provenance, and course academic-scope migrations |
 | CI tests and quality checks | Implemented | Release workflow includes Python API tests, Ruff, mypy, source and invariant validation, learning benchmark gates, frontend build/audit/E2E, native C++ tests, and Compose runtime/restore checks |
 | Container vulnerability scanning | Implemented | CI audits Python/npm dependencies, builds both images, scans high/critical findings, and publishes SPDX SBOM artifacts |
 | Role-based administration | Implemented | Server-side student, instructor, and admin roles; protected admin user-management endpoints; environment-backed initial admin provisioning |
@@ -87,6 +88,7 @@ An item is marked **Implemented** only when the repository contains the behavior
 - S3-compatible storage, Tesseract OCR, external penetration testing, and production alerting still require operator infrastructure and credentials; implementation hooks and CI procedures are present.
 - Historical exam ranking depends on the quality and concept coverage of imported question papers; the repository provides deterministic ingestion and ranking, not a licensed corpus.
 - Existing local databases created before the stricter course-scoping and review rules can retain legacy concepts or question mappings. Regenerate the map from the correctly coded syllabus and review records before treating local counts as current; no automatic destructive cleanup is performed.
+- Learner-created branch-scoped subjects are private workspaces, not institutional catalog approval. Official rows remain partial until RVCE academic review evidence closes the catalog targets.
 - Docker runtime validation is reproducible in `.github/workflows/compose-smoke.yml`; local Docker execution depends on the developer machine.
 - External penetration testing, production SLO approval, and privacy/legal approval remain operator or release-owner acceptance activities.
 - `npm audit` validates repository dependencies, not the globally installed npm CLI or Node runtime.

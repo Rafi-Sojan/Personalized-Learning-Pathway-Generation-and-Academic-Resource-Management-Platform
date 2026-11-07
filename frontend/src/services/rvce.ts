@@ -11,6 +11,8 @@ export type RvceCourseReview = {
 
 /** Fetch the normalized RVCE program list and supported first-year schemes. */
 export const getRvceCatalog = () => api<RvceCatalog>('/catalog/rvce')
+/** List academically verified course records for one exact RVCE program scope. */
+export const getRvceCourses = (programCode: string, schemeYear: number, semester: number) => api<RvceCourseReview[]>(`/catalog/rvce/courses?program_code=${encodeURIComponent(programCode)}&scheme_year=${schemeYear}&semester=${semester}`)
 /** Enroll the current learner in verified course rows for one scheme semester. */
 export const enrollRvceSemester = (selection: RvceEnrollment) => api<RvceEnrollmentResult>('/catalog/rvce/enroll', { method: 'POST', body: JSON.stringify(selection) })
 /** Load pending source-backed records for the academic review interface. */
