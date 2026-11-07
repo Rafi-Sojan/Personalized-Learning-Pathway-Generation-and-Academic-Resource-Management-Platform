@@ -18,5 +18,94 @@
       "relevant": ["functions"],
       "k": 5
     }
+  },
+  {
+    "concept_matching": {
+      "prompt": "Analyze distance vector routing and its convergence problem.",
+      "concepts": [
+        {"id": "routing", "name": "Routing"},
+        {"id": "distance-vector", "name": "Distance Vector Routing"},
+        {"id": "link-state", "name": "Link State Routing"}
+      ],
+      "expected": "distance-vector",
+      "expected_status": "matched"
+    }
+  },
+  {
+    "concept_matching": {
+      "prompt": "Explain routing.",
+      "concepts": [
+        {"id": "routing", "name": "Routing"},
+        {"id": "distance-vector", "name": "Distance Vector Routing"}
+      ],
+      "expected": "routing",
+      "expected_status": "matched"
+    }
+  },
+  {
+    "concept_matching": {
+      "prompt": "Explain the CNN architecture and feature maps.",
+      "concepts": [
+        {"id": "cnn", "name": "Convolutional Neural Networks"},
+        {"id": "rnn", "name": "Recurrent Neural Networks"}
+      ],
+      "expected": "cnn",
+      "expected_status": "matched"
+    }
+  },
+  {
+    "concept_matching": {
+      "prompt": "Compare CNN and RNN architectures.",
+      "concepts": [
+        {"id": "cnn", "name": "Convolutional Neural Networks"},
+        {"id": "rnn", "name": "Recurrent Neural Networks"}
+      ],
+      "expected": null,
+      "expected_status": "ambiguous"
+    }
+  },
+  {
+    "concept_matching": {
+      "prompt": "Discuss congestion control and leaky bucket traffic shaping.",
+      "concepts": [
+        {"id": "trees", "name": "Binary Search Trees"},
+        {"id": "hashing", "name": "Hash Tables"}
+      ],
+      "expected": null,
+      "expected_status": "no_evidence"
+    }
+  },
+  {
+    "concept_matching": {
+      "prompt": "Explain database normalization up to third normal form.",
+      "concepts": [
+        {"id": "db-normalization", "name": "Normalization", "parent_name": "Relational Database Design"},
+        {"id": "ml-normalization", "name": "Normalization", "parent_name": "Machine Learning Preprocessing"}
+      ],
+      "expected": "db-normalization",
+      "expected_status": "matched"
+    }
+  },
+  {
+    "concept_matching": {
+      "prompt": "Explain normalization.",
+      "concepts": [
+        {"id": "db-normalization", "name": "Normalization", "parent_name": "Relational Database Design"},
+        {"id": "ml-normalization", "name": "Normalization", "parent_name": "Machine Learning Preprocessing"}
+      ],
+      "expected": null,
+      "expected_status": "ambiguous"
+    }
+  },
+  {
+    "concept_matching": {
+      "prompt": "Explain the Djikstra algoritm with an example.",
+      "concepts": [
+        {"id": "dijkstra", "name": "Dijkstra Algorithm"},
+        {"id": "bellman-ford", "name": "Bellman Ford Algorithm"}
+      ],
+      "expected": "dijkstra",
+      "expected_status": "matched"
+    }
   }
 ]

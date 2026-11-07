@@ -6,7 +6,6 @@ def normalize_ocr_text(text: str) -> str:
 
 def run_pdf_ocr(path: str, max_chars: int) -> str:
     """OCR pages from a PDF while enforcing a total extracted-character limit."""
-    """OCR image-only PDF pages using the optional Tesseract provider."""
     try:
         import fitz
         import pytesseract

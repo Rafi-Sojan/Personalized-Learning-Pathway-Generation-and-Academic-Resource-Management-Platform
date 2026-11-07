@@ -10,6 +10,7 @@ from app.db.session import get_db
 from app.models import Concept, ConceptPrerequisite, Course, HistoricalExamQuestion, Resource, StudyPlan, StudyPlanItem, StudyPlanRevision, SyllabusRecord, SyllabusVersion, TopicProgress, User
 from app.schemas.learning import RoadmapItem, RoadmapRequest, StudyPlanResponse, StudyPlanRevisionResponse
 from app.services.audit import record_event
+from ml.graph.concept_prioritizer import ConceptPriorityInput, QuestionEvidence, ROADMAP_ALGORITHM_VERSION, prioritize_with_dependencies
 
 router = APIRouter()
 
@@ -47,7 +48,7 @@ def generate_roadmap(payload: RoadmapRequest, current_user: User = Depends(get_c
     if not items:
         raise HTTPException(status_code=409, detail="Generate syllabus-derived concepts before creating a roadmap")
     db.execute(update(StudyPlan).where(StudyPlan.user_id == current_user.id, StudyPlan.course_id == course.id, StudyPlan.status == "active").values(status="superseded"))
-    plan = StudyPlan(user_id=current_user.id, course_id=course.id, target_date=payload.target_date, daily_minutes=payload.daily_minutes)
+    plan = StudyPlan(user_id=current_user.id, course_id=course.id, target_date=payload.target_date, daily_minutes=payload.daily_minutes, algorithm_version=ROADMAP_ALGORITHM_VERSION)
     db.add(plan)
     db.flush()
     for item in items:
@@ -87,8 +88,6 @@ def generate_items(db: Session, user: User, course_id: str, target_date: date, d
         or_(~records_exist, records_verified),
     )).all()
     edges = db.scalars(select(ConceptPrerequisite).join(Concept, Concept.id == ConceptPrerequisite.concept_id).where(Concept.course_id == course_id, ConceptPrerequisite.status == "accepted")).all()
-    if _has_cycle({concept.id: [edge.prerequisite_id for edge in edges if edge.concept_id == concept.id] for concept in concepts}):
-        raise HTTPException(status_code=422, detail="Cannot generate a roadmap from a cyclic prerequisite graph")
     progress = {item.concept_id: item for item in db.scalars(select(TopicProgress).where(TopicProgress.user_id == user.id)).all()}
     evidence: dict[str, list[HistoricalExamQuestion]] = {}
     for question in db.scalars(select(HistoricalExamQuestion).where(
@@ -100,30 +99,24 @@ def generate_items(db: Session, user: User, course_id: str, target_date: date, d
         evidence.setdefault(question.concept_id or "", []).append(question)
     by_id = {concept.id: concept for concept in concepts}
     prerequisites = {concept.id: [edge.prerequisite_id for edge in edges if edge.concept_id == concept.id and edge.prerequisite_id in by_id] for concept in concepts}
-    ordered = []
-    remaining = set(by_id)
-    while remaining:
-        eligible = [by_id[item_id] for item_id in remaining if not (set(prerequisites[item_id]) & remaining)]
-        if not eligible:
-            raise HTTPException(status_code=422, detail="Cannot order concepts because prerequisites contain a cycle")
-        def mastery_gap(item: Concept) -> float:
-            """Translate the learner's latest concept score into a remaining mastery gap."""
-            item_progress = progress.get(item.id)
-            score = item_progress.score if item_progress and item_progress.score is not None else 0.0
-            return 100.0 - score
-
-        current_year = date.today().year
-        def evidence_priority(item: Concept) -> float:
-            """Weight reviewed question recurrence by recency and documented marks."""
-            questions = evidence.get(item.id, [])
-            if not questions:
-                return 0.0
-            weighted = sum((1 / (1 + max(current_year - question.exam_year, 0) * 0.15)) * (1 + min(question.marks or 0, 100) / 100) for question in questions)
-            return weighted
-
-        eligible.sort(key=lambda item: (-evidence_priority(item), -mastery_gap(item), -item.difficulty, item.source_page or 0, (item.unit_label or "").casefold(), item.name.casefold(), item.id))
-        ordered.extend(eligible)
-        remaining -= {item.id for item in eligible}
+    priority_inputs = [
+        ConceptPriorityInput(
+            concept_id=concept.id,
+            name=concept.name,
+            difficulty=concept.difficulty,
+            mastery_score=progress[concept.id].score if concept.id in progress else None,
+            source_page=concept.source_page,
+            unit_label=concept.unit_label,
+            evidence=tuple(QuestionEvidence(question.exam_year, question.marks) for question in evidence.get(concept.id, [])),
+        )
+        for concept in concepts
+    ]
+    try:
+        priority_decisions = prioritize_with_dependencies(priority_inputs, prerequisites, current_year=date.today().year)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Cannot generate a roadmap from a cyclic prerequisite graph") from exc
+    decisions_by_id = {decision.concept_id: decision for decision in priority_decisions}
+    ordered = [by_id[decision.concept_id] for decision in priority_decisions]
     available_days = max((target_date - date.today()).days + 1, 1)
     def estimated_minutes(concept: Concept) -> int:
         """Use allocated syllabus unit time, falling back to concept difficulty."""
@@ -156,12 +149,11 @@ def generate_items(db: Session, user: User, course_id: str, target_date: date, d
             remaining_budget -= chunk
             minutes_left -= chunk
         linked = evidence.get(concept.id, [])
-        reasons = ["Prerequisites are satisfied", f"mastery gap {mastery_gap(concept):.0f}%", f"concept difficulty {concept.difficulty}/5"]
+        decision = decisions_by_id[concept.id]
+        reasons = ["Prerequisites are satisfied", *decision.reasons]
         if linked:
             recent_year = max(question.exam_year for question in linked)
-            reasons.append(f"{len(linked)} verified historical questions; latest in {recent_year}")
-        else:
-            reasons.append("no verified historical evidence")
+            reasons.append(f"latest reviewed question in {recent_year}")
         time_basis = "syllabus unit hours" if concept.estimated_minutes else "difficulty estimate"
         reasons.append(f"estimated {estimate} minutes from {time_basis}")
         if scheduled_minutes < estimate:

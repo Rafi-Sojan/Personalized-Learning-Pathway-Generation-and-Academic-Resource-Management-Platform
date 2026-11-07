@@ -1,4 +1,5 @@
 from datetime import date, datetime, timezone
+import json
 from typing import Optional
 from uuid import uuid4
 
@@ -178,8 +179,23 @@ class HistoricalExamQuestion(Base):
     assessment_type: Mapped[str] = mapped_column(String(24), default="unknown", index=True)
     question_format: Mapped[str] = mapped_column(String(24), default="unknown")
     mapping_confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    mapping_metadata_json: Mapped[str] = mapped_column(Text, default="{}")
     review_status: Mapped[str] = mapped_column(String(24), default="pending_review", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    @property
+    def mapping_metadata(self) -> dict[str, object]:
+        """Expose bounded matcher evidence as parsed JSON for API serialization."""
+        try:
+            value = json.loads(self.mapping_metadata_json or "{}")
+        except (TypeError, json.JSONDecodeError):
+            return {}
+        return value if isinstance(value, dict) else {}
+
+    @mapping_metadata.setter
+    def mapping_metadata(self, value: dict[str, object]) -> None:
+        """Persist matcher evidence deterministically without duplicating prompt text."""
+        self.mapping_metadata_json = json.dumps(value, sort_keys=True, separators=(",", ":"))
 
 
 class AuditEvent(Base):

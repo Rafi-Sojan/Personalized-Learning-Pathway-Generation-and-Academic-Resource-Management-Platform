@@ -16,8 +16,9 @@ from app.models import Concept, ConceptPrerequisite, Course, Resource as Resourc
 from app.schemas.learning import Resource
 from app.services.document_processing import process_resource_by_id
 from app.services.storage import storage
-from app.services.syllabus_service import extract_prerequisite_candidates, extract_syllabus_facts, extract_syllabus_topics, select_syllabus_course_section
-from ml.concept_mapping.text_cleaner import clean_text
+from app.services.syllabus_service import SyllabusTopic, extract_prerequisite_candidates, extract_syllabus_facts, extract_syllabus_topics, select_syllabus_course_section
+from ml.concept_mapping.concept_identity import SourceConceptIdentity, source_concept_identity, unique_name_keys
+from ml.concept_mapping.text_cleaner import canonical_key, clean_text
 
 router = APIRouter()
 
@@ -170,7 +171,24 @@ def generate_concept_map_from_syllabus(
         db.add(version)
         db.flush()
 
-    existing = db.scalars(select(Concept).where(Concept.course_id == source.course_id)).all()
+    existing = list(db.scalars(select(Concept).where(Concept.course_id == source.course_id)).all())
+    existing_by_id = {concept.id: concept for concept in existing}
+    previous_parent_names = {
+        concept.id: existing_by_id[concept.parent_concept_id].name
+        if concept.parent_concept_id in existing_by_id
+        else None
+        for concept in existing
+    }
+    existing_by_identity: dict[SourceConceptIdentity, list[Concept]] = {}
+    existing_by_name: dict[str, list[Concept]] = {}
+    for concept in existing:
+        identity = source_concept_identity(
+            concept.name,
+            concept.unit_label,
+            previous_parent_names[concept.id],
+        )
+        existing_by_identity.setdefault(identity, []).append(concept)
+        existing_by_name.setdefault(canonical_key(concept.name), []).append(concept)
     # This course has one current map: older mapped topics stay stored for references
     # such as prior plans, but only concepts in this source version remain current.
     for concept in existing:
@@ -178,33 +196,51 @@ def generate_concept_map_from_syllabus(
             concept.syllabus_version_id = None
             concept.unit_label = None
             concept.source_page = None
-    concepts_by_name = {clean_text(concept.name): concept for concept in existing}
+    unique_source_names = unique_name_keys(topic.name for topic in topics)
+    claimed_existing: set[str] = set()
+    current_entries: list[tuple[SyllabusTopic, Concept]] = []
     topics_per_unit: dict[str, int] = {}
     for topic in topics:
         if topic.unit_label:
             topics_per_unit[topic.unit_label] = topics_per_unit.get(topic.unit_label, 0) + 1
-    added = []
-    reused = []
+    added: list[Concept] = []
+    reused: list[Concept] = []
     for topic in topics:
         normalized = clean_text(topic.name)
         if not normalized:
             continue
-        if normalized in concepts_by_name:
-            concept = concepts_by_name[normalized]
+        identity = source_concept_identity(topic.name, topic.unit_label, topic.parent_label)
+        exact_candidates = [
+            candidate
+            for candidate in existing_by_identity.get(identity, [])
+            if candidate.id not in claimed_existing
+        ]
+        name_candidates = [
+            candidate
+            for candidate in existing_by_name.get(canonical_key(topic.name), [])
+            if candidate.id not in claimed_existing
+        ]
+        # Exact source hierarchy is safest. A globally unique name may also be
+        # reused across syllabus versions to preserve learner progress when the
+        # publisher moved it to another unit.
+        matched_concept = exact_candidates[0] if len(exact_candidates) == 1 else None
+        if matched_concept is None and canonical_key(topic.name) in unique_source_names and len(name_candidates) == 1:
+            matched_concept = name_candidates[0]
+        if matched_concept is not None:
+            concept = matched_concept
             concept.unit_label = topic.unit_label
             concept.source_page = topic.source_page
             concept.syllabus_version_id = version.id
             reused.append(concept)
+            claimed_existing.add(concept.id)
         else:
             concept = Concept(course_id=source.course_id, name=topic.name[:200], difficulty=1, status="not_started", unit_label=topic.unit_label, source_page=topic.source_page, syllabus_version_id=version.id)
             db.add(concept)
-            concepts_by_name[normalized] = concept
             added.append(concept)
-        db.flush()
-        parent = concepts_by_name.get(clean_text(topic.parent_label)) if topic.parent_label else None
-        concept.parent_concept_id = parent.id if parent and parent.id != concept.id else None
+        current_entries.append((topic, concept))
         count_in_unit = topics_per_unit.get(topic.unit_label or "", 0)
         concept.estimated_minutes = max(10, round(topic.unit_hours * 60 / count_in_unit)) if topic.unit_hours and count_in_unit else None
+        db.flush()
         prior_record = db.scalar(select(SyllabusRecord).where(
             SyllabusRecord.syllabus_version_id == version.id,
             SyllabusRecord.record_type == topic.record_type,
@@ -222,6 +258,19 @@ def generate_concept_map_from_syllabus(
                 parent_label=topic.parent_label, hours=topic.unit_hours, confidence=confidence,
                 review_status="pending_review", mapped_concept_id=concept.id,
             ))
+    # Resolve parents only against this source version. This avoids attaching a
+    # repeated label to an identically named heading from another unit.
+    current_by_unit_and_name: dict[tuple[str, str], list[Concept]] = {}
+    for topic, concept in current_entries:
+        key = (canonical_key(topic.unit_label or ""), canonical_key(topic.name))
+        current_by_unit_and_name.setdefault(key, []).append(concept)
+    for topic, concept in current_entries:
+        if not topic.parent_label:
+            concept.parent_concept_id = None
+            continue
+        parent_key = (canonical_key(topic.unit_label or ""), canonical_key(topic.parent_label))
+        parent_candidates = [item for item in current_by_unit_and_name.get(parent_key, []) if item.id != concept.id]
+        concept.parent_concept_id = parent_candidates[0].id if len(parent_candidates) == 1 else None
     # Preserve labeled syllabus outcomes, labs, assessment rules, and metadata as
     # page-linked facts without creating misleading concept-map nodes from them.
     for fact in extract_syllabus_facts(syllabus_text):
@@ -239,9 +288,14 @@ def generate_concept_map_from_syllabus(
                 confidence=0.58, review_status="pending_review",
             ))
     suggested_edges = 0
+    current_by_name: dict[str, list[Concept]] = {}
+    for topic, concept in current_entries:
+        current_by_name.setdefault(canonical_key(topic.name), []).append(concept)
     for candidate in extract_prerequisite_candidates(syllabus_text):
-        child = concepts_by_name.get(clean_text(candidate.concept_name))
-        prerequisite = concepts_by_name.get(clean_text(candidate.prerequisite_name))
+        child_options = current_by_name.get(canonical_key(candidate.concept_name), [])
+        prerequisite_options = current_by_name.get(canonical_key(candidate.prerequisite_name), [])
+        child = child_options[0] if len(child_options) == 1 else None
+        prerequisite = prerequisite_options[0] if len(prerequisite_options) == 1 else None
         if child is None or prerequisite is None or child.id == prerequisite.id:
             continue
         existing_edge = db.get(ConceptPrerequisite, (child.id, prerequisite.id))

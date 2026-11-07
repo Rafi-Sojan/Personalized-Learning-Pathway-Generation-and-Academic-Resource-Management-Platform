@@ -1,7 +1,7 @@
 # RVCE Syllabus Integration Implementation Record
 
 **Document ID:** ILR-IMP-001  
-**Version:** 1.5
+**Version:** 1.6
 **Status:** Implemented development workflow; academic acceptance pending  
 **Owner:** Project maintainer  
 **Last reviewed:** 2026-11-07
@@ -13,7 +13,7 @@ This record describes the RVCE course-syllabus ingestion and learner onboarding 
 
 ## 2. Delivery summary
 
-The implementation includes guided creation of private branch/scheme/semester subject workspaces, optional immediate syllabus attachment, a SHA-256-verified PDF extraction utility, a source-backed candidate dataset, a conflict quarantine file, a provenance validator, administrator-only batch import, role-gated review and approval, first-year branch mapping, learner enrollment, a learner catalog screen, an administrator review interface, schema migration, and CI/release checks. Personal subjects carry `origin=personal`; verified enrollment carries `origin=rvce_catalog` and the source catalog identifier. Neither path creates placeholder concepts; topic records must be generated from a stored syllabus PDF. Stored syllabus parsing is course-scoped and review-gated, while question-paper parsing excludes solution material and requires reviewed current-syllabus mappings before topic frequency is reported.
+The implementation includes guided creation of private branch/scheme/semester subject workspaces, optional immediate syllabus attachment, a SHA-256-verified PDF extraction utility, a source-backed candidate dataset, a conflict quarantine file, a provenance validator, administrator-only batch import, role-gated review and approval, first-year branch mapping, learner enrollment, a learner catalog screen, an administrator review interface, schema migrations, explainable concept matching and roadmap prioritization, and CI/release checks. Personal subjects carry `origin=personal`; verified enrollment carries `origin=rvce_catalog` and the source catalog identifier. Neither path creates placeholder concepts; topic records must be generated from a stored syllabus PDF. Stored syllabus parsing is course-scoped, source-identity-aware, and review-gated, while question-paper parsing excludes solution material and requires reviewed current-syllabus mappings before topic frequency is reported.
 
 The current source set contains eight inventoried PDFs. Extraction produced 207 non-conflicting candidate rows and quarantined two rows sharing a course identity but carrying different titles. Every candidate retains scheme, semester, course code, title, credit tuple total, source filename, source page, checksum, and source-index URL. Category and total contact hours are included when explicitly extractable. Unparsed outcomes and prerequisite relationships remain empty and must not be inferred from this dataset.
 
@@ -33,6 +33,7 @@ The current source set contains eight inventoried PDFs. Extraction produced 207 
 | `backend/migrations/versions/0010_exam_question_sections.py` | Separates Part A quiz entries from Part B main questions in the paper archive |
 | `backend/migrations/versions/0011_ingestion_provenance_review.py` | Adds versioned syllabus records, concept estimates/parentage, reviewable prerequisites, and historical-paper provenance/review metadata |
 | `backend/migrations/versions/0012_course_academic_scope.py` | Adds learner-course branch/scheme/semester scope, personal/catalog origin, catalog provenance, indexes, and duplicate guards |
+| `backend/migrations/versions/0013_matcher_evidence.py` | Adds durable bounded algorithm/version, decision, margin, explanation, and candidate metadata for historical-question mapping |
 
 The source manifest records a source folder label for reproducibility. Runtime imports use the configured source-root path and verify bytes against the recorded SHA-256 value before extracting a PDF.
 
@@ -70,7 +71,7 @@ All import paths require source filename and page provenance. The backend compar
 
 ## 6. Persistence and migration behavior
 
-`rvce_syllabus_courses` stores program, scheme, semester, course identity, title, credits, category, optional contact hours, JSON prerequisites/outcomes, source URL, SHA-256 checksum, source filename, source page, verification state, and creation time. The database enforces uniqueness across program, scheme year, semester, and course code. Learner `courses` store optional academic scope, origin, and optional catalog provenance; uniqueness guards duplicate personal scope identities and repeated materialization of one catalog row. Migration `0008_rvce_source_page` is guarded when adding columns to support databases where the columns may already exist. Migration `0012_course_academic_scope` similarly supports older databases and fresh metadata-bootstrap databases. Apply migrations using the repository's normal Alembic upgrade procedure before deploying the API.
+`rvce_syllabus_courses` stores program, scheme, semester, course identity, title, credits, category, optional contact hours, JSON prerequisites/outcomes, source URL, SHA-256 checksum, source filename, source page, verification state, and creation time. The database enforces uniqueness across program, scheme year, semester, and course code. Learner `courses` store optional academic scope, origin, and optional catalog provenance; uniqueness guards duplicate personal scope identities and repeated materialization of one catalog row. Historical questions store bounded matcher evidence in `mapping_metadata_json`. Migration `0008_rvce_source_page` is guarded when adding columns to support databases where the columns may already exist. Migration `0012_course_academic_scope` similarly supports older databases and fresh metadata-bootstrap databases. Migration `0013_matcher_evidence` preserves prior rows with an empty-object metadata default. Apply migrations using the repository's normal Alembic upgrade procedure before deploying the API.
 
 The learner enrollment operation is idempotent for a learner and course scope: existing course records are returned as existing rather than duplicated. If the learner already created the exact scoped personal subject, verified enrollment links that workspace to the approved catalog row in place and retains its notes and learning data. Newly created or newly linked catalog courses receive a syllabus-version label when none exists, but no placeholder concept. Concepts and prerequisite proposals are created only from the learner's stored and processed syllabus copy.
 
@@ -113,19 +114,20 @@ The repository checks recorded for this implementation report are listed below. 
 |---|---|
 | PDF source fingerprint and candidate extraction | Passed; 207 candidates produced and two conflicting rows quarantined |
 | `scripts/validate_rvce_courses.py` | Passed; 207 source-backed records |
-| `scripts/verify_release.py` | Passed 2026-11-07; 62 controlled artifacts, 271 Python docstrings, 78 frontend function comments, two C++ declarations, and pinned workflow actions checked |
-| Backend and ML test suites plus cross-module API tests | Passed 2026-11-07; 39 passed, one PostgreSQL/Redis integration test skipped because services were not enabled |
+| `scripts/verify_release.py` | Passed 2026-11-07 after learning-engine v2; 62 controlled artifacts, 319 Python docstrings, 78 frontend function comments, two C++ declarations, and pinned workflow actions checked |
+| Backend and ML test suites plus cross-module API tests | Passed 2026-11-07 after learning-engine v2; 55 passed, one PostgreSQL/Redis integration test skipped because services were not enabled |
 | Ruff over backend, ML, tests, and `conftest.py` | Passed 2026-11-07 |
 | mypy over `backend/app` | Passed 2026-11-07; 52 source files checked |
 | Python `compileall` over backend, ML, tests, and scripts | Passed |
-| Learning-quality regression benchmark | Passed; mapping F1, ranking NDCG, and historical-ranking NDCG each scored 1.0 against the configured 0.80 minimum |
+| Learning-quality regression benchmark | Passed; the computed eight-case matcher fixture scored 1.0 for precision, recall/F1, accuracy, abstention/status accuracy, and MRR with 0.625 coverage; mapping F1 and ranking NDCG metrics also passed. This is synthetic regression evidence only. |
 | Python dependency audit | Previously passed after remediation; not rerun in the 2026-11-06 local pass |
 | npm dependency audit | Previously passed after the Playwright update; not rerun in the 2026-11-06 local pass |
 | Frontend production build and bundle check | Passed 2026-11-07; 20 JavaScript assets within the configured bundle budget |
 | Frontend Playwright browser acceptance | Seven scenarios reported `ok` on 2026-11-07, including login redirect and branch-scoped subject creation; the below-policy Node 24.11.1/npm 11.6.2 full runner required termination after reporting. The targeted subject scenario exited cleanly, targeted login reported `ok`, and an isolated live walkthrough completed; pinned CI remains clean-exit authority |
 | Native scoring-engine test | Passed 2026-11-06 with g++ C++17, `-Wall -Wextra -Werror` |
-| SQL reference and migration consistency | Passed 2026-11-07; all tables, columns, and 45 indexes across 16 SQLAlchemy models matched `database/init.sql`, and migration `0012` passed fresh, legacy, downgrade, and re-upgrade checks |
+| SQL reference and migration consistency | `database/init.sql` matched all columns and named indexes in the 16-table/45-index model. Migration `0013` passed fresh SQLite upgrade, downgrade to `0012`, re-upgrade, and an isolated legacy-copy check that retained all six historical-question rows with `{}` metadata; PostgreSQL candidate verification remains a release gate. |
 | Root local database migration | Backed up as `learning.db.before-0012.bak`, upgraded from `0011` to head `0012`, and verified with the existing course preserved as personal origin |
+| Root database state after learning-engine v2 | Intentionally not mutated; still at `0012`. Run the documented Alembic upgrade against the selected database before starting the updated API. |
 | Supplied question-paper parser check | Passed 2026-11-07 for declared course `21CS45`; 64 rows: 19 quiz, 45 main, 32 CIE/test, 32 SEE, zero scheme/solution contamination |
 | Supplied AI syllabus parser check | Passed 2026-11-07 for `AI253IA`; 106 concepts: 19 roots and 87 children, zero outcome/lab/rubric/marks contamination |
 | Function-comment coverage | Passed 2026-11-07; enforced by `scripts/verify_release.py` |

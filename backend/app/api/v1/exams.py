@@ -19,7 +19,7 @@ from app.models import Concept, Course, HistoricalExamQuestion, Resource, Syllab
 from app.schemas.learning import HistoricalExamImportRequest, HistoricalExamQuestionCreate, HistoricalExamQuestionResponse, HistoricalExamRanking
 from app.services.audit import record_event
 from app.services.storage import storage
-from ml.concept_mapping.semantic_matcher import topic_similarity
+from ml.concept_mapping.semantic_matcher import ConceptDocument, ConceptMatch, ConceptMatcher, MATCHER_VERSION
 from ml.concept_mapping.text_cleaner import clean_text
 from ml.preprocessing.ocr_processor import run_pdf_ocr
 from ml.preprocessing.question_parser import parse_question_records
@@ -63,31 +63,51 @@ def _verified_syllabus_concepts(course_id: str, db: Session) -> list[Concept]:
     ).all())
 
 
-def _concept_for_prompt(prompt: str, course_id: str, db: Session) -> tuple[str | None, str, float | None]:
-    """Suggest an unambiguous mapping only among reviewed concepts in the same course."""
-    ranked = sorted(
-        ((topic_similarity(prompt, concept.name), concept) for concept in _verified_syllabus_concepts(course_id, db)),
-        key=lambda pair: pair[0],
-        reverse=True,
-    )
-    if not ranked:
-        return None, "Unmapped", None
-    best_score, best = ranked[0]
-    runner_up = ranked[1][0] if len(ranked) > 1 else 0.0
-    if best_score < 0.62 or (best_score < 0.9 and best_score - runner_up < 0.08):
-        return None, "Unmapped", None
-    return best.id, best.name, best_score
+def _concept_matcher(course_id: str, db: Session) -> ConceptMatcher:
+    """Build one corpus-aware matcher from current, human-verified syllabus concepts."""
+    concepts = _verified_syllabus_concepts(course_id, db)
+    by_id = {concept.id: concept for concept in concepts}
+    documents = [
+        ConceptDocument(
+            concept_id=concept.id,
+            name=concept.name,
+            parent_name=by_id[concept.parent_concept_id].name if concept.parent_concept_id in by_id else None,
+            unit_label=concept.unit_label,
+        )
+        for concept in concepts
+    ]
+    return ConceptMatcher(documents)
+
+
+def _concept_for_prompt(prompt: str, course_id: str, db: Session, *, matcher: ConceptMatcher | None = None) -> ConceptMatch:
+    """Return a reviewable match or an explicit abstention for one exam prompt."""
+    return (matcher or _concept_matcher(course_id, db)).match(prompt)
+
+
+def _manual_mapping_metadata(*, status: str, concept_id: str | None = None) -> dict[str, object]:
+    """Describe a human mapping decision without presenting it as model output."""
+    return {
+        "status": status,
+        "model_version": "human-review",
+        "margin": None,
+        "explanation": "Concept mapping set by an authorized reviewer.",
+        "candidates": [{"concept_id": concept_id}] if concept_id else [],
+    }
 
 
 @router.post("/questions", response_model=HistoricalExamQuestionResponse, status_code=201)
 def create_question(payload: HistoricalExamQuestionCreate, current_user: User = Depends(require_roles("admin", "instructor")), db: Session = Depends(get_db)) -> HistoricalExamQuestionResponse:
     """Persist one authorized historical question with an explicit or inferred concept link."""
     _course_for_user(payload.course_id, current_user, db)
-    concept_id = payload.concept_id
-    if concept_id and db.scalar(select(Concept).where(Concept.id == concept_id, Concept.course_id == payload.course_id)) is None:
+    manual_concept = db.scalar(select(Concept).where(Concept.id == payload.concept_id, Concept.course_id == payload.course_id)) if payload.concept_id else None
+    if payload.concept_id and manual_concept is None:
         raise HTTPException(status_code=404, detail="Concept not found")
-    concept_id, topic_label, confidence = (concept_id, "manual", 1.0) if concept_id else _concept_for_prompt(payload.prompt, payload.course_id, db)
+    match = _concept_for_prompt(payload.prompt, payload.course_id, db) if manual_concept is None else None
+    concept_id = manual_concept.id if manual_concept else match.concept_id if match else None
+    topic_label = manual_concept.name if manual_concept else match.label if match else "Unmapped"
+    confidence = 1.0 if manual_concept else match.confidence if match else None
     question = HistoricalExamQuestion(course_id=payload.course_id, source=payload.source, source_document=payload.source, exam_year=payload.exam_year, prompt=payload.prompt.strip(), concept_id=concept_id, topic_label=topic_label, difficulty=payload.difficulty, paper_part=payload.paper_part, question_kind=payload.question_kind, assessment_type=payload.assessment_type, question_format=payload.question_format, marks=payload.marks, mapping_confidence=confidence, review_status="pending_review")
+    question.mapping_metadata = _manual_mapping_metadata(status="manual", concept_id=concept_id) if manual_concept else match.as_metadata() if match else {}
     db.add(question)
     record_event(db, "historical_exam_question_created", current_user.id, metadata={"course_id": payload.course_id, "year": payload.exam_year})
     db.commit()
@@ -177,6 +197,7 @@ def _persist_parsed_questions(course_id: str, source: str, exam_year: int, text:
     if not parsed_questions:
         raise HTTPException(status_code=422, detail="No questions could be extracted")
     questions = []
+    matcher = _concept_matcher(course_id, db)
     for parsed in parsed_questions:
         prompt = parsed.prompt
         duplicate = db.scalar(select(HistoricalExamQuestion).where(
@@ -193,15 +214,18 @@ def _persist_parsed_questions(course_id: str, source: str, exam_year: int, text:
         ))
         if duplicate:
             continue
-        concept_id, topic_label, confidence = _concept_for_prompt(prompt, course_id, db)
+        match = _concept_for_prompt(prompt, course_id, db, matcher=matcher)
         question_kind = parsed.question_kind
         detected_assessment = parsed.assessment_type or assessment_type
         detected_format = parsed.question_format if parsed.question_format != "unknown" else question_format
-        questions.append(HistoricalExamQuestion(course_id=course_id, source=source, source_document=source_document, source_resource_id=source_resource_id, exam_year=exam_year, prompt=prompt, concept_id=concept_id, topic_label=topic_label, difficulty=None, paper_part=parsed.paper_part, question_kind=question_kind, question_number=parsed.question_number, subpart=parsed.subpart, marks=parsed.marks, source_page=parsed.source_page, assessment_type=detected_assessment, question_format=detected_format, mapping_confidence=confidence, review_status="pending_review"))
+        question = HistoricalExamQuestion(course_id=course_id, source=source, source_document=source_document, source_resource_id=source_resource_id, exam_year=exam_year, prompt=prompt, concept_id=match.concept_id, topic_label=match.label, difficulty=None, paper_part=parsed.paper_part, question_kind=question_kind, question_number=parsed.question_number, subpart=parsed.subpart, marks=parsed.marks, source_page=parsed.source_page, assessment_type=detected_assessment, question_format=detected_format, mapping_confidence=match.confidence, review_status="pending_review")
+        question.mapping_metadata = match.as_metadata()
+        questions.append(question)
     if not questions:
         raise HTTPException(status_code=409, detail="This paper has already been imported")
     db.add_all(questions)
-    record_event(db, "historical_exam_imported", user.id, metadata={"course_id": course_id, "year": exam_year, "question_count": len(questions)})
+    mapping_statuses = Counter(str(question.mapping_metadata.get("status", "unknown")) for question in questions)
+    record_event(db, "historical_exam_imported", user.id, metadata={"course_id": course_id, "year": exam_year, "question_count": len(questions), "matcher_version": MATCHER_VERSION, "mapping_statuses": dict(mapping_statuses)})
     db.flush()
     responses = [HistoricalExamQuestionResponse.model_validate(question) for question in questions]
     db.commit()
@@ -339,6 +363,7 @@ def review_question(
         question.concept_id = None
         question.topic_label = "Unmapped"
         question.mapping_confidence = None
+        question.mapping_metadata = _manual_mapping_metadata(status="cleared")
     elif concept_id is not None:
         concept = next((item for item in _verified_syllabus_concepts(question.course_id, db) if item.id == concept_id), None)
         if concept is None:
@@ -346,6 +371,7 @@ def review_question(
         question.concept_id = concept.id
         question.topic_label = concept.name
         question.mapping_confidence = 1.0
+        question.mapping_metadata = _manual_mapping_metadata(status="manual", concept_id=concept.id)
     db.commit()
     return {"id": question.id, "review_status": question.review_status, "difficulty": question.difficulty, "assessment_type": question.assessment_type, "question_format": question.question_format, "concept_id": question.concept_id, "topic_label": question.topic_label}
 

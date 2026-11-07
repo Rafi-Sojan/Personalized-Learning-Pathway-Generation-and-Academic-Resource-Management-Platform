@@ -1,7 +1,7 @@
 # Evaluation and Acceptance Plan
 
 **Document ID:** ILR-EVAL-001
-**Version:** 2.2
+**Version:** 2.3
 **Status:** Implementation-complete development baseline
 **Last reviewed:** 2026-11-07
 
@@ -25,8 +25,13 @@ Evaluation data must be versioned, de-identified where possible, and separated f
 
 ## 4. Reproducible benchmark harness
 
-`python scripts/evaluate_learning.py <benchmark.json>` evaluates a JSON array of cases. Each case may contain `mapping`, `roadmap`, `ranking`, and `historical_ranking` sections. The harness reports average mapping precision, recall, F1, roadmap completion rate, normal ranking hit rate, normal ranking NDCG, historical ranking hit rate, historical ranking NDCG, and case count. Thresholds can be enforced with repeated `--minimum metric=value` arguments; the release workflow gates mapping F1 and ranking NDCG at 0.80. Historical exam ranking inputs should record source/year and concept coverage. It is intentionally deterministic and is suitable for CI regression fixtures once a reviewed, de-identified benchmark set is supplied.
-# Chronological historical-frequency evaluation
+`python scripts/evaluate_learning.py <benchmark.json>` evaluates a JSON array of cases. Each case may contain `mapping`, `concept_matching`, `roadmap`, `ranking`, and `historical_ranking` sections. A `concept_matching` case supplies raw prompt text, candidate concept records, expected concept IDs (or `null` for required abstention), and an optional expected status. The harness invokes the matcher itself; it does not trust a pre-filled prediction.
+
+Reported matcher measures are exact accuracy, accepted-match precision, mapped-case recall/F1, coverage, abstention accuracy, status accuracy, and mean reciprocal rank. The release gate requires matcher precision, F1, and abstention accuracy of at least `0.90` on the source-controlled regression fixture, in addition to the existing mapping F1 and ranking NDCG gates. Coverage is reported but not thresholded so CI does not reward unsafe forced matching.
+
+The eight supplied matcher cases test specificity, generic labels, derived acronyms, two-topic ambiguity, no-evidence abstention, hierarchy context, same-name ambiguity, and OCR/spelling damage. They are synthetic engineering regressions and produced perfect scores on 2026-11-07. They are deliberately small and are not evidence of RVCE academic accuracy, population validity, calibration, fairness, or production quality. EVAL-01 remains open until an authorized, versioned, de-identified, academically annotated corpus and acceptance thresholds exist.
+
+## 5. Chronological historical-frequency evaluation
 
 `ml.evaluation.chronological_ranking.evaluate_chronological_frequency` uses an expanding-window evaluation. For each held-out year it ranks concepts using only verified historical records from earlier years, then reports Hit Rate@K and NDCG@K against topics occurring in the held-out year. Unmapped rows and invalid years are ignored. The result includes per-year metrics and macro means, making temporal leakage visible. This offline evaluator is a metric utility; it does not claim predictive validity without a representative, academically reviewed multi-year paper archive.
 

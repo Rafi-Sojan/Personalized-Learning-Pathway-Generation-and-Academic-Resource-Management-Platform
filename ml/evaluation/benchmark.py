@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from ml.evaluation.concept_matching import evaluate_concept_matching
 from ml.evaluation.mapping_metrics import f1_score, precision, recall
 from ml.evaluation.ranking_metrics import hit_rate, ndcg
 from ml.evaluation.roadmap_metrics import completion_rate
@@ -43,7 +44,7 @@ def evaluate_cases(cases: Iterable[dict]) -> dict[str, float]:
             k = int(historical.get("k", 5))
             historical_ranking_scores.append(hit_rate(recommended, relevant, k))
             historical_ranking_ndcg_scores.append(ndcg(recommended, relevant, k))
-    return {
+    result = {
         "mapping_precision": sum(mapping_scores) / len(mapping_scores) if mapping_scores else 0.0,
         "mapping_recall": sum(mapping_recall_scores) / len(mapping_recall_scores) if mapping_recall_scores else 0.0,
         "mapping_f1": sum(mapping_f1_scores) / len(mapping_f1_scores) if mapping_f1_scores else 0.0,
@@ -54,3 +55,6 @@ def evaluate_cases(cases: Iterable[dict]) -> dict[str, float]:
         "historical_ranking_ndcg": sum(historical_ranking_ndcg_scores) / len(historical_ranking_ndcg_scores) if historical_ranking_ndcg_scores else 0.0,
         "cases": float(len(case_list)),
     }
+    matching_cases = [case["concept_matching"] for case in case_list if isinstance(case.get("concept_matching"), dict)]
+    result.update(evaluate_concept_matching(matching_cases))
+    return result

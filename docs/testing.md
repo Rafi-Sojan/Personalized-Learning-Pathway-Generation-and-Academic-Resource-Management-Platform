@@ -1,7 +1,7 @@
 # Test and Verification Specification
 
 **Document ID:** ILR-TST-001
-**Version:** 2.5
+**Version:** 2.6
 **Status:** Implementation-complete development baseline
 **Last reviewed:** 2026-11-07
 
@@ -13,14 +13,16 @@ Testing shall verify functional behavior, authorization boundaries, data validat
 
 The 2026-11-07 local verification includes:
 
-- `python -m pytest backend/tests ml/tests tests -q`: 39 passed and one PostgreSQL/Redis integration test skipped because `INTEGRATION_TESTS` was not enabled.
+- `python -m pytest backend/tests ml/tests tests -q`: 55 passed and one PostgreSQL/Redis integration test skipped because `INTEGRATION_TESTS` was not enabled.
 - Focused regressions cover seed-free account/course setup, complete account export and foreign-key-safe deletion, external review anonymization, private-file deletion, multi-day roadmap segmentation, partial-preview disclosure, duplicate-paper object cleanup, Python/native scoring parity, solution-page exclusion, RVCE question-number variants, printed CIE/SEE detection, strict paper/course identity, hierarchical syllabus parsing, and manual question remapping.
 - Course-onboarding regressions cover RVCE alias normalization, branch/scheme validation, duplicate subject rejection, personal-origin responses, syllabus upload status, verified-enrollment catalog provenance, and the configured page limit against the inventoried syllabus books.
+- Learning-engine v2 regressions cover specific-versus-generic concepts, derived acronyms, multi-topic ambiguity, hierarchy context, same-name ambiguity, OCR/spelling damage, no-evidence abstention, bounded matcher metadata, source-aware concept identity, taxonomy-driven classification, crosswalk validation, deterministic graph order, downstream unlock priority, and cycle rejection.
 - Ruff passed across backend, ML, tests, and the root test configuration. Mypy passed across 52 backend source files.
-- `scripts/verify_release.py` passed with 62 controlled artifacts, 271 Python docstrings, 78 frontend function comments, two C++ API comments, and immutable workflow pins checked.
+- The computed eight-case matcher fixture passed precision, recall/F1, exact/status/abstention accuracy, and MRR at `1.0`, with `0.625` accepted-match coverage. The fixture is synthetic regression evidence only.
+- `scripts/verify_release.py` passed with 62 controlled artifacts, 319 Python docstrings, 78 frontend function comments, two C++ API comments, and immutable workflow pins checked.
 - The TypeScript/Vite production build passed and 20 JavaScript assets stayed within the bundle budget.
 - All seven Playwright scenarios reported `ok`, including accessibility, successful-login redirect, syllabus intake, the legacy resource redirect, and branch-scoped personal-subject creation. The full process used local Node 24.11.1/npm 11.6.2, which are below the declared minimum, and required termination after reporting. The targeted subject scenario exited cleanly; targeted login also reported `ok` but retained the same runner-exit limitation. A live isolated-database walkthrough verified login, creation, origin labeling, syllabus deep linking, and empty verified-catalog behavior. The pinned CI toolchain remains required for clean candidate acceptance.
-- `database/init.sql` executed in memory and matched every table, column, and named index across the 16-table/45-index SQLAlchemy model. Migration `0012_course_academic_scope` passed a fresh-database upgrade and a separate pre-change-schema test that preserved a legacy row, downgraded, and reapplied successfully.
+- `database/init.sql` matched every SQLAlchemy table, column, and named index across the 16-table/45-index model. Migration `0013_matcher_evidence` passed a fresh-database upgrade, downgrade to `0012`, and re-upgrade on SQLite. Upgrading an isolated copy of the root `0012` database retained all six historical-question rows and backfilled `{}` metadata. The candidate PostgreSQL migration gate remains required.
 - The prior 2026-11-06 native scorer test compiled and ran with `g++ -std=c++17 -Wall -Wextra -Werror`; native tests were not rerun on 2026-11-07.
 
 Two supplied RVCE-format PDFs were also used for deterministic, read-only parser checks. The 20-page combined CIE/scheme/SEE packet explicitly declares `21CS45` and produced 64 question rows: 19 Part A quiz items, 45 main questions, 32 CIE/test rows, and 32 SEE rows, with zero scheme/solution prompts. Selecting course `AI253IA` from the separate supplied 96-page 2022 AI/ML third-year scheme produced 106 teaching concepts: 19 roots and 87 children, with zero outcome, lab, rubric, or marks-distribution concepts. The course-identity guard prevents these two different subjects from being combined. These checks establish behavior on the observed layouts only; they are not a human-annotated precision/recall benchmark, source-authorization decision, or academic acceptance.

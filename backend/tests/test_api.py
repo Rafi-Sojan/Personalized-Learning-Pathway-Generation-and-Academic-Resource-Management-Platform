@@ -98,6 +98,32 @@ def test_syllabus_analysis() -> None:
     assert response.json()["count"] == 2
 
 
+def test_exam_import_persists_explainable_matcher_evidence() -> None:
+    """Return a versioned suggestion while keeping imported evidence pending review."""
+    headers = auth_headers()
+    courses = client.get("/api/v1/courses", headers=headers).json()
+    course_id = next(course["id"] for course in courses if course["code"] == "TST101")
+    response = client.post(
+        "/api/v1/exams/import",
+        headers=headers,
+        json={
+            "course_id": course_id,
+            "source": "matcher-regression",
+            "exam_year": 2026,
+            "text": "PART B\n1. Explain functions and function calls in detail.",
+            "assessment_type": "test",
+            "question_format": "long",
+        },
+    )
+    assert response.status_code == 201, response.text
+    question = response.json()[0]
+    assert question["concept_id"] == "functions"
+    assert question["review_status"] == "pending_review"
+    assert question["mapping_metadata"]["model_version"] == "rvce-hybrid-lexical-v2"
+    assert question["mapping_metadata"]["status"] == "matched"
+    assert question["mapping_metadata"]["candidates"][0]["concept_id"] == "functions"
+
+
 def test_rankings_return_only_the_authenticated_learner_summary() -> None:
     """Replace fabricated leaderboard rows with one private mastery summary."""
     response = client.get("/api/v1/rankings", headers=auth_headers())

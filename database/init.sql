@@ -153,6 +153,7 @@ CREATE TABLE IF NOT EXISTS historical_exam_questions (
   assessment_type TEXT NOT NULL DEFAULT 'unknown',
   question_format TEXT NOT NULL DEFAULT 'unknown',
   mapping_confidence REAL,
+  mapping_metadata_json TEXT NOT NULL DEFAULT '{}',
   review_status TEXT NOT NULL DEFAULT 'pending_review',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

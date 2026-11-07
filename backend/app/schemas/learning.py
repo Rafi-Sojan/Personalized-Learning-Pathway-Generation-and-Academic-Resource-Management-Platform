@@ -78,6 +78,7 @@ class HistoricalExamQuestionResponse(BaseModel):
     assessment_type: str = "unknown"
     question_format: str = "unknown"
     mapping_confidence: float | None = None
+    mapping_metadata: dict[str, object] = Field(default_factory=dict)
     review_status: str = "pending_review"
 
 

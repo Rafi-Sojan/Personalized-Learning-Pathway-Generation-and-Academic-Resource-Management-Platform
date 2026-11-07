@@ -1,7 +1,7 @@
 # Requirements Traceability Matrix
 
 **Document ID:** ILR-REQ-001
-**Version:** 2.8
+**Version:** 2.9
 **Status:** Implementation-complete development baseline
 **Last reviewed:** 2026-11-07
 
@@ -20,7 +20,7 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Syllabus versions | Implemented | `POST/GET /api/v1/courses/{course_id}/syllabus-versions` |
 | Text-based syllabus analysis | Implemented | `POST /api/v1/syllabus/analyze` with bounded input |
 | Stored syllabus PDF copies | Implemented | Course-owned `/syllabus/sources/upload`, private storage, checksum, and source listing |
-| Syllabus-derived concepts | Implemented; content validation open | Course-scoped unit parsing creates review-gated root/child concepts with page evidence and excludes outcome, lab, reference, and rubric tails; candidate quality still requires RVCE reviewer evaluation |
+| Syllabus-derived concepts | Implemented; content validation open | Course-scoped unit parsing creates review-gated root/child concepts with page evidence, excludes non-teaching tails, and uses unit/parent-aware identities so repeated labels do not collapse; candidate quality still requires RVCE reviewer evaluation |
 | PDF text extraction | Implemented | Bounded PyPDF/OCR processing records per-page markers in private processed text |
 | OCR for scanned PDFs | Implemented | Optional Tesseract/PyMuPDF provider is integrated for image-only PDFs, bounded by configured page/text limits, and packaged in `backend/Dockerfile.ocr` |
 | Manual resource catalog and mapping UI | Out of scope | Removed from learner navigation; legacy backend mapping contracts remain for compatibility |
@@ -29,7 +29,7 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Concept graph visualization | Implemented | React Flow map uses stable unit columns, parent-child edges, accepted prerequisite edges, source-page labels, and pending/verified styling; rejected current topics are omitted |
 | Syllabus-driven deadline-aware roadmap generation | Implemented | Persisted plans require a processed syllabus copy and map; full concept estimates are split across daily-capacity segments rather than truncated |
 | Feasibility checks | Implemented | Scheduler rejects impossible full-effort capacity and cyclic graphs; previews label a partial final concept when capacity expires |
-| Roadmap explanations | Implemented | Items include transparent prioritization explanations |
+| Roadmap explanations | Implemented | `rvce-evidence-priority-v2` records dependency-safe explanations for reviewed historical evidence, mastery gap, downstream unlock value, difficulty, and algorithm version |
 | Quiz attempts | Backend retained; learner UI removed | Concept quiz endpoint and attempt submission remain available for compatibility |
 | Progress adaptation and study activity | Backend retained; learner UI removed | Quiz/progress APIs and persisted records remain, but have no learner navigation or screens |
 | Live learner dashboard | Implemented | Current date/greeting, subject and mapped-topic counts, roadmap focus, empty states, and navigation actions use live API data |
@@ -37,8 +37,8 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Roadmap revision history | Implemented | Generated plans create revision snapshots and supersede prior active plans |
 | Past-paper PDF parsing | Implemented | Bounded page-aware extraction excludes scheme/solution ranges, recognizes RVCE numbering and printed CIE/SEE/part structure, preserves source coordinates, validates explicit course codes, and supports optional OCR |
 | Subject/topic question frequency | Implemented; academic validation open | Only verified main rows mapped to verified current-syllabus concepts create topic counts; mapped/unmapped main and quiz totals, year counts, repeats, evidence references, and archive filters are reported separately |
-| Historical exam ranking | Implemented | Historical question records, text/PDF import, conservative verified-syllabus matching, manual correction, review-gated frequency, C++ scorer contract, and benchmark harness |
-| Reproducible learning evaluation | Implemented | JSON benchmark harness reports mapping precision, roadmap completion, and ranking hit rate |
+| Historical exam ranking | Implemented | Historical question records, text/PDF import, corpus-aware phrase/acronym/OCR/context matching with conservative abstention, durable candidate evidence, manual correction, review-gated frequency, C++ scorer contract, and benchmark harness |
+| Reproducible learning evaluation | Implemented | JSON harness computes matcher decisions from raw prompts and reports precision, recall/F1, accuracy, coverage, abstention/status accuracy, MRR, roadmap completion, and ranking metrics |
 
 ## Platform requirements
 
@@ -54,7 +54,7 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Private file storage | Implemented | UUID filenames, non-public storage paths, checksum metadata, account cleanup, and compensating deletion for failed/duplicate paper imports |
 | Docker Compose | Implemented | Frontend, backend, worker, PostgreSQL, Redis, configurable storage, health checks, and corrected development mounts |
 | Non-root backend container | Implemented | Backend image runs as `appuser` |
-| Alembic migrations | Implemented | Configured environment plus lifecycle, resource mapping, exam, storage metadata, audit-event, ingestion provenance, and course academic-scope migrations |
+| Alembic migrations | Implemented | Configured environment plus lifecycle, resource mapping, exam, storage metadata, audit-event, ingestion provenance, course academic-scope, and matcher-evidence migrations |
 | CI tests and quality checks | Implemented | Release workflow includes Python API tests, Ruff, mypy, source and invariant validation, learning benchmark gates, frontend build/audit/E2E, native C++ tests, and Compose runtime/restore checks |
 | Container vulnerability scanning | Implemented | CI audits Python/npm dependencies, builds both images, scans high/critical findings, and publishes SPDX SBOM artifacts |
 | Role-based administration | Implemented | Server-side student, instructor, and admin roles; protected admin user-management endpoints; environment-backed initial admin provisioning |
@@ -70,7 +70,7 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Protected operational metrics | Implemented | Optional bearer-token protection and normalized path labels on `/metrics` |
 | Release invariant verification | Implemented | `scripts/verify_release.py` validates controlled artifacts, configuration entries, migration gate, and pinned actions |
 | Prometheus scrape and alert configuration | Implemented | Version-controlled scrape baseline and alert rules under `monitoring/` |
-| Expanded learning-quality evaluation | Implemented | Benchmark harness now reports mapping recall/F1 and ranking NDCG with threshold gates |
+| Expanded learning-quality evaluation | Implemented | Release gates enforce computed matcher precision/F1/abstention behavior plus mapping F1 and ranking NDCG; the source-controlled cases are regression fixtures, not academic acceptance |
 | Frontend manual acceptance record | Partial | Automated accessibility/performance gates and formal manual-review checklist are present; operator review remains required |
 | External security acceptance | Partial | DAST and repository controls are implemented; independent penetration testing remains required |
 | Production privacy/legal approval | Partial | PIA and formal approval requirements are documented; data-owner/legal approval remains required |
@@ -87,6 +87,7 @@ An item is marked **Implemented** only when the repository contains the behavior
 - Production rejects the development secret and Compose requires `SECRET_KEY` and `POSTGRES_PASSWORD` from `.env`.
 - S3-compatible storage, Tesseract OCR, external penetration testing, and production alerting still require operator infrastructure and credentials; implementation hooks and CI procedures are present.
 - Historical exam ranking depends on the quality and concept coverage of imported question papers; the repository provides deterministic ingestion and ranking, not a licensed corpus.
+- Hybrid matcher scores are deterministic relevance values, not calibrated probabilities. The eight source-controlled cases prevent engineering regressions but cannot establish RVCE academic accuracy; EVAL-01 remains open.
 - Existing local databases created before the stricter course-scoping and review rules can retain legacy concepts or question mappings. Regenerate the map from the correctly coded syllabus and review records before treating local counts as current; no automatic destructive cleanup is performed.
 - Learner-created branch-scoped subjects are private workspaces, not institutional catalog approval. Official rows remain partial until RVCE academic review evidence closes the catalog targets.
 - Docker runtime validation is reproducible in `.github/workflows/compose-smoke.yml`; local Docker execution depends on the developer machine.

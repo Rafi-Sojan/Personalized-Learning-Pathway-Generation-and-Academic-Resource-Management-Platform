@@ -5,7 +5,6 @@ def hit_rate(recommended: list[str], relevant: set[str], k: int = 5) -> float:
 
 def ndcg(recommended: list[str], relevant: set[str], k: int = 5) -> float:
     """Compute binary-relevance normalized discounted cumulative gain at k."""
-    """Compute binary-relevance NDCG for a top-k recommendation list."""
     import math
 
     ranked = recommended[:k]
