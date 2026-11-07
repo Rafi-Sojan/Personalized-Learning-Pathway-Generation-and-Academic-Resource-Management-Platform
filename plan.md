@@ -1,7 +1,7 @@
 # Project Plan and Outstanding Targets
 
 **Document type:** Cross-model project plan  
-**Version:** 1.4
+**Version:** 1.5
 **Plan snapshot:** 2026-11-07  
 **Status:** Local repository regression baseline verified; candidate workflow and external acceptance remain open  
 **Status authority:** [`docs/remaining-targets.md`](docs/remaining-targets.md)
@@ -80,10 +80,10 @@ External scope and source authorization should be settled before academic conclu
 
 ## 4. Immediate maintainer actions
 
-1. Review and commit the learning-engine v2 diff without resetting unrelated work.
-2. Apply migration `0013_matcher_evidence` to the intended development/staging database before starting the updated API; preserve a backup and verify the revision.
+1. Review and commit the integration-path and digest-pinned frontend runtime remediations without resetting unrelated work.
+2. Apply migration `0013_matcher_evidence` to each intended staging or production database before starting the updated API; preserve a backup and verify the revision. The root local development database is already at `0013` with its six historical-question rows retained.
 3. Repeat the seven-scenario Playwright pass in the declared Node 24.22.1/npm 11.21.1 CI toolchain; every earlier local scenario reported `ok`, but the below-policy full runner required termination after reporting.
-4. Run the repository Release gates workflow on a named candidate and preserve its test, build, audit, runtime, learning-quality, and restore artifacts.
+4. Push and rerun the backend/service and security workflows after the documented `PYTHONPATH` and nginx runtime remediations; then run the repository Release gates workflow on the named candidate and preserve its test, build, audit, runtime, learning-quality, and restore artifacts.
 5. Obtain the RVCE-01 scope decision and DATA-01 source authorization/completeness statement.
 6. Arrange academic reviewers and prepare row-level review sheets for the 207 catalog candidates and two quarantined conflicts.
 7. Request an authorized, de-identified paper corpus and define APP-01/APP-02/EVAL-01 annotation protocols and acceptance thresholds, using the synthetic matcher and recorded 64-question/106-concept checks only as engineering baselines.

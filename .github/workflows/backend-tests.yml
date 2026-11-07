@@ -134,6 +134,7 @@ jobs:
       - name: Run service integration checks
         env:
           INTEGRATION_TESTS: '1'
+          PYTHONPATH: backend
           DATABASE_URL: postgresql+psycopg://learning:learning-ci@localhost:5432/learning
           REDIS_URL: redis://localhost:6379/0
         run: python -m pytest tests/integration -q

@@ -1,7 +1,7 @@
 # RVCE Syllabus Integration Implementation Record
 
 **Document ID:** ILR-IMP-001  
-**Version:** 1.6
+**Version:** 1.7
 **Status:** Implemented development workflow; academic acceptance pending  
 **Owner:** Project maintainer  
 **Last reviewed:** 2026-11-07
@@ -114,7 +114,7 @@ The repository checks recorded for this implementation report are listed below. 
 |---|---|
 | PDF source fingerprint and candidate extraction | Passed; 207 candidates produced and two conflicting rows quarantined |
 | `scripts/validate_rvce_courses.py` | Passed; 207 source-backed records |
-| `scripts/verify_release.py` | Passed 2026-11-07 after learning-engine v2; 62 controlled artifacts, 319 Python docstrings, 78 frontend function comments, two C++ declarations, and pinned workflow actions checked |
+| `scripts/verify_release.py` | Passed 2026-11-07 after CI remediation; 65 controlled artifacts, 320 Python docstrings, 78 frontend function comments, two C++ declarations, pinned workflow actions, service-test path configuration, and the digest-pinned frontend runtime checked |
 | Backend and ML test suites plus cross-module API tests | Passed 2026-11-07 after learning-engine v2; 55 passed, one PostgreSQL/Redis integration test skipped because services were not enabled |
 | Ruff over backend, ML, tests, and `conftest.py` | Passed 2026-11-07 |
 | mypy over `backend/app` | Passed 2026-11-07; 52 source files checked |
@@ -123,11 +123,13 @@ The repository checks recorded for this implementation report are listed below. 
 | Python dependency audit | Previously passed after remediation; not rerun in the 2026-11-06 local pass |
 | npm dependency audit | Previously passed after the Playwright update; not rerun in the 2026-11-06 local pass |
 | Frontend production build and bundle check | Passed 2026-11-07; 20 JavaScript assets within the configured bundle budget |
+| Backend service integration workflow | GitHub run `42335747397` failed because the integration step omitted `PYTHONPATH=backend`; the failure was reproduced locally as two `ModuleNotFoundError: app` errors, the workflow now supplies the path, and a service-backed CI rerun is pending |
+| Frontend runtime image scan | GitHub run `42335747431` failed on `nginx:1.29.2-alpine`; local Trivy `0.76.2` reproduced 64 HIGH and three CRITICAL fixed findings, while the exact replacement `nginx:1.30.6-alpine` digest reported zero HIGH/CRITICAL fixed findings; CI rerun pending |
 | Frontend Playwright browser acceptance | Seven scenarios reported `ok` on 2026-11-07, including login redirect and branch-scoped subject creation; the below-policy Node 24.11.1/npm 11.6.2 full runner required termination after reporting. The targeted subject scenario exited cleanly, targeted login reported `ok`, and an isolated live walkthrough completed; pinned CI remains clean-exit authority |
 | Native scoring-engine test | Passed 2026-11-06 with g++ C++17, `-Wall -Wextra -Werror` |
 | SQL reference and migration consistency | `database/init.sql` matched all columns and named indexes in the 16-table/45-index model. Migration `0013` passed fresh SQLite upgrade, downgrade to `0012`, re-upgrade, and an isolated legacy-copy check that retained all six historical-question rows with `{}` metadata; PostgreSQL candidate verification remains a release gate. |
 | Root local database migration | Backed up as `learning.db.before-0012.bak`, upgraded from `0011` to head `0012`, and verified with the existing course preserved as personal origin |
-| Root database state after learning-engine v2 | Intentionally not mutated; still at `0012`. Run the documented Alembic upgrade against the selected database before starting the updated API. |
+| Root database state after learning-engine v2 | Upgraded from `0012` to `0013_matcher_evidence` before the 2026-11-07 local API run; all six historical-question rows were retained with non-null matcher metadata. Staging and production databases still require their own controlled migration. |
 | Supplied question-paper parser check | Passed 2026-11-07 for declared course `21CS45`; 64 rows: 19 quiz, 45 main, 32 CIE/test, 32 SEE, zero scheme/solution contamination |
 | Supplied AI syllabus parser check | Passed 2026-11-07 for `AI253IA`; 106 concepts: 19 roots and 87 children, zero outcome/lab/rubric/marks contamination |
 | Function-comment coverage | Passed 2026-11-07; enforced by `scripts/verify_release.py` |

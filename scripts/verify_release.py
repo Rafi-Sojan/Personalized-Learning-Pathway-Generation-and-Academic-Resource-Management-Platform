@@ -60,6 +60,9 @@ REQUIRED_FILES = (
     "backend/requirements-storage.txt",
     "ml/requirements.txt",
     "frontend/package-lock.json",
+    "frontend/Dockerfile",
+    ".github/workflows/backend-tests.yml",
+    ".github/workflows/security-scan.yml",
     ".github/workflows/release-gates.yml",
     "docs/code-commenting-standard.md",
     "database/init.sql",
@@ -151,6 +154,30 @@ def verify_cpp_api_comments() -> tuple[int, list[str]]:
     return count, failures
 
 
+def verify_ci_runtime_invariants() -> list[str]:
+    """Guard service-test import paths and immutable frontend runtime images."""
+    failures: list[str] = []
+    backend_workflow = (ROOT / ".github" / "workflows" / "backend-tests.yml").read_text(encoding="utf-8")
+    integration_step = re.search(
+        r"- name: Run service integration checks(?P<body>.*?)(?:\n\s*- name:|\Z)",
+        backend_workflow,
+        flags=re.DOTALL,
+    )
+    if integration_step is None or not re.search(
+        r"^\s+PYTHONPATH:\s*backend\s*$",
+        integration_step.group("body"),
+        flags=re.MULTILINE,
+    ):
+        failures.append("service integration workflow does not expose backend on PYTHONPATH")
+
+    dockerfile_lines = (ROOT / "frontend" / "Dockerfile").read_text(encoding="utf-8").splitlines()
+    runtime_images = [line.strip() for line in dockerfile_lines if line.strip().startswith("FROM ")]
+    pinned_nginx = re.compile(r"FROM nginx:\d+\.\d+\.\d+-alpine@sha256:[0-9a-f]{64}$")
+    if not runtime_images or pinned_nginx.fullmatch(runtime_images[-1]) is None:
+        failures.append("frontend runtime image is not an immutable nginx Alpine patch release")
+    return failures
+
+
 def main() -> int:
     """Check release artifacts, configuration, workflow pins, and function comments across languages."""
     failures: list[str] = []
@@ -195,6 +222,7 @@ def main() -> int:
     cpp_method_count, cpp_failures = verify_cpp_api_comments()
     failures.extend(frontend_failures)
     failures.extend(cpp_failures)
+    failures.extend(verify_ci_runtime_invariants())
 
     if failures:
         print("Release verification failed:")

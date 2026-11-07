@@ -1,7 +1,7 @@
 # Project Context for Model Handoffs
 
 **Document type:** Continuation brief  
-**Version:** 1.4
+**Version:** 1.5
 **Last reviewed:** 2026-11-07  
 **Use with:** [`AGENTS.md`](AGENTS.md) and [`plan.md`](plan.md)
 
@@ -80,7 +80,8 @@ For a local verification request, the documented Python command is `python -m py
 - The 2026-11-07 onboarding slice added learner-created branch/scheme/semester subject workspaces, optional syllabus attachment during creation, syllabus deep links, verified-catalog availability previews, course-origin provenance, and migration `0012_course_academic_scope`. The configured PDF ceiling is 200 pages so both inventoried first-year syllabus books fit within the bounded processor.
 - Read-only checks on the two supplied files produced 64 clean `21CS45` questions (19 quiz, 45 main; 32 CIE/test, 32 SEE) and 106 separate `AI253IA` concepts (19 roots, 87 children) without scheme/rubric contamination. These are different subjects and the API now prevents combining them. After the onboarding slice, the full local suite recorded 39 passed/1 skipped, with passing Ruff, mypy, release verification, frontend build/bundle checks, schema consistency, and migration lifecycle checks. Seven Playwright scenarios reported `ok`, but the below-policy Node/npm runner required termination after reporting; the targeted subject scenario exited cleanly, and the isolated live walkthrough succeeded. Pinned CI remains required. These are implementation checks, not academic acceptance.
 - The 2026-11-07 learning-engine v2 pass added `rvce-hybrid-lexical-v2` (corpus rarity, token-boundary phrases, derived acronyms, OCR-tolerant similarity, hierarchy context, bounded work, and conservative abstention), durable ranked matcher evidence, unit/parent-aware concept identities, and `rvce-evidence-priority-v2` roadmap scoring. The computed eight-case synthetic matcher fixture scored 1.0 on precision, recall/F1, accuracy, abstention/status accuracy, and MRR at 0.625 coverage. Local checks recorded 55 passed/1 skipped Python tests plus passing Ruff, mypy, frontend build/bundle, and migration `0013` fresh/downgrade/re-upgrade checks. These results prevent engineering regressions; APP-01, APP-02, and EVAL-01 remain open for authorized academic evaluation.
-- The root local database was not changed by the 2026-11-07 correction. It may still contain a legacy multi-course map created under an unrelated course code; do not delete it automatically. Regenerate from a correctly coded enrolled subject and review the new syllabus/question rows before treating UI counts as current.
+- GitHub runs `42335747397` and `42335747431` failed only in service integration and the frontend image scan. The integration step omitted `PYTHONPATH=backend`; local reproduction confirmed `ModuleNotFoundError: app`, and the workflow now supplies the path. The former `nginx:1.29.2-alpine` runtime reproduced 67 fixed HIGH/CRITICAL Trivy findings; the exact pinned `nginx:1.30.6-alpine` replacement digest reported zero. Both GitHub jobs require a new-revision rerun before DEV-01 evidence can close.
+- The root local database was upgraded from `0012` to `0013_matcher_evidence` before the 2026-11-07 local application run. Verification found all six historical-question rows retained with non-null matcher metadata. It may still contain a legacy multi-course map created under an unrelated course code; do not delete it automatically. Regenerate from a correctly coded enrolled subject and review the new syllabus/question rows before treating UI counts as current.
 
 ### Recent local runtime note
 
