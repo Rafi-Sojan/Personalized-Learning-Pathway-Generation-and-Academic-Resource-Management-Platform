@@ -2,8 +2,8 @@ import { useCallback } from 'react'
 import { useAsync } from '../hooks/useAsync'
 import { getCourses } from '../services/courses'
 
-/** Load and display the authenticated learner's course library and completion state. */
+/** Load and display the learner's selected subjects and mapped topic counts. */
 export function Courses() {
   const { data, loading } = useAsync(useCallback(() => getCourses(), []), [])
-  return <main><div className="eyebrow">Learning library</div><h1>My courses</h1><p className="lede">A clear view of everything you are building.</p><div className="course-grid">{loading ? <p>Loading courses…</p> : data.map((course) => <article className="course-card" key={course.id}><span className="course-code">{course.code}</span><h2>{course.title}</h2><p>{course.description}</p><div className="progress"><i style={{ width: `${course.progress}%` }} /></div><small>{course.progress}% complete · {course.concept_count} concepts</small></article>)}</div></main>
+  return <main><div className="eyebrow">RVCE learning library</div><h1>My subjects</h1><p className="lede">Choose a subject to add its syllabus copy, review mapped topics, and plan study.</p><div className="course-grid">{loading ? <p>Loading subjects…</p> : data.map((course) => <article className="course-card" key={course.id}><span className="course-code">{course.code}</span><h2>{course.title}</h2><p>{course.description}</p><small>{course.concept_count} mapped topics</small></article>)}</div></main>
 }

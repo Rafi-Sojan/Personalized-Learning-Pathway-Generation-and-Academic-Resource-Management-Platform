@@ -62,13 +62,15 @@ def process_pdf(upload_path: Path, processed_path: Path) -> int:
         raise ValueError("Encrypted PDFs are not supported")
     chunks: list[str] = []
     total = 0
-    for page in reader.pages:
+    for page_number, page in enumerate(reader.pages, start=1):
         text = page.extract_text() or ""
-        remaining = settings.max_extracted_text_chars - total
+        marker = f"[[PAGE {page_number}]]\n"
+        remaining = settings.max_extracted_text_chars - total - len(marker)
         if remaining <= 0:
             break
-        chunks.append(text[:remaining])
-        total += min(len(text), remaining)
+        page_text = text[:remaining]
+        chunks.append(f"{marker}{page_text}")
+        total += len(marker) + len(page_text)
     extracted = "\n".join(chunks)
     if settings.ocr_enabled and len(extracted.strip()) < 20:
         extracted = run_pdf_ocr(str(upload_path), settings.max_extracted_text_chars)

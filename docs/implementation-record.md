@@ -1,10 +1,10 @@
 # RVCE Syllabus Integration Implementation Record
 
 **Document ID:** ILR-IMP-001  
-**Version:** 1.1
+**Version:** 1.4
 **Status:** Implemented development workflow; academic acceptance pending  
 **Owner:** Project maintainer  
-**Last reviewed:** 2026-11-01  
+**Last reviewed:** 2026-11-07
 **Related records:** ILR-REQ-001, ILR-API-001, ILR-DB-001, ILR-FE-001, ILR-RVCE-001
 
 ## 1. Purpose and scope
@@ -13,7 +13,7 @@ This record describes the RVCE course-syllabus ingestion and learner enrollment 
 
 ## 2. Delivery summary
 
-The implementation includes a SHA-256-verified PDF extraction utility, a source-backed candidate dataset, a conflict quarantine file, a provenance validator, administrator-only batch import, role-gated review and approval, first-year branch mapping, learner enrollment, a learner catalog screen, an administrator review interface, schema migration, and CI/release checks.
+The implementation includes a SHA-256-verified PDF extraction utility, a source-backed candidate dataset, a conflict quarantine file, a provenance validator, administrator-only batch import, role-gated review and approval, first-year branch mapping, learner enrollment, a learner catalog screen, an administrator review interface, schema migration, and CI/release checks. Learner enrollment creates subjects without placeholder concepts; topic records must be generated from a stored syllabus PDF. Stored syllabus parsing is course-scoped and review-gated, while question-paper parsing excludes solution material and requires reviewed current-syllabus mappings before topic frequency is reported.
 
 The current source set contains eight inventoried PDFs. Extraction produced 207 non-conflicting candidate rows and quarantined two rows sharing a course identity but carrying different titles. Every candidate retains scheme, semester, course code, title, credit tuple total, source filename, source page, checksum, and source-index URL. Category and total contact hours are included when explicitly extractable. Unparsed outcomes and prerequisite relationships remain empty and must not be inferred from this dataset.
 
@@ -26,9 +26,12 @@ The current source set contains eight inventoried PDFs. Extraction produced 207 
 | `database/rvce_course_candidates.json` | Non-conflicting extracted records in `pending_review` status |
 | `database/rvce_course_conflicts.json` | Quarantined same-identity records requiring academic reconciliation |
 | `database/rvce-course-record.schema.json` | JSON Schema for the source-backed course record contract |
-| `database/init.sql` | Fresh-database representation of the syllabus table |
+| `database/init.sql` | SQLite-compatible reference snapshot of all current model tables and columns; Alembic remains deployment authority |
 | `backend/migrations/versions/0007_rvce_syllabus_courses.py` | Creates the syllabus record table |
 | `backend/migrations/versions/0008_rvce_source_page.py` | Adds source filename and page provenance columns |
+| `backend/migrations/versions/0009_concept_syllabus_provenance.py` | Adds syllabus-version, unit, and page provenance to mapped concepts |
+| `backend/migrations/versions/0010_exam_question_sections.py` | Separates Part A quiz entries from Part B main questions in the paper archive |
+| `backend/migrations/versions/0011_ingestion_provenance_review.py` | Adds versioned syllabus records, concept estimates/parentage, reviewable prerequisites, and historical-paper provenance/review metadata |
 
 The source manifest records a source folder label for reproducibility. Runtime imports use the configured source-root path and verify bytes against the recorded SHA-256 value before extracting a PDF.
 
@@ -42,7 +45,7 @@ The source manifest records a source folder label for reproducibility. Runtime i
 6. An administrator imports candidates. The endpoint rechecks source membership, checksum, page range, and official URL, and forces all imported rows to `pending_review`.
 7. An instructor or administrator can inspect pending records and their source provenance. An administrator can approve, reject, or return a row to pending review.
 8. First-year rows use `BE-UNMAPPED`. Approval requires an administrator-supplied RVCE program code; the API checks the target scheme and duplicate identity before saving the branch mapping.
-9. Learner catalog queries omit unresolved records. Enrollment only uses approved, branch-mapped rows and creates learner-owned course, starter concept, and syllabus-version records.
+9. Learner catalog queries omit unresolved records. Enrollment only uses approved, branch-mapped rows and creates learner-owned course and syllabus-version records. Learners then attach the syllabus copy for concept generation.
 
 ## 5. HTTP contract and authorization
 
@@ -64,7 +67,7 @@ All import paths require source filename and page provenance. The backend compar
 
 `rvce_syllabus_courses` stores program, scheme, semester, course identity, title, credits, category, optional contact hours, JSON prerequisites/outcomes, source URL, SHA-256 checksum, source filename, source page, verification state, and creation time. The database enforces uniqueness across program, scheme year, semester, and course code. Migration `0008_rvce_source_page` is guarded when adding columns to support databases where the columns may already exist. Apply migrations using the repository's normal Alembic upgrade procedure before deploying the API.
 
-The learner enrollment operation is idempotent for a learner and course scope: existing course records are returned as existing rather than duplicated. Newly created courses receive a starter concept named after the syllabus course and a syllabus-version label. Detailed concept decomposition and prerequisite graph generation remain a subsequent content workflow; extracted rows do not fabricate these relationships.
+The learner enrollment operation is idempotent for a learner and course scope: existing course records are returned as existing rather than duplicated. Newly created courses receive a syllabus-version label but no placeholder concept. Concepts and prerequisite proposals are created only from the learner's stored and processed syllabus copy.
 
 ## 7. Operator procedure
 
@@ -95,28 +98,31 @@ Open **Administration → RVCE syllabus review queue**. Inspect course identity 
 
 ## 8. Verification record
 
-The repository checks run for this implementation report:
+The repository checks recorded for this implementation report are listed below. Rows dated 2026-11-07 were rerun against the current working tree; earlier point-in-time audit evidence must still be repeated by the Release gates workflow for a named candidate.
 
 | Check | Result |
 |---|---|
 | PDF source fingerprint and candidate extraction | Passed; 207 candidates produced and two conflicting rows quarantined |
 | `scripts/validate_rvce_courses.py` | Passed; 207 source-backed records |
-| `scripts/verify_release.py` | Passed; controlled artifact inventory, Python function docstrings, and pinned workflow actions checked |
-| Backend and ML test suites plus cross-module API tests | Passed; 19 passed, 1 skipped (optional integration test requires its external service) |
-| Ruff over backend, ML, and tests | Passed |
-| mypy over `backend/app` | Passed; 52 source files checked |
+| `scripts/verify_release.py` | Passed 2026-11-07; 60 controlled artifacts, 264 Python docstrings, 72 frontend function comments, two C++ declarations, and pinned workflow actions checked |
+| Backend and ML test suites plus cross-module API tests | Passed 2026-11-07; 37 passed, one PostgreSQL/Redis integration test skipped because services were not enabled |
+| Ruff over backend, ML, tests, and `conftest.py` | Passed 2026-11-07 |
+| mypy over `backend/app` | Passed 2026-11-07; 52 source files checked |
 | Python `compileall` over backend, ML, tests, and scripts | Passed |
 | Learning-quality regression benchmark | Passed; mapping F1, ranking NDCG, and historical-ranking NDCG each scored 1.0 against the configured 0.80 minimum |
-| Python dependency audit | Passed; no known vulnerabilities across backend, OCR, storage, and ML requirement sets after remediation |
-| npm dependency audit | Passed; zero vulnerabilities after updating Playwright |
-| Frontend production build and bundle check | Passed; 22 JavaScript assets within configured bundle budget |
-| Frontend Playwright browser acceptance | All four tests reported passing with patched Playwright 1.64.1; the local runner did not exit after reporting results, and local Node 24.11.1 is below the declared minimum, so the pinned-toolchain CI run remains authoritative |
-| Native scoring-engine test | Passed with g++ C++17, `-Wall -Wextra -Werror` |
-| Function-comment coverage | Passed; enforced by `scripts/verify_release.py` |
+| Python dependency audit | Previously passed after remediation; not rerun in the 2026-11-06 local pass |
+| npm dependency audit | Previously passed after the Playwright update; not rerun in the 2026-11-06 local pass |
+| Frontend production build and bundle check | Passed 2026-11-07; 19 JavaScript assets within the configured bundle budget |
+| Frontend Playwright browser acceptance | Five tests reported `ok` on 2026-11-06; the unsupported local Node 24.11.1 runner did not exit and was terminated, so the pinned Node 24.22.1 CI run remains authoritative for clean completion |
+| Native scoring-engine test | Passed 2026-11-06 with g++ C++17, `-Wall -Wextra -Werror` |
+| SQL reference consistency | Passed 2026-11-06; all tables and columns across 16 SQLAlchemy models matched the in-memory `database/init.sql` snapshot |
+| Supplied question-paper parser check | Passed 2026-11-07 for declared course `21CS45`; 64 rows: 19 quiz, 45 main, 32 CIE/test, 32 SEE, zero scheme/solution contamination |
+| Supplied AI syllabus parser check | Passed 2026-11-07 for `AI253IA`; 106 concepts: 19 roots and 87 children, zero outcome/lab/rubric/marks contamination |
+| Function-comment coverage | Passed 2026-11-07; enforced by `scripts/verify_release.py` |
 | Independent dependency/image audit and Compose staging checks | Defined in release workflow; not run locally in this environment |
 | External RVCE academic, legal/privacy, security, accessibility, and production release approval | Pending; tracked in `remaining-targets.md` |
 
-The **Release gates** workflow installs pinned dependencies and runs backend, ML, RVCE data-validation, release, frontend, C++, and Compose runtime/restore checks. The local outcomes above are developer-environment evidence; the workflow run and its artifacts must be attached to the release record before approval.
+The **Release gates** workflow installs pinned dependencies and runs backend, ML, RVCE data-validation, release, frontend, C++, and Compose runtime/restore checks. The local outcomes above are developer-environment evidence; the workflow run and its artifacts must be attached to the release record before approval. The supplied question packet declares `21CS45`, while the checked syllabus section is `AI253IA`; the course-identity guard deliberately prevents cross-subject mapping. The supplied-document counts are parser conformance observations, not a claim that the documents are licensed for a production corpus or that an RVCE reviewer accepted every extracted row.
 
 ## 9. Acceptance gaps and release limits
 

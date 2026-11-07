@@ -1,1 +1,1 @@
-"""Persistence boundaries; the starter uses an in-memory repository."""
+"""Database engine, metadata, and request-scoped session boundaries."""

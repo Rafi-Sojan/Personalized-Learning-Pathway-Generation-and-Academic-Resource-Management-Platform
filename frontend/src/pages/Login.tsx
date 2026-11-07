@@ -1,17 +1,23 @@
 import { FormEvent, useState } from 'react'
 import { Compass, LockKeyhole } from 'lucide-react'
-import { login } from '../services/auth'
+import { login, register } from '../services/auth'
 
 /** Authenticate the learner and report successful login to the application shell. */
 export function Login({ onSuccess }: { onSuccess: () => void }) {
-  const [email, setEmail] = useState('demo@example.com')
-  const [password, setPassword] = useState('demo-password')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [creatingAccount, setCreatingAccount] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   /** Submit credentials and expose authentication failures without losing form state. */
   async function submit(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError(null)
-    try { await login(email, password); onSuccess() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to sign in') } finally { setBusy(false) }
+    try {
+      if (creatingAccount) await register(name, email, password)
+      else await login(email, password)
+      onSuccess()
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to authenticate') } finally { setBusy(false) }
   }
-  return <div className="login-shell"><form className="login-card" onSubmit={submit}><div className="login-brand"><div className="brand-mark"><Compass size={20} /></div><span>pathway<span className="brand-dot">.</span></span></div><span className="section-kicker">Your learning workspace</span><h1>Welcome back.</h1><p>Sign in to continue your personalized roadmap.</p><label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label><label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} /></label>{error && <div className="form-error">{error}</div>}<button className="primary" disabled={busy}><LockKeyhole size={16} />{busy ? 'Signing in…' : 'Sign in'}</button><small>Development account: demo@example.com / demo-password</small></form></div>
+  return <div className="login-shell"><form className="login-card" onSubmit={submit}><div className="login-brand"><div className="brand-mark"><Compass size={20} /></div><span>pathway<span className="brand-dot">.</span></span></div><span className="section-kicker">RVCE learning workspace</span><h1>{creatingAccount ? 'Create account.' : 'Welcome back.'}</h1><p>{creatingAccount ? 'Create a learner account to map your syllabus.' : 'Sign in to continue your syllabus and study roadmap.'}</p>{creatingAccount && <label>Name<input type="text" value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={120} autoComplete="name" required /></label>}<label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label><label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={creatingAccount ? 'new-password' : 'current-password'} required minLength={8} /></label>{error && <div className="form-error">{error}</div>}<button className="primary" disabled={busy}><LockKeyhole size={16} />{busy ? 'Please wait…' : creatingAccount ? 'Create account' : 'Sign in'}</button><button className="secondary" type="button" onClick={() => { setCreatingAccount(!creatingAccount); setError(null) }}>{creatingAccount ? 'Already have an account? Sign in' : 'New learner? Create an account'}</button></form></div>
 }

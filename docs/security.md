@@ -1,11 +1,11 @@
 # Security Baseline
 
 **Document ID:** ILR-SEC-001
-**Version:** 2.0
+**Version:** 2.2
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-10-28
+**Last reviewed:** 2026-11-06
 
-The development API uses short-lived signed JWTs, Argon2 password hashing, ownership checks, upload limits, request throttling, and baseline security headers. The demo seed account is `demo@example.com` with password `demo-password`; it is for local development only and must be changed or removed before deployment.
+The development API uses short-lived signed JWTs, Argon2 password hashing, ownership checks, upload limits, request throttling, and baseline security headers. The production frontend Nginx configuration adds a restrictive content security policy, frame denial, MIME sniffing protection, referrer policy, permissions policy, and cross-origin opener isolation. Fresh local startup creates no sample account or course; learners register through the login screen, and an initial administrator is created only when explicit credentials are configured.
 
 ## Mandatory production controls
 

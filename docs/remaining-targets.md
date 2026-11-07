@@ -1,10 +1,10 @@
 # Project Completion and Acceptance Register
 
 **Document ID:** ILR-REG-001  
-**Version:** 1.0  
+**Version:** 1.3
 **Status:** Development implementation complete; release acceptance actions open  
 **Owner:** Project maintainer  
-**Last reviewed:** 2026-11-01  
+**Last reviewed:** 2026-11-07
 **Authority:** This register is the consolidated source for outstanding project targets. Requirement-level detail remains in `requirements-traceability.md`; approval evidence is recorded in `release-acceptance.md` and the referenced domain records.
 
 ## 1. Purpose
@@ -15,7 +15,11 @@ This register distinguishes repository implementation work from decisions and ev
 
 | ID | Target | Status | Accountable role | Required evidence and closure condition |
 |---|---|---|---|---|
-| DEV-01 | Core platform, RVCE catalog workflow, source provenance, branch mapping, learner enrollment, migrations, and operational controls | Implemented; verify with release gates | Project maintainer | Passing repository release workflow at the candidate revision; test artifacts retained |
+| DEV-01 | Core platform, RVCE catalog workflow, source provenance, branch mapping, learner enrollment, migrations, and operational controls | Local regression baseline verified; release workflow pending | Project maintainer | Local 2026-11-07 checks recorded 37 passed/1 skipped Python tests plus passing Ruff, mypy, release-document, frontend build, and bundle checks; closure still requires a clean passing Release gates run at the candidate revision with retained artifacts |
+| APP-01 | Validate syllabus-to-concept-map extraction against the selected RVCE syllabus formats and review topic quality | Open; implementation conformance improved, academic validation pending | Project maintainer and RVCE academic reviewer | Course scoping, hierarchy, review gating, and non-topic exclusion are implemented; one supplied `AI253IA` layout check yielded 106 clean teaching nodes, but expected-topic annotations, precision/recall, provenance review, and documented academic decisions are still required |
+| APP-02 | Validate historical question parsing and topic-frequency attribution across authorized RVCE past-paper layouts | Open; implementation conformance improved, corpus evaluation pending | Project maintainer and learning-quality reviewer | One supplied packet yielded 64 clean question rows with the expected 19/45 quiz/main and 32/32 CIE/SEE splits; authorization, OCR/layout breadth, row-level human review, topic-mapping agreement, and a multi-year frequency baseline remain required |
+| APP-03 | Add archive filters across RVCE program/branch, scheme, and semester when question-paper provenance is available | Open; metadata/model decision | Project maintainer and RVCE data owner | Versioned paper-scope metadata, migrated question records, and filter acceptance across the approved RVCE catalog |
+| AI-01 | Add AI-generated website links to concepts | Deferred by product decision | Product owner and project maintainer | Select provider and model, configure a server-side API key, define trusted-link validation/grounding, and record quality review before implementation |
 | RVCE-01 | Select the target admission cohort, branch set, scheme year, and semester scope | Open; external decision | RVCE academic owner | Signed scope record naming cohort, branches, scheme, and semesters |
 | RVCE-02 | Review 207 extracted candidate rows for identity, title, credit interpretation, semester, and source-page accuracy | Open; academic review | RVCE academic owner | Row-level decisions with reviewer, date, outcome, and source reference; approved rows imported only after review |
 | RVCE-03 | Reconcile two quarantined same-identity/different-title conflicts | Open; academic decision | RVCE academic owner | Recorded decision for each conflict, authoritative source page, and updated validated data |

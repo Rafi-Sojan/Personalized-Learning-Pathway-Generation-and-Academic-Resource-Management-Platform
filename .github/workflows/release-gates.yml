@@ -33,7 +33,7 @@ jobs:
           PYTHONPATH: backend
         run: python -m pytest backend/tests ml/tests tests --junitxml=test-results.xml
       - name: Run Ruff
-        run: python -m ruff check backend ml tests
+        run: python -m ruff check backend ml tests conftest.py
       - name: Run mypy
         run: python -m mypy backend/app --ignore-missing-imports
       - name: Audit Python dependencies
@@ -45,7 +45,7 @@ jobs:
       - name: Verify controlled release invariants
         run: python scripts/verify_release.py
       - name: Compile repository Python modules
-        run: python -m compileall -q backend ml tests scripts
+        run: python -m compileall -q backend ml tests scripts conftest.py
       - name: Run learning-quality regression gate
         run: python scripts/evaluate_learning.py ml/evaluation/benchmark.example.json --minimum mapping_f1=0.80 --minimum ranking_ndcg=0.80 --minimum historical_ranking_ndcg=0.80
       - name: Publish Python test report

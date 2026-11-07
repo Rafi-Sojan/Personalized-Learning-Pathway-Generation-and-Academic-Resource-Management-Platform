@@ -1,0 +1,91 @@
+# Project Plan and Outstanding Targets
+
+**Document type:** Cross-model project plan  
+**Version:** 1.2  
+**Plan snapshot:** 2026-11-07  
+**Status:** Local repository regression baseline verified; candidate workflow and external acceptance remain open  
+**Status authority:** [`docs/remaining-targets.md`](docs/remaining-targets.md)
+
+## 1. Objective
+
+Deliver an RVCE-focused learning platform whose syllabus-derived concepts, roadmaps, and historical question frequencies have traceable sources and have been validated by the appropriate academic, data, security, privacy, accessibility, and operations owners.
+
+The repository contains a broad development implementation. Work is complete only when both repository checks and required external evidence are recorded. Do not describe the project as production-ready solely because the application builds or runs locally.
+
+## 2. Recommended work sequence
+
+### Phase A — Establish scope and evidence rights
+
+| ID | Target | Current status | Closure evidence |
+|---|---|---|---|
+| RVCE-01 | Select the admission cohort, branches, scheme year, and semester scope. | Open; RVCE academic decision required. | Dated scope record naming the cohort, branch set, scheme, and semesters. |
+| DATA-01 | Confirm source authorization and syllabus-set completeness for that scope. | Open; RVCE data-owner confirmation required. | Authorization or provenance note plus a signed completeness statement. |
+
+These decisions define which catalog rows and source documents can be reviewed. An inventory of files alone does not establish institutional completeness or permission to use them.
+
+### Phase B — Review and publish the RVCE catalog
+
+| ID | Target | Dependency | Closure evidence |
+|---|---|---|---|
+| RVCE-02 | Review the 207 extracted candidate rows for identity, title, credits, semester, and source-page accuracy. | RVCE-01, DATA-01 | Row-level reviewer, date, decision, and source reference; only approved rows are published. |
+| RVCE-03 | Resolve the two quarantined same-identity/different-title conflicts. | Authoritative RVCE decision | Recorded disposition for each conflict and validated source page. |
+| RVCE-04 | Map first-year `BE-UNMAPPED` rows to applicable selected branches and verify catalog coverage. | RVCE-01, RVCE-02 | Approved branch mappings and coverage report listing unresolved rows. |
+
+Keep uncertain records pending review. Do not infer a conflict resolution or branch mapping from course names alone.
+
+### Phase C — Validate learning and question-paper quality
+
+| ID | Target | Dependency | Closure evidence |
+|---|---|---|---|
+| APP-01 | Evaluate syllabus extraction and concept mapping on representative RVCE syllabi. | Approved scope and source set | Human-annotated expected topics, extraction precision/recall, unit/page provenance review, and correction decisions. |
+| APP-02 | Evaluate question parsing and topic-frequency attribution on authorized RVCE past papers. | Authorized paper corpus; APP-01 topics where needed | Part A/Part B and OCR review, row-level parsing review, topic-mapping agreement, and year-frequency baseline. |
+| EVAL-01 | Establish a licensed or otherwise authorized, de-identified historical-question benchmark. | Data-owner approval | Corpus authorization, version and de-identification record, benchmark report, metric thresholds, and reviewer decision. |
+| APP-03 | Add archive filters for program/branch, scheme, and semester when paper provenance is available. | Paper-scope metadata decision and source provenance | Versioned schema, migration, populated test records, and accepted filters over the approved RVCE catalog. |
+
+The current product rule is Part A = quiz and Part B = main questions when the source or uploader establishes those sections. Frequency claims must remain traceable to reviewed records mapped to verified concepts in the current syllabus version. The 2026-11-07 supplied-layout checks are regression anchors, but they do not close APP-01 or APP-02 without row-level academic annotations and agreement metrics.
+
+### Phase D — Complete independent readiness reviews
+
+| ID | Target | Accountable role | Closure evidence |
+|---|---|---|---|
+| DEV-01 | Verify the implemented core platform and operational controls at a release candidate. | Project maintainer | Passing Release gates workflow with retained test and build artifacts. |
+| SEC-01 | Assess the deployed release candidate independently and remediate findings. | Security assessor and maintainer | Scoped report, findings, remediation, retest, and accepted residual risks. |
+| PRIV-01 | Approve lawful basis, retention, processors, rights handling, and incident procedures. | Privacy/legal owner | Dated approval against `docs/privacy-impact-assessment.md`; conditions tracked. |
+| OPS-01 | Run a representative staging service and gather operational evidence. | Operations owner | Revision and environment identity, load/latency, backup/restore, RPO/RTO, monitoring, alert test, and SLO decision. |
+| UX-01 | Complete human keyboard, screen-reader, responsive, and user-flow acceptance. | Accessibility reviewer and product owner | Completed `docs/accessibility-and-performance.md` checklist with browser/device scope and findings. |
+| REL-01 | Make the production release decision. | Named release owner | Completed `docs/release-acceptance.md` with evidence links, residual risks, decision, reviewer, and date. |
+
+### Deferred by product decision
+
+| ID | Target | Status | Re-entry conditions |
+|---|---|---|---|
+| AI-01 | Generate concept-related website links with an AI service. | Deferred. | Product owner selects provider/model; server-side key management, link grounding/validation, and quality review are defined. |
+
+Do not implement AI link generation or request an API key until the product owner reopens this target.
+
+## 3. Dependencies and parallel work
+
+```text
+RVCE-01 + DATA-01
+       ├── RVCE-02 ── RVCE-04
+       ├── RVCE-03
+       └── APP-01 ── APP-02 + EVAL-01 ── APP-03
+
+DEV-01 ── SEC-01 + PRIV-01 + OPS-01 + UX-01 ── REL-01
+```
+
+External scope and source authorization should be settled before academic conclusions are drawn. Independent security, privacy, operations, and accessibility work can proceed on separate paths once a stable candidate and the appropriate owners are available.
+
+## 4. Immediate maintainer actions
+
+1. Preserve and review the broad uncommitted working tree before creating a release candidate; do not reset prior work.
+2. Upgrade the local Node/npm toolchain to the declared minimum or rely on the pinned CI image, then confirm a clean Playwright process exit.
+3. Run the repository Release gates workflow on a named candidate and preserve its test, build, audit, runtime, and restore artifacts.
+4. Obtain the RVCE-01 scope decision and DATA-01 source authorization/completeness statement.
+5. Arrange academic reviewers and prepare row-level review sheets for the 207 catalog candidates and two quarantined conflicts.
+6. Request an authorized, de-identified paper corpus and define APP-01/APP-02 annotation protocols and acceptance thresholds, using the recorded 64-question and 106-concept layout checks only as parser baselines.
+
+## 5. Change control
+
+This plan summarizes the outstanding targets; it does not replace the acceptance register. When a target's state changes, update [`docs/remaining-targets.md`](docs/remaining-targets.md), its detailed domain document, and the evidence link. Record a target as complete only when its stated closure evidence exists. Record external decisions with the accountable owner and date.
+

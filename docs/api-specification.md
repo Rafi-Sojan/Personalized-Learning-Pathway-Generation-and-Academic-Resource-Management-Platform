@@ -1,9 +1,9 @@
 # API Specification
 
 **Document ID:** ILR-API-001
-**Version:** 2.3
+**Version:** 2.8
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-11-01
+**Last reviewed:** 2026-11-07
 
 ## 1. Contract conventions
 
@@ -21,27 +21,38 @@ Successful responses use the route-specific JSON schema. Validation and authoriz
 | POST | `/auth/login` | No | Issue a signed access token |
 | GET | `/auth/me` | Yes | Read the authenticated user |
 | POST | `/auth/logout` | Yes | Revoke all issued tokens for the authenticated user |
-| GET | `/auth/export` | Yes | Export the authenticated user's data |
-| POST | `/auth/delete` | Yes | Permanently delete the authenticated user's data after email confirmation |
+| GET | `/auth/export` | Yes | Export the authenticated user's profile, owned academic provenance, learning records, plans/revisions, review records, and audit events |
+| POST | `/auth/delete` | Yes | Permanently delete the authenticated user's dependent database rows and private files after email confirmation |
 | GET/POST | `/courses` | Yes | List or create owned courses |
-| GET | `/concepts` | Yes | List owned concepts and prerequisites |
-| POST | `/syllabus/analyze` | Yes | Extract topics from bounded text |
-| GET | `/roadmap` | Yes | Preview an authenticated study plan |
-| POST | `/roadmap/generate` | Yes | Persist a deadline-aware study plan |
+| GET | `/concepts?course_id={id}&syllabus_only={bool}` | Yes | List owned concepts, hierarchy, review state, and prerequisites; syllabus-only output omits rejected current topics |
+| POST | `/syllabus/analyze` | Yes | Extract bounded topic names plus additive unit/page metadata when present |
+| GET | `/syllabus/sources?course_id={id}` | Yes | List stored syllabus PDF copies for an owned course |
+| POST | `/syllabus/sources/upload?course_id={id}` | Yes, multipart | Store a private syllabus PDF copy |
+| POST | `/syllabus/sources/{id}/process` | Yes | Extract bounded text from a stored syllabus PDF |
+| POST | `/syllabus/sources/{id}/generate-map` | Yes | Create or reuse pending-review concepts with syllabus-version, hierarchy, unit, and source-page provenance; reject a multi-course source that lacks the selected course code |
+| GET | `/syllabus/records?course_id={id}` | Yes | List versioned source-backed syllabus records with confidence and review state |
+| POST | `/syllabus/records/{id}/review?status=...` | Yes | Verify, reject, or return a parsed syllabus record to review |
+| GET | `/roadmap?course_id={id}&days={n}` | Yes | Preview a feasible 60-minute-per-day schedule for the explicitly selected owned course; full estimates are split into daily segments and the final concept may be shown partially when preview capacity expires |
+| POST | `/roadmap/generate` | Yes | Persist a deadline-aware full-effort plan with multi-day concept segments; requires a processed syllabus source and generated concept map |
 | GET | `/roadmap/history` | Yes | List generated roadmap revisions |
-| GET | `/resources` | Yes | List owned or public resources |
-| POST | `/resources/upload` | Yes | Validate and store a private PDF |
-| POST | `/resources/{id}/process` | Yes | Extract text from an owned PDF |
-| GET/POST | `/resources/{id}/mappings` | Yes | Review resource-to-concept mappings |
-| GET/POST | `/progress` | Yes | Read/update private progress; reads include up to 400 days of learner-owned quiz/progress timestamps normalized to UTC for local-calendar streak and activity displays |
-| GET | `/quizzes/{concept_id}` | Yes | Get an owned concept quiz |
-| POST | `/quizzes/{concept_id}/attempts` | Yes | Submit a quiz attempt |
-| GET | `/rankings` | Yes | Read the development leaderboard |
+| GET | `/resources` | Yes | Legacy resource listing retained for compatibility; not part of the learner workflow |
+| POST | `/resources/upload`, `/resources/{id}/process` | Yes | Legacy generic PDF intake and processing retained for compatibility |
+| GET/POST | `/resources/{id}/mappings` | Yes | Legacy mapping review retained for compatibility; not part of the learner workflow |
+| GET/POST | `/progress` | Yes | Read/update private progress data; retained for API compatibility, not shown in current learner UI |
+| GET | `/quizzes/{concept_id}` | Yes | Get an owned concept quiz; retained for API compatibility |
+| POST | `/quizzes/{concept_id}/attempts` | Yes | Submit a quiz attempt; retained for API compatibility |
+| GET | `/rankings` | Yes | Read the authenticated learner's private aggregate mastery points without exposing other learners |
 | GET | `/rankings/concepts` | Yes | Rank owned concepts using native scoring when configured |
 | GET | `/metrics` | Optional bearer token | Prometheus-compatible request/status counters; set `METRICS_AUTH_TOKEN` and restrict deployment access |
-| GET/POST | `/exams/questions` | Yes; POST instructor/admin | List or create historical exam question records |
-| POST | `/exams/import` | Instructor/admin | Import numbered or paragraph-separated question paper text |
-| GET | `/exams/rankings` | Yes | Rank concepts by historical question frequency and difficulty |
+| GET | `/exams/questions` | Yes | Search course question records by year, prompt, topic, assessment type, and format |
+| POST | `/exams/questions/{id}/review?status=...` | Yes | Verify, reject, or return an imported question to review; optionally set a verified `concept_id` or use `clear_concept=true` |
+| POST | `/exams/questions` | Instructor/admin | Create one historical exam question record |
+| POST | `/exams/import` | Yes, owned course | Import numbered text with structural section/assessment detection, course-code validation, and reviewable mappings |
+| POST | `/concepts/{id}/prerequisites/{id}/review?status=...` | Yes | Review an explicit syllabus prerequisite suggestion with cycle validation |
+| POST | `/exams/import-pdf?course_id={id}` | Yes, multipart, owned course | Retain one source PDF, exclude scheme/solution pages, parse structural assessment metadata, and validate any printed course code |
+| GET | `/exams/papers/{resource_id}` | Yes, owned course | View a retained source paper PDF |
+| GET | `/exams/frequency?course_id={id}` | Yes, owned course | Summarize verified current-syllabus-mapped main-question counts with source references; report unmapped main and quiz totals separately |
+| GET | `/exams/rankings` | Yes | Rank concepts using verified historical-question frequency and any human-rated difficulty |
 | GET/POST | `/admin/users` | Admin | List or create users with server-side roles |
 | GET | `/admin/processing` | Admin | Read bounded document-worker queue counts and oldest active job |
 | GET | `/catalog/rvce` | No | Read validated RVCE program, scheme, and source metadata |
@@ -50,7 +61,7 @@ Successful responses use the route-specific JSON schema. Validation and authoriz
 | POST | `/catalog/rvce/courses/import` | Admin | Bulk import up to 500 source-backed candidates as pending review |
 | GET | `/catalog/rvce/courses/review` | Instructor/admin | List pending RVCE syllabus records for academic review |
 | PATCH | `/catalog/rvce/courses/{id}/verification` | Admin | Approve, reject, or return a record to pending review |
-| POST | `/catalog/rvce/enroll` | Authenticated user | Add academically verified semester courses and initial concepts to the learner's course list |
+| POST | `/catalog/rvce/enroll` | Authenticated user | Add academically verified semester subjects; topics are created only from a stored syllabus copy |
 
 First-year records whose branch applicability has not been academically mapped use `program_code=BE-UNMAPPED`. They may be imported and reviewed, but the learner listing and enrollment operations only include the selected branch code. An administrator must include a valid `program_code` in the verification request to record the branch mapping and approve such a row; approval without that mapping returns `422`.
 
@@ -62,6 +73,13 @@ The authenticated user ID is obtained from the verified token and applied server
 
 Upload requests must identify a PDF and remain below the configured size limit. The server generates the storage filename, records a checksum, and writes extracted text to private processed storage. Processing moves through `uploaded`, `queued`, `processing`, `retryable`, `processed`, or terminal `failed` states. The worker applies the configured attempt, delay, and lease-timeout limits; stale `processing` leases are recovered before the next polling cycle. Manual processing requests reset the retry state. Local background tasks remain available for development.
 
+Syllabus copies use the private PDF lifecycle and are labeled `syllabus_pdf`. Extracted text retains page markers. Versioned records preserve source wording, normalized text, page, confidence, source resource, hierarchy, and review state. Every newly extracted record begins pending review. Labeled outcomes, labs, assessment policy, rubrics, references, and course metadata remain facts or non-topic content and do not become concept nodes. Combined scheme documents are scoped to the selected course code. Prerequisite suggestions are created only from explicit supported language and exact topic matches; they remain proposed until accepted, and acceptance checks for cycles.
+
+Historical-paper PDFs are retained as private `historical_exam_pdf` resources. The uploader supplies fallback assessment type, question format, and Part A quiz treatment. Strong printed CIE/SEE and Part headings override those fallbacks, while prompt wording is never used to infer assessment identity. Scheme, solution, answer-key, and model-answer page ranges are excluded. Imported question rows retain page, printed number, subpart, and marks where recognized and remain pending review. A printed course code that does not match the selected course causes a `422` response. Concept suggestions consider only verified concepts in the current syllabus version and are withheld when weak or ambiguous. Only verified, mapped main questions contribute to topic frequency and roadmap evidence. See `docs/syllabus-and-paper-ingestion.md` for workflow details and known extraction limits.
+
+`GET /exams/frequency` returns `question_count`, `main_question_count`, `mapped_main_question_count`, `unmapped_main_question_count`, and `quiz_count` for the active filters. Each topic entry includes its concept ID/name, total and per-year counts, last-seen year, repeated-prompt count, documented marks, and supporting question/source coordinates. Unmapped verified rows are reported in the aggregate but never emitted as a synthetic topic. The question review endpoint accepts either `concept_id=<verified-current-syllabus-concept>` or `clear_concept=true`; a manual assignment records confidence `1.0`.
+
+If a PDF import fails or contains only duplicate questions, the newly written object and uncommitted resource row are removed. Account exports include source-backed syllabus records, historical questions, plan items/revisions, mappings, and audit events. Account deletion removes those records in foreign-key-safe order, anonymizes any surviving review references to the deleted user, invalidates user caches, and then removes owned private objects.
 ## 5. Compatibility policy
 
 Breaking changes to paths, authentication, required fields, response meanings, or ownership behavior require a versioned API change or migration notice. New optional fields should be additive. Route tests must be updated with every contract change.

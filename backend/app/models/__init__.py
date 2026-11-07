@@ -49,6 +49,25 @@ class SyllabusVersion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class SyllabusRecord(Base):
+    """Store one extracted syllabus fact with its original text and document provenance."""
+    __tablename__ = "syllabus_records"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    syllabus_version_id: Mapped[str] = mapped_column(ForeignKey("syllabus_versions.id"), index=True)
+    source_resource_id: Mapped[str] = mapped_column(ForeignKey("academic_resources.id"), index=True)
+    course_id: Mapped[str] = mapped_column(ForeignKey("courses.id"), index=True)
+    record_type: Mapped[str] = mapped_column(String(24), default="topic", index=True)
+    source_page: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    source_text: Mapped[str] = mapped_column(Text)
+    normalized_text: Mapped[str] = mapped_column(String(500))
+    unit_label: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    parent_label: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    confidence: Mapped[float] = mapped_column(Float, default=0.5)
+    review_status: Mapped[str] = mapped_column(String(24), default="pending_review", index=True)
+    mapped_concept_id: Mapped[Optional[str]] = mapped_column(ForeignKey("concepts.id"), nullable=True, index=True)
+
+
 class RvceSyllabusCourse(Base):
     __tablename__ = "rvce_syllabus_courses"
     __table_args__ = (UniqueConstraint("program_code", "scheme_year", "semester", "course_code", name="uq_rvce_syllabus_course_identity"),)
@@ -78,12 +97,21 @@ class Concept(Base):
     name: Mapped[str] = mapped_column(String(200))
     difficulty: Mapped[int] = mapped_column(Integer, default=1)
     status: Mapped[str] = mapped_column(String(30), default="not_started")
+    unit_label: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    source_page: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    syllabus_version_id: Mapped[Optional[str]] = mapped_column(ForeignKey("syllabus_versions.id"), index=True, nullable=True)
+    parent_concept_id: Mapped[Optional[str]] = mapped_column(ForeignKey("concepts.id"), nullable=True, index=True)
+    estimated_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
 
 class ConceptPrerequisite(Base):
     __tablename__ = "concept_prerequisites"
     concept_id: Mapped[str] = mapped_column(ForeignKey("concepts.id"), primary_key=True)
     prerequisite_id: Mapped[str] = mapped_column(ForeignKey("concepts.id"), primary_key=True)
+    status: Mapped[str] = mapped_column(String(24), default="accepted", index=True)
+    source_page: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    rationale: Mapped[str] = mapped_column(Text, default="")
 
 
 class Resource(Base):
@@ -125,11 +153,23 @@ class HistoricalExamQuestion(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     course_id: Mapped[str] = mapped_column(ForeignKey("courses.id"), index=True)
     source: Mapped[str] = mapped_column(String(240))
+    source_document: Mapped[str] = mapped_column(String(500), default="")
+    source_resource_id: Mapped[Optional[str]] = mapped_column(ForeignKey("academic_resources.id"), nullable=True, index=True)
     exam_year: Mapped[int] = mapped_column(Integer, index=True)
     prompt: Mapped[str] = mapped_column(Text)
     concept_id: Mapped[Optional[str]] = mapped_column(ForeignKey("concepts.id"), index=True, nullable=True)
     topic_label: Mapped[str] = mapped_column(String(120), default="general")
-    difficulty: Mapped[int] = mapped_column(Integer, default=1)
+    difficulty: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=None)
+    paper_part: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    question_kind: Mapped[str] = mapped_column(String(20), default="main", index=True)
+    question_number: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    subpart: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    marks: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    source_page: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    assessment_type: Mapped[str] = mapped_column(String(24), default="unknown", index=True)
+    question_format: Mapped[str] = mapped_column(String(24), default="unknown")
+    mapping_confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    review_status: Mapped[str] = mapped_column(String(24), default="pending_review", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 

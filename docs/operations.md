@@ -1,9 +1,9 @@
 # Operations and Runbook
 
 **Document ID:** ILR-OPS-001
-**Version:** 2.1
+**Version:** 2.2
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-10-28
+**Last reviewed:** 2026-11-03
 
 ## 1. Operational responsibility
 
@@ -18,6 +18,9 @@ python -m venv .venv
 # Windows PowerShell
 .venv\\Scripts\\Activate.ps1
 python -m pip install -r backend/requirements.txt -r ml/requirements.txt
+alembic -c backend/alembic.ini upgrade head
+# PowerShell: $env:PYTHONPATH = "$PWD;$PWD\backend"
+# macOS/Linux: export PYTHONPATH=".:./backend"
 uvicorn app.main:app --reload --app-dir backend
 ```
 
@@ -29,7 +32,7 @@ npm ci
 npm run dev
 ```
 
-The seeded local login is `demo@example.com` / `demo-password`.
+Create a learner from the login screen, or configure `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` to bootstrap a local administrator. Fresh local startup does not create sample courses or user accounts.
 
 ## Full Compose stack
 
@@ -72,7 +75,7 @@ Never commit `.env` or real credentials.
 
 ## Database lifecycle
 
-Development startup creates missing tables automatically. Production does not create tables or seed the demo account; run the checked-in migration first:
+Development startup creates missing tables automatically. No account or course is seeded by default. Production does not create tables; run the checked-in migration first:
 
 ```bash
 alembic -c backend/alembic.ini upgrade head
@@ -91,7 +94,7 @@ The restore script requires explicit `RESTORE` confirmation. Backup files are ig
 
 ## Health verification
 
-After startup, verify that the API responds, the interactive documentation loads, the frontend can reach the configured API origin, database migrations are current, and Redis connectivity is either healthy or intentionally operating in fallback mode. Perform an authenticated smoke test for login, a private read, a progress update, and roadmap generation.
+After startup, verify that the API responds, the interactive documentation loads, the frontend can reach the configured API origin, database migrations are current, and Redis connectivity is either healthy or intentionally operating in fallback mode. Perform an authenticated smoke test for learner registration/login, subject selection, syllabus upload and processing, concept-map generation, roadmap creation, and question-frequency access. Progress and quiz endpoints remain compatibility APIs and are not part of the learner UI flow.
 
 The readiness endpoint is `GET /health/ready`; it confirms database connectivity and reports whether Redis is available or the process-local fallback is active. `GET /metrics` exposes normalized request/status and document-worker counters for an internal Prometheus scraper. Set `METRICS_AUTH_TOKEN` and enforce private network access before enabling production scraping; the endpoint must not be published directly to the internet. Authorized administrators can inspect queue counts and the oldest active job at `/api/v1/admin/processing`.
 

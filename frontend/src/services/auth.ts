@@ -11,6 +11,14 @@ export async function login(email: string, password: string): Promise<AuthRespon
   return result
 }
 
+/** Create a learner account and persist its new access token and profile. */
+export async function register(name: string, email: string, password: string): Promise<AuthResponse> {
+  const result = await api<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password }) })
+  localStorage.setItem('access_token', result.access_token)
+  localStorage.setItem('user', JSON.stringify(result.user))
+  return result
+}
+
 /** Attempt server revocation, then always clear browser credentials locally. */
 export async function logout() {
   try { await api<void>('/auth/logout', { method: 'POST' }) } catch { /* revoke locally when the API is unavailable */ }

@@ -35,13 +35,20 @@ REQUIRED_FILES = (
     "backend/app/api/v1/catalog.py",
     "backend/app/schemas/rvce.py",
     "backend/app/api/v1/progress.py",
+    "backend/app/api/v1/syllabus.py",
+    "backend/app/api/v1/exams.py",
+    "backend/app/api/v1/roadmap.py",
     "frontend/src/pages/RvceCatalog.tsx",
+    "frontend/src/pages/SyllabusSources.tsx",
+    "frontend/src/pages/Exams.tsx",
     "frontend/src/pages/Dashboard.tsx",
-    "frontend/src/pages/Progress.tsx",
-    "frontend/src/utils/activity.ts",
     "frontend/src/App.tsx",
     "frontend/src/pages/Admin.tsx",
     "frontend/src/services/rvce.ts",
+    "frontend/src/services/syllabus.ts",
+    "frontend/src/services/exams.ts",
+    "docs/frontend-design.md",
+    "docs/api-specification.md",
     "scripts/extract_rvce_candidates.py",
     "scripts/import_rvce_candidates.py",
     "scripts/validate_rvce_courses.py",
@@ -59,6 +66,9 @@ REQUIRED_FILES = (
     "backend/migrations/versions/0006_processing_reliability.py",
     "backend/migrations/versions/0007_rvce_syllabus_courses.py",
     "backend/migrations/versions/0008_rvce_source_page.py",
+    "backend/migrations/versions/0009_concept_syllabus_provenance.py",
+    "backend/migrations/versions/0010_exam_question_sections.py",
+    "backend/app/services/syllabus_service.py",
 )
 REQUIRED_ENV = (
     "SECRET_KEY=",
@@ -68,6 +78,7 @@ REQUIRED_ENV = (
     "METRICS_AUTH_TOKEN=",
 )
 DOCUMENTED_PYTHON_ROOTS = ("backend", "ml", "scripts", "tests")
+IGNORED_PYTHON_PARTS = {".venv", "venv", "env", "site-packages", "__pycache__"}
 TS_FUNCTION_DECLARATION = re.compile(r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)")
 TS_FUNCTION_VARIABLE = re.compile(r"^\s*(?:export\s+)?(?:const|let)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*(.*)$")
 CPP_METHOD_DECLARATION = re.compile(r"^\s*(?:Score|std::vector<Score>)\s+\w+\s*\([^;]*\)\s*const;\s*$")
@@ -153,7 +164,11 @@ def main() -> int:
     documented_function_count = 0
     documented_source_files = [ROOT / "conftest.py"]
     for relative_root in DOCUMENTED_PYTHON_ROOTS:
-        documented_source_files.extend((ROOT / relative_root).rglob("*.py"))
+        documented_source_files.extend(
+            source_file
+            for source_file in (ROOT / relative_root).rglob("*.py")
+            if not IGNORED_PYTHON_PARTS.intersection(source_file.relative_to(ROOT).parts)
+        )
     for source_file in documented_source_files:
         relative = source_file.relative_to(ROOT).as_posix()
         module = ast.parse(source_file.read_text(encoding="utf-8"), filename=relative)

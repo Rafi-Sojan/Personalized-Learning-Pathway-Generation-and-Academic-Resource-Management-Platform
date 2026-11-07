@@ -10,6 +10,13 @@ class Concept(BaseModel):
     difficulty: int = Field(ge=1, le=5)
     status: str
     prerequisites: list[str] = []
+    suggested_prerequisites: list[str] = []
+    unit_label: str | None = None
+    source_page: int | None = None
+    syllabus_version_id: str | None = None
+    parent_concept_id: str | None = None
+    estimated_minutes: int | None = None
+    review_status: str | None = None
 
 
 class Resource(BaseModel):
@@ -32,7 +39,12 @@ class HistoricalExamQuestionCreate(BaseModel):
     exam_year: int = Field(ge=1900, le=2100)
     prompt: str = Field(min_length=5, max_length=20000)
     concept_id: str | None = None
-    difficulty: int = Field(default=1, ge=1, le=5)
+    difficulty: int | None = Field(default=None, ge=1, le=5)
+    paper_part: str | None = Field(default=None, max_length=20)
+    question_kind: str = Field(default="main", pattern="^(quiz|main)$")
+    assessment_type: str = Field(default="unknown", pattern="^(quiz|test|see|assignment|lab|practice|unknown)$")
+    question_format: str = Field(default="unknown", pattern="^(objective|short|long|numerical|coding|practical|unknown)$")
+    marks: float | None = Field(default=None, ge=0, le=1000)
 
 
 class HistoricalExamImportRequest(BaseModel):
@@ -40,6 +52,9 @@ class HistoricalExamImportRequest(BaseModel):
     source: str = Field(min_length=1, max_length=240)
     exam_year: int = Field(ge=1900, le=2100)
     text: str = Field(min_length=5, max_length=500000)
+    assessment_type: str = Field(default="unknown", pattern="^(quiz|test|see|assignment|lab|practice|unknown)$")
+    question_format: str = Field(default="unknown", pattern="^(objective|short|long|numerical|coding|practical|unknown)$")
+    part_a_is_quiz: bool = False
 
 
 class HistoricalExamQuestionResponse(BaseModel):
@@ -51,14 +66,26 @@ class HistoricalExamQuestionResponse(BaseModel):
     prompt: str
     concept_id: str | None
     topic_label: str
-    difficulty: int
+    difficulty: int | None = None
+    paper_part: str | None = None
+    question_kind: str = "main"
+    question_number: str | None = None
+    subpart: str | None = None
+    marks: float | None = None
+    source_page: int | None = None
+    source_document: str = ""
+    source_resource_id: str | None = None
+    assessment_type: str = "unknown"
+    question_format: str = "unknown"
+    mapping_confidence: float | None = None
+    review_status: str = "pending_review"
 
 
 class HistoricalExamRanking(BaseModel):
     concept_id: str
     concept_name: str
     question_count: int
-    average_difficulty: float
+    average_difficulty: float | None
     score: float
 
 
@@ -87,6 +114,7 @@ class RoadmapItem(BaseModel):
     minutes: int = Field(gt=0)
     status: str
     reason: str
+    evidence_question_ids: list[str] = []
 
 
 class RoadmapRequest(BaseModel):

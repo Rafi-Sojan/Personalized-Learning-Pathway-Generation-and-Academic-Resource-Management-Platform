@@ -1,27 +1,34 @@
 # Intelligent Learning Roadmap
 
 **Project document:** ILR-DOC-001
-**Release status:** Implementation-complete development baseline
-**Documentation version:** 2.2
-**Last reviewed:** 2026-11-01
+**Release status:** Development baseline verified locally; release acceptance open
+**Documentation version:** 2.7
+**Last reviewed:** 2026-11-07
 
-Intelligent Learning Roadmap is a modular learning-support platform that converts course material, learner progress, and concept dependencies into an actionable study plan. It combines a web dashboard, a typed API, explainable learning utilities, and a native scoring engine.
+Intelligent Learning Roadmap is an RVCE-focused platform that turns stored syllabus copies into source-aware concept maps and study roadmaps, and identifies topic frequency in historical question papers. It combines a web dashboard, a typed API, explainable learning utilities, and a native scoring engine.
 
 ## 1. Project status
 
-This repository provides an implementation-complete development baseline for an RVCE-focused learning platform with signed authentication, Argon2 password hashing, role-gated administration, ownership-aware SQLAlchemy persistence, secure asynchronous document processing, optional OCR, object-storage abstraction, deadline-aware roadmap generation, historical exam ranking, Redis-backed caching/throttling, privacy workflows, and a native scoring boundary. The RVCE program/scheme catalog is source-provenance validated. Eight supplied PDFs have been inventoried; extracted course candidates remain pending academic verification, conflict resolution, and first-year branch mapping. SQLite is used for a no-service local run; Docker Compose provisions PostgreSQL, Redis, a worker, private storage, and the frontend/backend services.
+This repository provides an implementation-complete development baseline for an RVCE-focused learning platform with signed authentication, Argon2 password hashing, role-gated administration, ownership-aware SQLAlchemy persistence, secure asynchronous document processing, optional OCR, object-storage abstraction, syllabus-derived maps and roadmaps, past-paper parsing and topic frequency, Redis-backed caching/throttling, privacy workflows, and a native scoring boundary. Learner academic workflows center on syllabus PDFs and question papers; manual learning-resource catalog management is not in scope. AI-generated concept links are deferred. The RVCE program/scheme catalog is source-provenance validated. Eight supplied PDFs have been inventoried; extracted course candidates remain pending academic verification, conflict resolution, and first-year branch mapping. SQLite is used for a no-service local run; Docker Compose provisions PostgreSQL, Redis, a worker, private storage, and the frontend/backend services.
 
 ## 2. Capabilities
 
-- Course and concept tracking with prerequisite-aware statuses.
+- RVCE subject selection and review-gated syllabus concept maps with unit/page provenance and parent-child topic hierarchy.
 - Syllabus topic extraction through a FastAPI endpoint.
-- Dated roadmap generation for incomplete concepts.
-- Curated resources and concept-level quiz contracts.
-- Progress updates and dashboard summaries.
+- Dated roadmap generation that splits full concept estimates across bounded daily study segments.
+- Stored syllabus PDFs processed into course concepts and roadmap inputs.
+- Page-aware past-paper parsing that excludes answer schemes and reports verified topic frequency by subject and year, including repeated prompts.
+- Versioned syllabus extraction with source document/page provenance, confidence, review state, and separate outcome/lab/assessment-policy facts.
+- Reviewable historical-paper questions with explicit assessment metadata, source-page references, marks where printed, manual concept correction, and verified-only frequency evidence.
+- Explicit syllabus prerequisite suggestions that require approval and cycle validation before they affect roadmap ordering.
+- Course-specific roadmap previews with prerequisite order, mastery gap, verified historical recurrence/recency/marks, and question evidence references.
+- Section-aware paper parsing preserves printed parts and structural CIE/SEE headers; Part A quiz classification is applied only when the source/uploader establishes it, while verified, current-syllabus-mapped main questions drive historical frequency.
+- Quiz and progress backend contracts remain available; quizzes and progress are not exposed in the current learner UI.
 - Deterministic Python utilities for text cleaning, semantic matching, dependency ordering, scheduling, and evaluation.
 - C++ scoring library and command-line demonstration for concept prioritization.
 - Historical exam question import, concept association, and frequency/difficulty ranking.
 - S3-compatible private storage option with durable audit-event retention and purge tooling.
+- Complete account export and foreign-key-safe deletion for syllabus, question-paper, roadmap, progress, review, audit, and private-file records.
 - Student, instructor, and administrator roles with protected user-management operations.
 - RVCE program and scheme catalog metadata, PDF checksum/page provenance, batch import, administrator academic review, and verified semester enrollment.
 
@@ -33,7 +40,7 @@ This repository provides an implementation-complete development baseline for an 
 | `backend/` | FastAPI application, schemas, services, and API routes |
 | `ml/` | Explainable preprocessing, mapping, graph, scheduling, and metrics |
 | `scoring-engine/` | C++ scoring library, CLI, and native tests |
-| `database/` | Initial relational schema, seed data, and ER documentation |
+| `database/` | Initial relational schema, empty seed placeholder, and ER documentation |
 | `tests/` | Cross-module integration tests |
 | `docs/` | Architecture, API, security, database, and evaluation notes |
 | `monitoring/` | Prometheus scrape configuration and alert rules |
@@ -63,6 +70,9 @@ python -m pip install -r backend/requirements-ocr.txt -r backend/requirements-st
 Start the API from the repository root:
 
 ```bash
+alembic -c backend/alembic.ini upgrade head
+# PowerShell: $env:PYTHONPATH = "$PWD;$PWD\backend"
+# macOS/Linux: export PYTHONPATH=".:./backend"
 uvicorn app.main:app --reload --app-dir backend
 ```
 
@@ -84,7 +94,7 @@ copy .env.example .env  # Windows
 docker compose up --build
 ```
 
-The seeded development account is `demo@example.com` with password `demo-password`. Replace the Compose `SECRET_KEY` before any shared deployment.
+Register a learner account from the login screen or configure `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` for local administration. Local startup no longer creates generic sample courses or concepts. Replace the Compose `SECRET_KEY` before any shared deployment.
 
 ## 6. Testing and builds
 
@@ -126,6 +136,8 @@ python scripts/verify_release.py
 python scripts/load_test.py --url http://localhost:8000/health/ready --requests 100 --workers 10
 ```
 
+The 2026-11-07 local repository verification recorded 37 passing Python tests and one skipped service-container integration test, a successful frontend production build and bundle check, and passing Ruff, mypy, and release-invariant checks. The prior 2026-11-06 pass recorded a synchronized 16-table SQL reference snapshot and a successful strict-warning native scorer build. All five Playwright scenarios previously reported `ok`; the unsupported local Node 24.11.1 runner did not exit after reporting and was terminated, so a clean browser-suite exit must still be confirmed with the pinned Node 24.22.1 CI toolchain.
+
 RVCE course extraction reads the source PDFs in place, verifies their SHA-256 fingerprints, and writes pending-review candidates plus conflicts under `database/`. Set `RVCE_SYLLABUS_DIR` to the supplied syllabus directory and run `make extract-rvce` to regenerate and validate the files. After the backend is running and an administrator is logged in, submit candidates with `python scripts/import_rvce_candidates.py --token <admin-token>`. Imported candidates stay hidden from learners until an administrator approves them. First-year candidates are labeled `BE-UNMAPPED` and remain unavailable for branch enrollment until reviewed.
 
 The same operations are available through the root `Makefile` where the required tools are installed.
@@ -141,17 +153,22 @@ The API is mounted under `/api/v1`:
 | `POST` | `/auth/delete` | Delete authenticated account after email confirmation |
 | `POST` | `/auth/logout` | Revoke the authenticated user's existing tokens |
 | `GET` | `/courses` | List or create courses |
-| `GET` | `/concepts` | List concepts and prerequisites |
+| `GET` | `/concepts?course_id={id}&syllabus_only=true` | List syllabus-derived concepts with unit/page provenance |
 | `POST` | `/syllabus/analyze` | Extract topics from syllabus text |
-| `GET` | `/roadmap` | Generate a dated study plan |
+| `GET` | `/syllabus/sources?course_id={id}` | List stored course syllabus PDF copies |
+| `POST` | `/syllabus/sources/upload?course_id={id}` | Store a course syllabus PDF copy |
+| `POST` | `/syllabus/sources/{id}/process` | Extract text from a stored syllabus copy |
+| `POST` | `/syllabus/sources/{id}/generate-map` | Create concepts from extracted syllabus topics with source provenance |
+| `GET` | `/roadmap` | Preview a capacity-bounded, multi-day study plan |
+| `POST` | `/roadmap/generate` | Persist a full-effort plan from a processed syllabus-derived concept map |
 | `GET` | `/roadmap/history` | List roadmap revisions |
-| `GET` | `/resources` | List learning resources |
-| `GET`, `POST` | `/resources/{id}/mappings` | Review resource-to-concept mappings |
 | `GET`, `POST` | `/progress` | Read or record learner progress |
 | `GET` | `/quizzes/{concept_id}` | Retrieve a concept quiz |
-| `GET` | `/rankings` | Retrieve the development leaderboard |
-| `GET`, `POST` | `/exams/questions` | List or create historical exam questions; creation requires instructor/admin role |
+| `GET` | `/rankings` | Retrieve the authenticated learner's private mastery summary |
+| `GET` | `/exams/questions` | Search question records by subject, year, or prompt text |
 | `POST` | `/exams/import` | Import numbered or paragraph-separated question paper text |
+| `POST` | `/exams/import-pdf` | Parse a question-paper PDF and associate questions with syllabus topics |
+| `GET` | `/exams/frequency` | Read Part B topic frequency; Part A quiz counts are reported separately |
 | `GET` | `/exams/rankings` | Rank concepts by historical question evidence |
 | `GET`, `POST` | `/admin/users` | Admin-only user and role management |
 | `GET` | `/metrics` | Internal Prometheus-compatible request/status metrics |

@@ -16,7 +16,7 @@ ACTIVITY_HISTORY_DAYS = 400
 
 @router.get("")
 def get_progress(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
-    """Return learner progress and recent study timestamps used by the dashboard streak."""
+    """Return learner-owned progress records through the retained compatibility API."""
     concepts = db.scalars(select(Concept).join(Course, Course.id == Concept.course_id).where(Course.owner_id == current_user.id)).all()
     updates = db.scalars(select(TopicProgress).where(TopicProgress.user_id == current_user.id)).all()
     cutoff = utc_now() - timedelta(days=ACTIVITY_HISTORY_DAYS)

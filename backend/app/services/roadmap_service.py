@@ -1,3 +1,5 @@
+"""Legacy in-memory roadmap utility retained for compatibility."""
+
 from datetime import date, timedelta
 from typing import cast
 
@@ -5,11 +7,10 @@ from app.repositories.in_memory import repository
 
 
 def build_roadmap(days: int = 14) -> list[dict]:
-    """Build a deterministic sample roadmap with one item per requested day."""
+    """Build a deterministic sample schedule from legacy utility fixtures."""
     pending = [concept for concept in repository.concepts if concept["status"] != "completed"]
-    result = []
-    for index, concept in enumerate(pending):
-        result.append({
+    return [
+        {
             "id": f"plan-{concept['id']}",
             "concept_id": concept["id"],
             "concept_name": concept["name"],
@@ -17,5 +18,6 @@ def build_roadmap(days: int = 14) -> list[dict]:
             "minutes": 25 + cast(int, concept["difficulty"]) * 10,
             "status": "planned",
             "reason": "Prerequisites are available and this topic is not complete.",
-        })
-    return result
+        }
+        for index, concept in enumerate(pending)
+    ]

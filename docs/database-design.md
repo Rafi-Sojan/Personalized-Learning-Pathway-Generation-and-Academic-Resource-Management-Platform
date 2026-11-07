@@ -1,17 +1,17 @@
 # Database Design Specification
 
 **Document ID:** ILR-DB-001
-**Version:** 2.2
+**Version:** 2.6
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-11-01
+**Last reviewed:** 2026-11-06
 
 ## 1. Authority and persistence
 
-The relational contract is represented by SQLAlchemy models, `database/init.sql`, and the Alembic migration under `backend/migrations/versions`. Alembic is authoritative for deployed schema evolution. SQLite is used for zero-service development; PostgreSQL is the Compose and intended production database.
+The relational contract is represented by SQLAlchemy models, the SQLite-compatible reference snapshot in `database/init.sql`, and Alembic migrations under `backend/migrations/versions`. Alembic is authoritative for deployed schema evolution. SQLite is used for zero-service development; PostgreSQL is the Compose and intended production database. SQLite connections explicitly enable foreign-key enforcement so local tests expose referential-integrity failures instead of masking them.
 
 ## 2. Ownership and relationships
 
-Users own courses. Courses own concepts and resources. Prerequisite edges connect concepts within a course. Progress, quiz attempts, and study plans are scoped to users. Roadmap items are persisted derived data and can be regenerated from progress, availability, deadlines, and dependencies. Study plan revisions preserve generated snapshots, resource-concept mappings preserve review state, confidence, source, and reviewer, historical exam questions preserve source/year and concept evidence, and audit events preserve security/product events until retention cleanup.
+Users own courses. Each course owns concepts, syllabus versions, and private source resources. `syllabus_records` retains per-version extracted topic/subtopic, unit-hour, outcome, laboratory, metadata, and assessment-policy text with source resource, page, confidence, and review status. Concepts retain parent-subtopic relationships and estimated minutes derived from unit hours when available. Accepted prerequisite edges constrain roadmaps; proposed source-backed edges require review and cycle validation. Progress, quiz attempts, historical papers, and study plans remain separate learner data. Historical exam questions retain source document/resource, page, year, part, question number/subpart, marks, declared assessment type/format, optional human-rated difficulty, concept mapping confidence, and review state. Only verified mapped main questions contribute to historical rankings; learner quiz attempts never enter that evidence set. Audit events preserve security/product events until retention cleanup. Legacy resource-to-concept mapping tables remain for compatibility.
 
 ## 3. Integrity requirements
 
@@ -26,18 +26,20 @@ Users own courses. Courses own concepts and resources. Prerequisite edges connec
 - Resource processing state shall record attempts, bounded error detail, active-start time, next retry time, and successful completion time so worker recovery is auditable.
 - A worker lease that exceeds `DOCUMENT_WORKER_TIMEOUT_SECONDS` shall be reclaimed on the next worker polling cycle and recorded as retryable or terminal failure according to the attempt limit.
 - RVCE syllabus identity is unique by program, scheme year, semester, and course code. Imported rows retain source PDF filename, page, SHA-256 checksum, and a pending, verified, or rejected review state.
+- Concepts with no `syllabus_version_id` are legacy or manually created records; syllabus maps, roadmap generation, and inferred past-paper attribution use only concepts with source syllabus provenance.
 - `BE-UNMAPPED` RVCE first-year rows are excluded from learner catalog and enrollment queries. An administrator must map the record to an RVCE program before approval; duplicate branch identities are rejected.
+- Account deletion removes plan children, progress and attempts, historical questions, syllabus records, mappings, prerequisites, resources, concepts, syllabus versions, courses, audit actor rows, and the user in dependency-safe order. Surviving mapping reviews by the deleted user are anonymized.
 
 ## 4. RVCE syllabus records
 
-`rvce_syllabus_courses` is the source-backed syllabus table. It stores program and scheme identity, semester, course title/code, credit and contact-hour metadata, category, prerequisite/outcome JSON, source URL, source checksum, relative PDF filename, page number, verification state, and creation timestamp. Migration `0007_rvce_syllabus_courses.py` creates the table; `0008_rvce_source_page.py` adds source-page provenance. The source manifest and course-row schema are versioned under `database/`.
-
-Import validation requires the file path and checksum to match the inventoried RVCE source manifest, the page to fall within the recorded PDF page count, and the source URL to equal the official RVCE syllabus index. Academic approval remains a human review action.
+`rvce_syllabus_courses` is the source-backed academic catalog table. It stores program and scheme identity, semester, course title/code, credit and contact-hour metadata, category, prerequisite/outcome JSON, source URL, source checksum, relative PDF filename, page number, verification state, and creation timestamp. Migrations `0007` and `0008` create and extend this catalog provenance. Migration `0009` adds syllabus provenance to concepts; `0010` adds question section fields; `0011_ingestion_provenance_review` adds versioned syllabus extraction records, subtopic parentage, unit-derived estimate fields, reviewable prerequisites, and historical question-paper provenance and review metadata. See `docs/syllabus-and-paper-ingestion.md` for import and review rules.
 
 ## 5. File data
 
-Private uploads are stored under `storage/uploads` using generated UUID filenames. Metadata, checksums, and processing lifecycle fields are stored in `academic_resources`; extracted text is written to `storage/processed` after validated PDF processing. `processed_key` tracks the derived object when S3-compatible storage is enabled. These directories/buckets are not public frontend assets and must use encrypted, access-controlled storage in production.
+Private syllabus copies are stored under `storage/uploads` using generated server-side filenames. Metadata, checksums, and processing lifecycle fields are stored in `academic_resources`; extracted text is written to `storage/processed` after validated PDF processing. `processed_key` tracks the derived object when S3-compatible storage is enabled. Past-paper PDFs are size/page bounded, retained as private `historical_exam_pdf` resources, and served only to authorized course owners. Parsed question rows link back to the source resource and page. These directories/buckets are not public frontend assets and must use encrypted, access-controlled storage in production.
 
 ## 6. Recovery requirements
 
 Production must define database backup frequency, retention, encryption, restore testing, and recovery objectives. Redis data is non-authoritative and may be rebuilt; database and private file storage are authoritative and must be backed up consistently.
+
+The 2026-11-06 schema consistency check executed `database/init.sql` in an in-memory SQLite database and compared every table and column against SQLAlchemy metadata; all 16 modeled tables matched. This check validates the reference snapshot only and does not replace Alembic upgrade testing on PostgreSQL.

@@ -1,9 +1,9 @@
 # Architecture Specification
 
 **Document ID:** ILR-ARC-001
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-10-28
+**Last reviewed:** 2026-11-03
 
 ## 1. Architectural style
 
@@ -11,9 +11,9 @@ The platform is a modular monolith with separately testable frontend, API, learn
 
 ## 2. Logical components
 
-1. **Frontend:** React/Vite presents courses, concept maps, roadmaps, resources, quizzes, and progress.
+1. **Frontend:** React/Vite presents RVCE subjects, stored syllabus copies, source-aware concept maps and roadmaps, and past-paper frequency analysis. Quiz and progress screens are outside the current learner UI.
 2. **API:** FastAPI owns HTTP contracts, authentication, ownership checks, validation, and application orchestration.
-3. **Persistence:** SQLAlchemy models and repositories persist users, courses, concepts, prerequisites, resources, historical exam questions, audit events, progress, and study plans.
+3. **Persistence:** SQLAlchemy models and repositories persist users, courses, concepts with syllabus-version/unit/page provenance, prerequisites, private syllabus source documents, parsed historical exam questions, audit events, compatibility progress data, and study plans.
 4. **Learning logic:** The ML package provides deterministic preprocessing, concept mapping, graph, scheduling, and evaluation primitives.
 5. **Scoring:** The C++ engine provides a fast ranking primitive and a command-line testable boundary.
 6. **Infrastructure:** PostgreSQL is the Compose persistence service; Redis supports rate limits and JSON response caching; local or S3-compatible storage holds private documents.
@@ -23,8 +23,10 @@ The platform is a modular monolith with separately testable frontend, API, learn
 - The browser is an untrusted client and must not be trusted for identity, ownership, or scoring claims.
 - The API is the authorization boundary for all private data.
 - Uploaded documents are untrusted input and must remain outside public static paths.
+- Past-paper PDFs are parsed in memory; only normalized question records and source/year metadata are retained by the import endpoint.
 - Redis is an availability optimization, not the source of truth.
 - Derived ML and scoring results are recommendations and require validation before becoming authoritative records.
+- AI-provider credentials and generated website links are deferred and must not be placed in the browser bundle.
 
 ## 4. Runtime data flow
 
@@ -35,7 +37,7 @@ Browser -> FastAPI -> authentication/authorization -> services -> SQLAlchemy -> 
                               rate limiter/cache  ML/scoring integrations
                                       |
                                       v
-                         Redis + private object storage
+               Redis + private syllabus storage + question archive
 ```
 
 ## 5. Deployment boundaries

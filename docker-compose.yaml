@@ -32,7 +32,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     environment:
-      FRONTEND_ORIGIN: http://localhost:5173
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173,http://127.0.0.1:5173}
       DATABASE_URL: postgresql+psycopg://learning:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/learning
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}

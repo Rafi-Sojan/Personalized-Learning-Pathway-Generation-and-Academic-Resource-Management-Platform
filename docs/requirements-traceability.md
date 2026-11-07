@@ -1,9 +1,9 @@
 # Requirements Traceability Matrix
 
 **Document ID:** ILR-REQ-001
-**Version:** 2.4
+**Version:** 2.7
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-11-01
+**Last reviewed:** 2026-11-07
 
 This document maps the attached project specification to the current implementation. Statuses are intentionally explicit so the repository does not imply production readiness where a development implementation remains.
 
@@ -18,21 +18,25 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Course and concept management | Implemented | SQLAlchemy course/concept models and authenticated course/concept routes |
 | Syllabus versions | Implemented | `POST/GET /api/v1/courses/{course_id}/syllabus-versions` |
 | Text-based syllabus analysis | Implemented | `POST /api/v1/syllabus/analyze` with bounded input |
-| Digital PDF uploads | Implemented | Validated private uploads under `storage/uploads` |
-| PDF text extraction | Implemented | PyPDF processing endpoint and processed text output |
+| Stored syllabus PDF copies | Implemented | Course-owned `/syllabus/sources/upload`, private storage, checksum, and source listing |
+| Syllabus-derived concepts | Implemented; content validation open | Course-scoped unit parsing creates review-gated root/child concepts with page evidence and excludes outcome, lab, reference, and rubric tails; candidate quality still requires RVCE reviewer evaluation |
+| PDF text extraction | Implemented | Bounded PyPDF/OCR processing records per-page markers in private processed text |
 | OCR for scanned PDFs | Implemented | Optional Tesseract/PyMuPDF provider is integrated for image-only PDFs, bounded by configured page/text limits, and packaged in `backend/Dockerfile.ocr` |
-| Resource-to-topic mapping | Implemented | Resource-to-concept mapping records support proposed, accepted, and rejected review states |
+| Manual resource catalog and mapping UI | Out of scope | Removed from learner navigation; legacy backend mapping contracts remain for compatibility |
+| AI-generated website links for concepts | Deferred | Provider/API key, link grounding, validation, and persistence are intentionally postponed |
 | Concept prerequisites | Implemented | Prerequisite table, API mutation, and cycle detection |
-| Concept graph visualization | Implemented | React Flow concept map |
-| Deadline-aware roadmap generation | Implemented | Persisted study plans with target date and daily capacity |
-| Feasibility checks | Implemented | Scheduler rejects impossible capacity and cyclic graphs |
+| Concept graph visualization | Implemented | React Flow map uses stable unit columns, parent-child edges, accepted prerequisite edges, source-page labels, and pending/verified styling; rejected current topics are omitted |
+| Syllabus-driven deadline-aware roadmap generation | Implemented | Persisted plans require a processed syllabus copy and map; full concept estimates are split across daily-capacity segments rather than truncated |
+| Feasibility checks | Implemented | Scheduler rejects impossible full-effort capacity and cyclic graphs; previews label a partial final concept when capacity expires |
 | Roadmap explanations | Implemented | Items include transparent prioritization explanations |
-| Quiz attempts | Implemented | Concept quiz endpoint and attempt submission |
-| Progress adaptation and study activity | Implemented | Quiz/progress updates modify topic mastery; `/progress` returns learner-owned activity timestamps for the live dashboard streak |
-| Live learner dashboard | Implemented | Current date/greeting, active-course count, completion, activity streak, roadmap focus, empty states, and navigation actions use live API/browser data instead of fixed demo values |
-| Account data export and deletion | Implemented | Authenticated export and email-confirmed deletion endpoints plus frontend account screen |
+| Quiz attempts | Backend retained; learner UI removed | Concept quiz endpoint and attempt submission remain available for compatibility |
+| Progress adaptation and study activity | Backend retained; learner UI removed | Quiz/progress APIs and persisted records remain, but have no learner navigation or screens |
+| Live learner dashboard | Implemented | Current date/greeting, subject and mapped-topic counts, roadmap focus, empty states, and navigation actions use live API data |
+| Account data export and deletion | Implemented | Export covers source provenance, historical questions, complete plan history, mappings and audits; foreign-key-safe deletion removes owned rows/files and anonymizes surviving review references |
 | Roadmap revision history | Implemented | Generated plans create revision snapshots and supersede prior active plans |
-| Historical exam ranking | Implemented | Historical question records, numbered-text import, concept matching, frequency/difficulty ranking, C++ scorer contract, and benchmark harness |
+| Past-paper PDF parsing | Implemented | Bounded page-aware extraction excludes scheme/solution ranges, recognizes RVCE numbering and printed CIE/SEE/part structure, preserves source coordinates, validates explicit course codes, and supports optional OCR |
+| Subject/topic question frequency | Implemented; academic validation open | Only verified main rows mapped to verified current-syllabus concepts create topic counts; mapped/unmapped main and quiz totals, year counts, repeats, evidence references, and archive filters are reported separately |
+| Historical exam ranking | Implemented | Historical question records, text/PDF import, conservative verified-syllabus matching, manual correction, review-gated frequency, C++ scorer contract, and benchmark harness |
 | Reproducible learning evaluation | Implemented | JSON benchmark harness reports mapping precision, roadmap completion, and ranking hit rate |
 
 ## Platform requirements
@@ -44,9 +48,9 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Token revocation/logout | Implemented | Per-user token version, authenticated logout endpoint, and frontend session control |
 | Object ownership checks | Implemented | Course, concept, resource, progress, quiz, and roadmap queries are user-scoped |
 | PostgreSQL persistence | Implemented | SQLAlchemy URL configurable; Compose provisions PostgreSQL |
-| SQLite no-service development | Implemented | Default local database URL |
+| SQLite no-service development | Implemented | Default local database URL with connection-level foreign-key enforcement and isolated temporary test databases |
 | Redis caching/rate limiting | Implemented | Redis-backed rate limiting plus JSON response caching for courses and concepts, with invalidation on writes and process-local fallback |
-| Private file storage | Implemented | UUID filenames, non-public storage paths, checksum metadata |
+| Private file storage | Implemented | UUID filenames, non-public storage paths, checksum metadata, account cleanup, and compensating deletion for failed/duplicate paper imports |
 | Docker Compose | Implemented | Frontend, backend, worker, PostgreSQL, Redis, configurable storage, health checks, and corrected development mounts |
 | Non-root backend container | Implemented | Backend image runs as `appuser` |
 | Alembic migrations | Implemented | Configured environment plus lifecycle, resource mapping, exam, storage metadata, and audit-event migrations |
@@ -54,7 +58,7 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Container vulnerability scanning | Implemented | CI audits Python/npm dependencies, builds both images, scans high/critical findings, and publishes SPDX SBOM artifacts |
 | Role-based administration | Implemented | Server-side student, instructor, and admin roles; protected admin user-management endpoints; environment-backed initial admin provisioning |
 | Object storage | Implemented | Local private storage and optional S3-compatible backend with upload, materialization, processed-output, and deletion support |
-| Audit retention | Implemented | Durable audit-event records, account deletion cleanup, configurable retention, and purge utility |
+| Audit retention | Implemented | Durable audit-event records, complete account export/deletion cleanup, configurable retention, and purge utility |
 | Runtime smoke verification | Implemented | Compose health/readiness workflow runs the full service stack in CI |
 | DAST baseline | Implemented | Scheduled/manual OWASP ZAP workflow and local PowerShell runner produce retained reports |
 | Monitoring and alerting contract | Implemented | Health/readiness endpoints, Prometheus-compatible metrics, SLO document, and alert conditions |
@@ -78,10 +82,11 @@ An item is marked **Implemented** only when the repository contains the behavior
 
 ## Known development limitations
 
-- The seeded demo account is for local development only.
+- Fresh local startup creates no demo account or generic course fixtures.
 - Production rejects the development secret and Compose requires `SECRET_KEY` and `POSTGRES_PASSWORD` from `.env`.
 - S3-compatible storage, Tesseract OCR, external penetration testing, and production alerting still require operator infrastructure and credentials; implementation hooks and CI procedures are present.
 - Historical exam ranking depends on the quality and concept coverage of imported question papers; the repository provides deterministic ingestion and ranking, not a licensed corpus.
+- Existing local databases created before the stricter course-scoping and review rules can retain legacy concepts or question mappings. Regenerate the map from the correctly coded syllabus and review records before treating local counts as current; no automatic destructive cleanup is performed.
 - Docker runtime validation is reproducible in `.github/workflows/compose-smoke.yml`; local Docker execution depends on the developer machine.
 - External penetration testing, production SLO approval, and privacy/legal approval remain operator or release-owner acceptance activities.
 - `npm audit` validates repository dependencies, not the globally installed npm CLI or Node runtime.

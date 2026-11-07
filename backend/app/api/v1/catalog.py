@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import require_roles
 from app.db.session import get_db
-from app.models import Concept, Course, RvceSyllabusCourse, SyllabusVersion, User
+from app.models import Course, RvceSyllabusCourse, SyllabusVersion, User
 from app.schemas.rvce import RvceEnrollmentRequest, RvceEnrollmentResponse, RvceSyllabusCourseCreate, RvceSyllabusCourseResponse
 from app.services.rvce_catalog import get_rvce_catalog
 from app.services.audit import record_event
@@ -254,7 +254,7 @@ def enroll_rvce_semester(
     current_user: User = Depends(require_roles("student", "instructor", "admin")),
     db: Session = Depends(get_db),
 ) -> RvceEnrollmentResponse:
-    """Create learner-owned course and concept records from verified RVCE rows."""
+    """Create learner-owned courses from verified rows without placeholder concepts."""
     catalog = get_rvce_catalog()
     program_code = payload.program_code.upper()
     alias_map = {alias: entry["code"] for entry in catalog["program_schemes"] for alias in entry.get("aliases", [])}
@@ -293,7 +293,7 @@ def enroll_rvce_semester(
         )
         db.add(course)
         db.flush()
-        db.add(Concept(course_id=course.id, name=row.title, difficulty=2, status="not_started"))
+        # Course enrollment creates no placeholder concept; topics must come from a stored syllabus copy.
         db.add(SyllabusVersion(course_id=course.id, label=f"RVCE {payload.scheme_year} scheme, semester {payload.semester}"))
         created += 1
         course_ids.append(course.id)

@@ -1,9 +1,9 @@
 # Security Audit and Operating Posture
 
 **Document ID:** ILR-AUD-001
-**Version:** 2.2
+**Version:** 2.4
 **Status:** Development audit with dependency remediation verified; external acceptance pending
-**Last reviewed:** 2026-11-01
+**Last reviewed:** 2026-11-06
 
 ## Scope
 
@@ -39,6 +39,9 @@ The implementation closes the repository-owned hardening targets. It remains a d
 
 - CORS origins are configuration-driven rather than wildcarded.
 - API responses include baseline security headers.
+- The production frontend adds CSP, frame denial, MIME-sniffing protection, referrer and permissions policies, and opener isolation; deployments must approve any additional API origin added to CSP.
+- SQLite enables foreign-key enforcement in development and tests, and account lifecycle regression coverage exercises deletion with those constraints active.
+- Failed or all-duplicate historical-paper imports roll back metadata and remove the uncommitted private object.
 - Rate limiting uses Redis when available and falls back to process-local enforcement.
 - PostgreSQL and Redis Compose ports bind to localhost for local development.
 - The backend container runs as a non-root user.
@@ -84,7 +87,7 @@ Before deployment:
 2. Upgrade Node and npm to patched supported versions.
 3. Run Python and npm advisory scans against fresh lockfiles.
 4. Run Alembic migrations against PostgreSQL.
-5. Replace the demo account and Compose credentials.
+5. Confirm that no default account is provisioned and replace all Compose credentials.
 6. Restrict CORS to the deployed frontend origin.
 7. Keep Redis and PostgreSQL on private networks.
 8. Review image scan and DAST results, retain SBOM artifacts, run `scripts/backup_database.py` and a confirmed restore drill, and verify monitoring and alerting.

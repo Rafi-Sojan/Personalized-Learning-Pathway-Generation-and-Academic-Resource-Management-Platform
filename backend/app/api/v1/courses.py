@@ -14,7 +14,7 @@ router = APIRouter()
 
 @router.get("", response_model=list[Course])
 def get_courses(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[Course]:
-    """List the authenticated user's courses with progress counts and short-lived caching."""
+    """List the authenticated user's courses with current mapped-topic counts and short-lived caching."""
     cached = get_json(f"courses:{current_user.id}")
     if isinstance(cached, list):
         return [Course(**item) for item in cached]
@@ -46,8 +46,9 @@ def create_course(payload: CourseCreate, current_user: User = Depends(get_curren
 
 def course_dict(course: CourseModel, db: Session, user_id: str) -> dict:
     """Build the course response fields from stored data and the owner's progress."""
-    concept_count = db.scalar(select(func.count(Concept.id)).where(Concept.course_id == course.id)) or 0
-    completed_count = db.scalar(select(func.count(TopicProgress.id)).join(Concept, Concept.id == TopicProgress.concept_id).where(TopicProgress.user_id == user_id, TopicProgress.completed.is_(True), Concept.course_id == course.id)) or 0
+    mapped_concepts = Concept.syllabus_version_id.is_not(None)
+    concept_count = db.scalar(select(func.count(Concept.id)).where(Concept.course_id == course.id, mapped_concepts)) or 0
+    completed_count = db.scalar(select(func.count(TopicProgress.id)).join(Concept, Concept.id == TopicProgress.concept_id).where(TopicProgress.user_id == user_id, TopicProgress.completed.is_(True), Concept.course_id == course.id, mapped_concepts)) or 0
     return {
         "id": course.id,
         "code": course.code,

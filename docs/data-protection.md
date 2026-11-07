@@ -1,9 +1,9 @@
 # Data Protection and Information Management
 
 **Document ID:** ILR-DATA-001
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-10-28
+**Last reviewed:** 2026-11-06
 
 ## 1. Data inventory
 
@@ -29,7 +29,7 @@ Users own their courses and associated concepts, resources, progress, and study 
 
 ## 4. Retention and deletion
 
-The API provides authenticated data export and email-confirmed account deletion. Account deletion removes owned database records, audit actor records, and associated private upload/processed files. Audit events have configurable retention through `AUDIT_RETENTION_DAYS` and `scripts/purge_audit_events.py`. Production operators must define retention periods for learning records, uploads, logs, and backups and verify deletion across backup/object-storage retention windows.
+The API provides authenticated data export and email-confirmed account deletion. Export includes profile, course and concept provenance, syllabus versions/records, progress, quiz attempts, plans and revisions, resources and mappings, historical questions, and user-linked audit events. Account deletion removes those owned database records in foreign-key-safe order, anonymizes surviving review references, invalidates user caches, and removes associated private upload/processed files. Audit events have configurable retention through `AUDIT_RETENTION_DAYS` and `scripts/purge_audit_events.py`. Production operators must define retention periods for learning records, uploads, logs, and backups and verify deletion across backup/object-storage retention windows.
 
 ## 5. Privacy requirements
 

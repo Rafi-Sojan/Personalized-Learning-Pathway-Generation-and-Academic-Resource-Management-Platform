@@ -10,7 +10,7 @@ class Settings:
     app_name: str = os.getenv("APP_NAME", "Intelligent Learning Roadmap")
     environment: str = os.getenv("ENVIRONMENT", "development")
     api_prefix: str = os.getenv("API_PREFIX", "/api/v1")
-    frontend_origin: str = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
+    frontend_origin: str = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173,http://127.0.0.1:5173")
     secret_key: str = os.getenv("SECRET_KEY", _DEVELOPMENT_SECRET)
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./learning.db")
     redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")

@@ -47,7 +47,7 @@ export function Account() {
     <p className="lede">Export your learning data or permanently remove your account.</p>
     <section className="panel" aria-labelledby="export-heading">
       <div className="panel-heading"><div><span className="section-kicker">Data portability</span><h2 id="export-heading">Download your data</h2></div></div>
-      <p>Exports your profile, courses, concepts, progress, quiz attempts, roadmaps, resources, and mapping decisions as JSON.</p>
+      <p>Exports your profile, courses, source-backed syllabus records, concepts, progress, quiz attempts, roadmap history, resources, historical-paper questions, and review decisions as JSON.</p>
       <button className="primary" type="button" onClick={downloadExport}>Download export</button>
     </section>
     <section className="panel" aria-labelledby="delete-heading">
