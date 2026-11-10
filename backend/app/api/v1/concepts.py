@@ -28,7 +28,7 @@ def get_concepts(course_id: str | None = Query(default=None), syllabus_only: boo
         query = query.where(ConceptModel.course_id == course_id)
     if syllabus_only:
         query = query.where(ConceptModel.syllabus_version_id.is_not(None))
-    concepts = db.scalars(query.order_by(ConceptModel.source_page, ConceptModel.name)).all()
+    concepts = db.scalars(query.order_by(ConceptModel.unit_sequence, ConceptModel.source_page, ConceptModel.name)).all()
     records = db.scalars(select(SyllabusRecord).where(SyllabusRecord.mapped_concept_id.in_([item.id for item in concepts]))).all() if concepts else []
     statuses: dict[str, set[str]] = {}
     versions = {item.id: item.syllabus_version_id for item in concepts}
@@ -47,7 +47,7 @@ def get_concepts(course_id: str | None = Query(default=None), syllabus_only: boo
     for edge in prerequisites:
         target = by_concept if edge.status == "accepted" else suggested
         target.setdefault(edge.concept_id, []).append(edge.prerequisite_id)
-    result = [Concept(id=item.id, name=item.name, course_id=item.course_id, difficulty=item.difficulty, status=item.status, prerequisites=by_concept.get(item.id, []), suggested_prerequisites=suggested.get(item.id, []), unit_label=item.unit_label, source_page=item.source_page, syllabus_version_id=item.syllabus_version_id, parent_concept_id=item.parent_concept_id, estimated_minutes=item.estimated_minutes, review_status=review_status.get(item.id)) for item in concepts]
+    result = [Concept(id=item.id, name=item.name, course_id=item.course_id, difficulty=item.difficulty, status=item.status, prerequisites=by_concept.get(item.id, []), suggested_prerequisites=suggested.get(item.id, []), unit_label=item.unit_label, unit_sequence=item.unit_sequence, source_page=item.source_page, syllabus_version_id=item.syllabus_version_id, parent_concept_id=item.parent_concept_id, estimated_minutes=item.estimated_minutes, review_status=review_status.get(item.id)) for item in concepts]
     set_json(cache_key, [item.model_dump() for item in result], expire=30)
     return result
 
@@ -61,7 +61,7 @@ def get_one_concept(concept_id: str, current_user: User = Depends(get_current_us
     edges = db.scalars(select(ConceptPrerequisite).where(ConceptPrerequisite.concept_id == concept.id)).all()
     statuses = set(db.scalars(select(SyllabusRecord.review_status).where(SyllabusRecord.mapped_concept_id == concept.id, SyllabusRecord.syllabus_version_id == concept.syllabus_version_id)).all())
     review_status = "verified" if "verified" in statuses else "pending_review" if "pending_review" in statuses else "rejected" if statuses else None
-    return Concept(id=concept.id, name=concept.name, course_id=concept.course_id, difficulty=concept.difficulty, status=concept.status, prerequisites=[edge.prerequisite_id for edge in edges if edge.status == "accepted"], suggested_prerequisites=[edge.prerequisite_id for edge in edges if edge.status == "proposed"], unit_label=concept.unit_label, source_page=concept.source_page, syllabus_version_id=concept.syllabus_version_id, parent_concept_id=concept.parent_concept_id, estimated_minutes=concept.estimated_minutes, review_status=review_status)
+    return Concept(id=concept.id, name=concept.name, course_id=concept.course_id, difficulty=concept.difficulty, status=concept.status, prerequisites=[edge.prerequisite_id for edge in edges if edge.status == "accepted"], suggested_prerequisites=[edge.prerequisite_id for edge in edges if edge.status == "proposed"], unit_label=concept.unit_label, unit_sequence=concept.unit_sequence, source_page=concept.source_page, syllabus_version_id=concept.syllabus_version_id, parent_concept_id=concept.parent_concept_id, estimated_minutes=concept.estimated_minutes, review_status=review_status)
 
 
 @router.post("/{concept_id}/prerequisites", status_code=201)

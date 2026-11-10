@@ -1,4 +1,5 @@
 import hashlib
+import math
 import uuid
 from pathlib import Path
 
@@ -14,9 +15,10 @@ from app.infrastructure.cache import redis_cache
 from app.infrastructure.rate_limiter import enforce_rate_limit, expensive_limiter
 from app.models import Concept, ConceptPrerequisite, Course, Resource as ResourceModel, SyllabusRecord, SyllabusVersion, User
 from app.schemas.learning import Resource
+from app.services.audit import record_event
 from app.services.document_processing import process_resource_by_id
 from app.services.storage import storage
-from app.services.syllabus_service import SyllabusTopic, extract_prerequisite_candidates, extract_syllabus_facts, extract_syllabus_topics, select_syllabus_course_section
+from app.services.syllabus_service import SyllabusTopic, extract_course_profile, extract_prerequisite_candidates, extract_syllabus_facts, extract_syllabus_topics, select_syllabus_course_section
 from ml.concept_mapping.concept_identity import SourceConceptIdentity, source_concept_identity, unique_name_keys
 from ml.concept_mapping.text_cleaner import canonical_key, clean_text
 
@@ -27,6 +29,20 @@ class SyllabusRequest(BaseModel):
     """Bound the text accepted by the lightweight syllabus analysis endpoint."""
 
     text: str = Field(min_length=3, max_length=200_000)
+
+
+class RoadmapProfileReviewRequest(BaseModel):
+    """Validate a human decision and optional corrections to extracted planning metadata."""
+
+    status: str = Field(pattern="^(verified|rejected|pending_review)$")
+    course_type: str | None = Field(default=None, pattern="^(generic|theory|numerical_theory|theory_lab|programming|project|cad|language|objective_hss|health_practice)$")
+    lecture_hours: float | None = Field(default=None, ge=0, le=1000)
+    tutorial_hours: float | None = Field(default=None, ge=0, le=1000)
+    practical_hours: float | None = Field(default=None, ge=0, le=1000)
+    experiential_hours: float | None = Field(default=None, ge=0, le=1000)
+    unit_hours: dict[str, float] = Field(default_factory=dict)
+    unit_assessment_scopes: dict[str, str] = Field(default_factory=dict)
+    review_notes: str = Field(default="", max_length=2000)
 
 
 def _owned_course(course_id: str, user: User, db: Session) -> Course:
@@ -53,10 +69,58 @@ def _owned_syllabus(resource_id: str, user: User, db: Session) -> ResourceModel:
     return resource
 
 
+def _profile_response(version: SyllabusVersion | None) -> dict:
+    """Return a stable optional-profile response without exposing malformed stored JSON."""
+    if version is None or not version.roadmap_profile:
+        return {"available": False, "syllabus_version_id": version.id if version else None, "status": "not_available", "profile": {}, "review_notes": ""}
+    return {
+        "available": True,
+        "syllabus_version_id": version.id,
+        "status": version.roadmap_profile_status,
+        "profile": version.roadmap_profile,
+        "review_notes": version.roadmap_profile_review_notes,
+    }
+
+
+def _apply_profile_estimates(db: Session, version: SyllabusVersion, profile: dict[str, object]) -> None:
+    """Allocate reviewed total workload across ordered units without double-counting subtopics."""
+    concepts = list(db.scalars(select(Concept).where(Concept.syllabus_version_id == version.id)).all())
+    if not concepts:
+        return
+    raw_modalities = profile.get("modality_hours", {})
+    modalities = raw_modalities if isinstance(raw_modalities, dict) else {}
+    total_hours = sum(float(value) for value in modalities.values() if isinstance(value, (int, float)) and value >= 0)
+    raw_units = profile.get("units", [])
+    units = [item for item in raw_units if isinstance(item, dict)] if isinstance(raw_units, list) else []
+    unit_hours = {
+        int(item["sequence"]): float(item["hours"])
+        for item in units
+        if isinstance(item.get("sequence"), int) and isinstance(item.get("hours"), (int, float)) and float(item["hours"]) > 0
+    }
+    groups: dict[int | None, list[Concept]] = {}
+    for concept in concepts:
+        groups.setdefault(concept.unit_sequence, []).append(concept)
+    weighted_sequences = [sequence for sequence in groups if sequence is not None]
+    weight_total = sum(unit_hours.get(sequence, 1.0) for sequence in weighted_sequences)
+    if total_hours <= 0:
+        total_hours = sum(unit_hours.values())
+    for sequence, values in groups.items():
+        if sequence is None or total_hours <= 0 or weight_total <= 0:
+            for concept in values:
+                if concept.estimated_minutes is None:
+                    concept.estimated_minutes = 25 + concept.difficulty * 10
+            continue
+        unit_minutes = max(len(values) * 10, round(total_hours * 60 * unit_hours.get(sequence, 1.0) / weight_total))
+        base, remainder = divmod(unit_minutes, len(values))
+        for index, concept in enumerate(sorted(values, key=lambda item: (item.source_page or 0, item.name.casefold(), item.id))):
+            concept.estimated_minutes = max(10, base + (1 if index < remainder else 0))
+
+
 @router.post("/analyze")
 def analyze_syllabus(payload: SyllabusRequest, _: User = Depends(get_current_user)) -> dict:
     """Extract syllabus topic candidates from submitted text without persisting it."""
     topics = extract_syllabus_topics(payload.text, limit=100)
+    profile = extract_course_profile(payload.text)
     return {
         "topics": [topic.name for topic in topics],
         "topic_details": [
@@ -64,6 +128,7 @@ def analyze_syllabus(payload: SyllabusRequest, _: User = Depends(get_current_use
             for topic in topics
         ],
         "count": len(topics),
+        "course_profile": profile.to_dict() if profile.has_planning_metadata else None,
         "status": "completed",
     }
 
@@ -164,12 +229,17 @@ def generate_concept_map_from_syllabus(
     topics = extract_syllabus_topics(syllabus_text)
     if not topics:
         raise HTTPException(status_code=422, detail="No syllabus topics could be extracted from this PDF")
+    extracted_profile = extract_course_profile(syllabus_text, course.code, course.title)
+    profile = extracted_profile.to_dict() if extracted_profile.has_planning_metadata else {}
 
     version = db.scalar(select(SyllabusVersion).where(SyllabusVersion.source_resource_id == source.id))
     if version is None:
         version = SyllabusVersion(course_id=source.course_id, label=source.title[:120], source_resource_id=source.id)
         db.add(version)
         db.flush()
+    version.roadmap_profile = profile
+    version.roadmap_profile_status = "pending_review"
+    version.roadmap_profile_review_notes = ""
 
     existing = list(db.scalars(select(Concept).where(Concept.course_id == source.course_id)).all())
     existing_by_id = {concept.id: concept for concept in existing}
@@ -195,6 +265,7 @@ def generate_concept_map_from_syllabus(
         if concept.syllabus_version_id is not None:
             concept.syllabus_version_id = None
             concept.unit_label = None
+            concept.unit_sequence = None
             concept.source_page = None
     unique_source_names = unique_name_keys(topic.name for topic in topics)
     claimed_existing: set[str] = set()
@@ -229,12 +300,13 @@ def generate_concept_map_from_syllabus(
         if matched_concept is not None:
             concept = matched_concept
             concept.unit_label = topic.unit_label
+            concept.unit_sequence = topic.unit_sequence
             concept.source_page = topic.source_page
             concept.syllabus_version_id = version.id
             reused.append(concept)
             claimed_existing.add(concept.id)
         else:
-            concept = Concept(course_id=source.course_id, name=topic.name[:200], difficulty=1, status="not_started", unit_label=topic.unit_label, source_page=topic.source_page, syllabus_version_id=version.id)
+            concept = Concept(course_id=source.course_id, name=topic.name[:200], difficulty=1, status="not_started", unit_label=topic.unit_label, unit_sequence=topic.unit_sequence, source_page=topic.source_page, syllabus_version_id=version.id)
             db.add(concept)
             added.append(concept)
         current_entries.append((topic, concept))
@@ -302,6 +374,8 @@ def generate_concept_map_from_syllabus(
         if existing_edge is None:
             db.add(ConceptPrerequisite(concept_id=child.id, prerequisite_id=prerequisite.id, status="proposed", source_page=candidate.source_page, confidence=0.78, rationale=candidate.source_text))
             suggested_edges += 1
+    if profile:
+        _apply_profile_estimates(db, version, profile)
     db.commit()
     redis_cache.delete(f"concepts:{current_user.id}:all")
     redis_cache.delete(f"concepts:{current_user.id}:{source.course_id}")
@@ -320,11 +394,107 @@ def generate_concept_map_from_syllabus(
         "concepts_added": len(added),
         "concepts_reused": len(reused),
         "prerequisite_suggestions": suggested_edges,
+        "roadmap_profile": _profile_response(version),
         "concepts": [
-            {"id": concept.id, "name": concept.name, "course_id": concept.course_id, "unit_label": concept.unit_label, "source_page": concept.source_page, "parent_concept_id": concept.parent_concept_id, "estimated_minutes": concept.estimated_minutes}
+            {"id": concept.id, "name": concept.name, "course_id": concept.course_id, "unit_label": concept.unit_label, "unit_sequence": concept.unit_sequence, "source_page": concept.source_page, "parent_concept_id": concept.parent_concept_id, "estimated_minutes": concept.estimated_minutes}
             for concept in [*added, *reused]
         ],
     }
+
+
+@router.get("/profile")
+def get_syllabus_roadmap_profile(
+    course_id: str = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Return the newest extracted roadmap profile after enforcing course ownership."""
+    _owned_course(course_id, current_user, db)
+    version = db.scalar(
+        select(SyllabusVersion)
+        .where(SyllabusVersion.course_id == course_id)
+        .order_by(SyllabusVersion.created_at.desc())
+        .limit(1)
+    )
+    return _profile_response(version)
+
+
+@router.post("/profile/{syllabus_version_id}/review")
+def review_syllabus_roadmap_profile(
+    syllabus_version_id: str,
+    payload: RoadmapProfileReviewRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Apply bounded reviewer corrections before profile metadata controls a persisted plan."""
+    version = db.scalar(
+        select(SyllabusVersion)
+        .join(Course, Course.id == SyllabusVersion.course_id)
+        .where(SyllabusVersion.id == syllabus_version_id, Course.owner_id == current_user.id)
+    )
+    if version is None:
+        raise HTTPException(status_code=404, detail="Syllabus roadmap profile not found")
+    profile = dict(version.roadmap_profile)
+    if not profile:
+        raise HTTPException(status_code=409, detail="Generate a syllabus concept map before reviewing its roadmap profile")
+    if payload.course_type is not None:
+        profile["course_type"] = payload.course_type
+    raw_modalities = profile.get("modality_hours", {})
+    modalities = dict(raw_modalities) if isinstance(raw_modalities, dict) else {}
+    overrides = {
+        "lecture": payload.lecture_hours,
+        "tutorial": payload.tutorial_hours,
+        "practical": payload.practical_hours,
+        "experiential": payload.experiential_hours,
+    }
+    for key, value in overrides.items():
+        if value is not None:
+            modalities[key] = value
+    profile["modality_hours"] = modalities
+    if payload.unit_assessment_scopes or payload.unit_hours:
+        invalid = {value for value in payload.unit_assessment_scopes.values() if value not in {"both", "cie_only", "see_only"}}
+        if invalid:
+            raise HTTPException(status_code=422, detail="Unit assessment scopes must be both, cie_only, or see_only")
+        if any(not math.isfinite(value) or value < 0 or value > 1000 for value in payload.unit_hours.values()):
+            raise HTTPException(status_code=422, detail="Unit hours must be between 0 and 1000")
+        raw_units = profile.get("units", [])
+        units = [dict(item) for item in raw_units if isinstance(item, dict)] if isinstance(raw_units, list) else []
+        known_labels = {str(item.get("label", "")) for item in units}
+        unknown = (set(payload.unit_assessment_scopes) | set(payload.unit_hours)) - known_labels
+        if unknown:
+            raise HTTPException(status_code=422, detail=f"Unknown unit labels: {', '.join(sorted(unknown))}")
+        for unit in units:
+            label = str(unit.get("label", ""))
+            if label in payload.unit_assessment_scopes:
+                unit["assessment_scope"] = payload.unit_assessment_scopes[label]
+            if label in payload.unit_hours:
+                unit["hours"] = payload.unit_hours[label]
+        profile["units"] = units
+    version.roadmap_profile = profile
+    version.roadmap_profile_status = payload.status
+    version.roadmap_profile_review_notes = payload.review_notes.strip()
+    if payload.status == "verified":
+        _apply_profile_estimates(db, version, profile)
+    record_event(
+        db,
+        "syllabus_roadmap_profile_reviewed",
+        current_user.id,
+        metadata={
+            "course_id": version.course_id,
+            "syllabus_version_id": version.id,
+            "status": payload.status,
+            "course_type": profile.get("course_type"),
+            "modality_overrides": sorted(key for key, value in overrides.items() if value is not None),
+            "unit_hour_overrides": sorted(payload.unit_hours),
+            "unit_scope_overrides": sorted(payload.unit_assessment_scopes),
+        },
+    )
+    db.commit()
+    redis_cache.delete(f"concepts:{current_user.id}:all:all-sources")
+    redis_cache.delete(f"concepts:{current_user.id}:{version.course_id}:all-sources")
+    redis_cache.delete(f"concepts:{current_user.id}:all:syllabus")
+    redis_cache.delete(f"concepts:{current_user.id}:{version.course_id}:syllabus")
+    return _profile_response(version)
 
 
 @router.get("/records")

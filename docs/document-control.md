@@ -2,16 +2,16 @@
 
 **Document ID:** ILR-DOC-001
 **System:** Intelligent Learning Roadmap
-**Version:** 2.9
+**Version:** 3.0
 **Status:** Implementation-complete development baseline
 **Owner:** Project maintainer
-**Last reviewed:** 2026-11-07
+**Last reviewed:** 2026-11-10
 
 ## 1. Purpose
 
 This document defines the controlled documentation set for the Intelligent Learning Roadmap platform. It establishes the authoritative location of system requirements, design decisions, operational procedures, security controls, test evidence, and known limitations.
 
-The repository is an implementation-complete development baseline. The learner can create private branch-scoped subjects, attach syllabus copies, review versioned matcher evidence, and generate dependency-safe roadmaps, while verified RVCE catalog publication and academic learning-quality acceptance remain source- and review-controlled. The current CI integration-path and frontend-runtime findings are remediated in the working tree but require green reruns. A production release still requires operator-owned infrastructure, external academic/security/privacy/accessibility acceptance, and formal release approval identified in the traceability, evaluation, security, operations, and testing documents.
+The repository contains a broad development implementation. The learner can create private branch-scoped subjects, attach syllabus copies, review concept and workload extraction, generate hard-order typed course/semester roadmaps, complete sessions with mastery feedback, and inspect reviewed question evidence. Verified RVCE catalog publication and academic learning-quality acceptance remain source- and review-controlled. Roadmap v3 has local compilation, invariant, smoke, and frontend-build evidence; its expanded Python/API and migration lifecycle checks require a compatible CI rerun. A production release still requires operator-owned infrastructure, external academic/security/privacy/accessibility acceptance, and formal release approval identified in the traceability, evaluation, security, operations, and testing documents.
 
 ## 2. Document hierarchy
 

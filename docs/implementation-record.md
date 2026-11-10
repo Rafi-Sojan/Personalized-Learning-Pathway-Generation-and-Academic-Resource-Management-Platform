@@ -1,10 +1,10 @@
 # RVCE Syllabus Integration Implementation Record
 
 **Document ID:** ILR-IMP-001  
-**Version:** 1.7
+**Version:** 1.8
 **Status:** Implemented development workflow; academic acceptance pending  
 **Owner:** Project maintainer  
-**Last reviewed:** 2026-11-07
+**Last reviewed:** 2026-11-10
 **Related records:** ILR-REQ-001, ILR-API-001, ILR-DB-001, ILR-FE-001, ILR-RVCE-001
 
 ## 1. Purpose and scope
@@ -13,7 +13,7 @@ This record describes the RVCE course-syllabus ingestion and learner onboarding 
 
 ## 2. Delivery summary
 
-The implementation includes guided creation of private branch/scheme/semester subject workspaces, optional immediate syllabus attachment, a SHA-256-verified PDF extraction utility, a source-backed candidate dataset, a conflict quarantine file, a provenance validator, administrator-only batch import, role-gated review and approval, first-year branch mapping, learner enrollment, a learner catalog screen, an administrator review interface, schema migrations, explainable concept matching and roadmap prioritization, and CI/release checks. Personal subjects carry `origin=personal`; verified enrollment carries `origin=rvce_catalog` and the source catalog identifier. Neither path creates placeholder concepts; topic records must be generated from a stored syllabus PDF. Stored syllabus parsing is course-scoped, source-identity-aware, and review-gated, while question-paper parsing excludes solution material and requires reviewed current-syllabus mappings before topic frequency is reported.
+The implementation includes guided creation of private branch/scheme/semester subject workspaces, optional immediate syllabus attachment, a SHA-256-verified PDF extraction utility, a source-backed candidate dataset, a conflict quarantine file, a provenance validator, administrator-only batch import, role-gated review and approval, first-year branch mapping, learner enrollment, a learner catalog screen, an administrator review interface, schema migrations, explainable concept matching, reviewed course workload profiles, course-type activity planning, explicit semester scheduling, and CI/release checks. Personal subjects carry `origin=personal`; verified enrollment carries `origin=rvce_catalog` and the source catalog identifier. Neither path creates placeholder concepts; topic records must be generated from a stored syllabus PDF. Stored syllabus parsing is course-scoped, source-identity-aware, and review-gated, while question-paper parsing excludes solution material and requires reviewed current-syllabus mappings before topic frequency is reported. Source unit order and accepted prerequisites are hard roadmap constraints. Part A evidence supports retrieval activities; verified Part B evidence drives main-question priority. Available extracted workload metadata must be verified before it controls persistence.
 
 The current source set contains eight inventoried PDFs. Extraction produced 207 non-conflicting candidate rows and quarantined two rows sharing a course identity but carrying different titles. Every candidate retains scheme, semester, course code, title, credit tuple total, source filename, source page, checksum, and source-index URL. Category and total contact hours are included when explicitly extractable. Unparsed outcomes and prerequisite relationships remain empty and must not be inferred from this dataset.
 
@@ -34,6 +34,7 @@ The current source set contains eight inventoried PDFs. Extraction produced 207 
 | `backend/migrations/versions/0011_ingestion_provenance_review.py` | Adds versioned syllabus records, concept estimates/parentage, reviewable prerequisites, and historical-paper provenance/review metadata |
 | `backend/migrations/versions/0012_course_academic_scope.py` | Adds learner-course branch/scheme/semester scope, personal/catalog origin, catalog provenance, indexes, and duplicate guards |
 | `backend/migrations/versions/0013_matcher_evidence.py` | Adds durable bounded algorithm/version, decision, margin, explanation, and candidate metadata for historical-question mapping |
+| `backend/migrations/versions/0014_course_aware_roadmaps.py` | Adds reviewable syllabus workload profiles, hard unit sequence, course/semester plan scope, typed sessions, source/assessment provenance, and question evidence IDs |
 
 The source manifest records a source folder label for reproducibility. Runtime imports use the configured source-root path and verify bytes against the recorded SHA-256 value before extracting a PDF.
 
@@ -66,12 +67,16 @@ All paths below are relative to `/api/v1`.
 | `POST /courses` | Authenticated user | Create a personal subject workspace under a manifest-validated branch/scheme/semester; never publish a catalog row |
 | `GET /courses` | Authenticated user | Return owned subjects with academic scope, origin, mapped-topic count, and latest syllabus-copy status |
 | `POST /syllabus/sources/upload?course_id=...` | Authenticated course owner | Store the optional first or subsequent private syllabus copy |
+| `GET/POST /syllabus/profile...` | Authenticated course owner | Read and review extracted course type, workload, unit scope, source issues, and notes before roadmap persistence |
+| `POST /roadmap/generate` | Authenticated course owner | Create a feasible typed course plan from verified current syllabus concepts and reviewed profile metadata |
+| `POST /roadmap/semester/generate` | Authenticated course owner | Balance only explicitly selected same-program/scheme/semester subjects |
+| `PATCH /roadmap/items/{id}` | Authenticated plan owner | Update session status and optional completion mastery with concept-state recalculation |
 
 All import paths require source filename and page provenance. The backend compares the submitted source identity with `database/rvce_source_documents.json`; malformed or unknown provenance is rejected with `422`. Duplicate records return `409`. Unmapped first-year rows are not published or enrolled.
 
 ## 6. Persistence and migration behavior
 
-`rvce_syllabus_courses` stores program, scheme, semester, course identity, title, credits, category, optional contact hours, JSON prerequisites/outcomes, source URL, SHA-256 checksum, source filename, source page, verification state, and creation time. The database enforces uniqueness across program, scheme year, semester, and course code. Learner `courses` store optional academic scope, origin, and optional catalog provenance; uniqueness guards duplicate personal scope identities and repeated materialization of one catalog row. Historical questions store bounded matcher evidence in `mapping_metadata_json`. Migration `0008_rvce_source_page` is guarded when adding columns to support databases where the columns may already exist. Migration `0012_course_academic_scope` similarly supports older databases and fresh metadata-bootstrap databases. Migration `0013_matcher_evidence` preserves prior rows with an empty-object metadata default. Apply migrations using the repository's normal Alembic upgrade procedure before deploying the API.
+`rvce_syllabus_courses` stores program, scheme, semester, course identity, title, credits, category, optional contact hours, JSON prerequisites/outcomes, source URL, SHA-256 checksum, source filename, source page, verification state, and creation time. The database enforces uniqueness across program, scheme year, semester, and course code. Learner `courses` store optional academic scope, origin, and optional catalog provenance; uniqueness guards duplicate personal scope identities and repeated materialization of one catalog row. Historical questions store bounded matcher evidence in `mapping_metadata_json`. Syllabus versions store bounded profile JSON/status/notes; concepts store source unit sequence; plan items always identify their course and retain activity, modality, source, scope, and evidence identifiers. Migration `0008_rvce_source_page` is guarded when adding columns to support databases where the columns may already exist. Migrations `0012`, `0013`, and `0014` preserve older records with bounded backfills. Apply migrations using the repository's normal Alembic upgrade procedure before deploying the API.
 
 The learner enrollment operation is idempotent for a learner and course scope: existing course records are returned as existing rather than duplicated. If the learner already created the exact scoped personal subject, verified enrollment links that workspace to the approved catalog row in place and retains its notes and learning data. Newly created or newly linked catalog courses receive a syllabus-version label when none exists, but no placeholder concept. Concepts and prerequisite proposals are created only from the learner's stored and processed syllabus copy.
 
@@ -119,6 +124,9 @@ The repository checks recorded for this implementation report are listed below. 
 | Ruff over backend, ML, tests, and `conftest.py` | Passed 2026-11-07 |
 | mypy over `backend/app` | Passed 2026-11-07; 52 source files checked |
 | Python `compileall` over backend, ML, tests, and scripts | Passed |
+| Course-aware roadmap implementation check | 2026-11-10: Python compilation, `scripts/verify_release.py` (73 controlled artifacts, 393 Python docstrings, 91 frontend function comments, two C++ API comments), frontend production build with its 20-asset bundle budget, and the 16-table/48-index SQL bootstrap check passed; parser/profile and pure scheduler smoke checks produced the expected aliases, unit order, typed activity minutes, evidence split, and mastery factors |
+| Expanded Python/API roadmap regressions | Added for profile review gating, workload anomalies, hard unit order, CIE/SEE exclusion, Part A/B evidence, typed activities, mastery/reopen behavior, semester balancing, and infeasibility; not executed locally because the available MSYS Python cannot install the pinned binary dependencies, so CI remains the authority |
+| Migration `0014` lifecycle | Upgrade/downgrade/re-upgrade steps added to backend and release workflows; local execution pending a compatible SQLAlchemy/Alembic runtime and PostgreSQL candidate gate |
 | Learning-quality regression benchmark | Passed; the computed eight-case matcher fixture scored 1.0 for precision, recall/F1, accuracy, abstention/status accuracy, and MRR with 0.625 coverage; mapping F1 and ranking NDCG metrics also passed. This is synthetic regression evidence only. |
 | Python dependency audit | Previously passed after remediation; not rerun in the 2026-11-06 local pass |
 | npm dependency audit | Previously passed after the Playwright update; not rerun in the 2026-11-06 local pass |

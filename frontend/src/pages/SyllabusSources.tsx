@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getCourses } from '../services/courses'
-import { generateConceptMap, getSyllabusRecords, getSyllabusSources, processSyllabusSource, reviewSyllabusRecord, uploadSyllabusSource, type SyllabusRecord } from '../services/syllabus'
-import type { Course, Resource } from '../types'
+import { generateConceptMap, getSyllabusRecords, getSyllabusRoadmapProfile, getSyllabusSources, processSyllabusSource, reviewSyllabusRecord, reviewSyllabusRoadmapProfile, uploadSyllabusSource, type SyllabusRecord } from '../services/syllabus'
+import type { Course, Resource, RoadmapProfile, SyllabusRoadmapProfile } from '../types'
 
 /** Store course syllabus copies, extract their topics, and create roadmap concepts. */
 export function SyllabusSources() {
@@ -12,6 +12,12 @@ export function SyllabusSources() {
   const [courseId, setCourseId] = useState('')
   const [sources, setSources] = useState<Resource[]>([])
   const [records, setRecords] = useState<SyllabusRecord[]>([])
+  const [roadmapProfile, setRoadmapProfile] = useState<SyllabusRoadmapProfile | null>(null)
+  const [profileType, setProfileType] = useState('theory')
+  const [profileHours, setProfileHours] = useState({ lecture: 0, tutorial: 0, practical: 0, experiential: 0 })
+  const [profileUnitHours, setProfileUnitHours] = useState<Record<string, number>>({})
+  const [profileScopes, setProfileScopes] = useState<Record<string, 'both' | 'cie_only' | 'see_only'>>({})
+  const [profileNotes, setProfileNotes] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [busyId, setBusyId] = useState('')
   const [message, setMessage] = useState('')
@@ -37,12 +43,23 @@ export function SyllabusSources() {
   const refreshSources = useCallback(async () => {
     if (!courseId) {
       setSources([])
+      setRoadmapProfile(null)
       return
     }
     try {
       setError('')
-      setSources(await getSyllabusSources(courseId))
-      setRecords(await getSyllabusRecords(courseId))
+      const [sourceItems, recordItems, profile] = await Promise.all([getSyllabusSources(courseId), getSyllabusRecords(courseId), getSyllabusRoadmapProfile(courseId)])
+      setSources(sourceItems)
+      setRecords(recordItems)
+      setRoadmapProfile(profile)
+      if (profile.available) {
+        const data = profile.profile as RoadmapProfile
+        setProfileType(data.course_type)
+        setProfileHours(data.modality_hours)
+        setProfileUnitHours(Object.fromEntries(data.units.map((unit) => [unit.label, unit.hours ?? 0])))
+        setProfileScopes(Object.fromEntries(data.units.map((unit) => [unit.label, unit.assessment_scope])))
+        setProfileNotes(profile.review_notes)
+      }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Unable to load syllabus copies')
     }
@@ -94,7 +111,7 @@ export function SyllabusSources() {
     try {
       const result = await generateConceptMap(source.id)
       setMessage(`Found ${result.topics_found} syllabus topics; added ${result.concepts_added} concepts and reused ${result.concepts_reused}. Verify the extracted topic records below before they influence frequency or roadmaps.`)
-      setRecords(await getSyllabusRecords(courseId))
+      await refreshSources()
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Unable to generate concepts')
     } finally {
@@ -115,6 +132,34 @@ export function SyllabusSources() {
     await refreshSources()
   }
 
+  /** Verify, reject, or correct the extracted workload profile that controls roadmap activities. */
+  async function reviewProfile(status: 'verified' | 'rejected') {
+    if (!roadmapProfile?.syllabus_version_id) return
+    setBusyId('profile')
+    setError('')
+    try {
+      const updated = await reviewSyllabusRoadmapProfile(roadmapProfile.syllabus_version_id, {
+        status,
+        course_type: profileType,
+        lecture_hours: profileHours.lecture,
+        tutorial_hours: profileHours.tutorial,
+        practical_hours: profileHours.practical,
+        experiential_hours: profileHours.experiential,
+        unit_hours: profileUnitHours,
+        unit_assessment_scopes: profileScopes,
+        review_notes: profileNotes,
+      })
+      setRoadmapProfile(updated)
+      setMessage(status === 'verified' ? 'Course roadmap profile verified. Its reviewed workload and activity type can now control persisted plans.' : 'Course roadmap profile rejected. Correct and verify it before generating a persisted plan.')
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Unable to review roadmap profile')
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  const profileData = roadmapProfile?.available ? roadmapProfile.profile as RoadmapProfile : null
+
   return <main>
     <div className="eyebrow">Syllabus-driven learning</div>
     <h1>Syllabus copies</h1>
@@ -130,6 +175,22 @@ export function SyllabusSources() {
       </form>
       {!courses.length && <p className="empty-state">Create a subject before uploading its syllabus. <Link to="/courses">Add a subject</Link></p>}
     </section>
+    {profileData && <section className="panel roadmap-profile-panel">
+      <div className="panel-heading"><div><span className="section-kicker">Reviewed planning contract</span><h2>Course roadmap profile</h2></div><span className={`scope-badge ${roadmapProfile?.status === 'verified' ? 'verified' : ''}`}>{roadmapProfile?.status.replace(/_/g, ' ')}</span></div>
+      <p className="mapping-status">Confirm the extracted activity type, workload, unit order, and assessment scope. Source warnings remain visible even after a reviewer records a decision.</p>
+      <div className="profile-facts"><span>Codes: {profileData.course_codes.join(' / ') || 'not detected'}</span><span>Category: {profileData.category ?? 'not detected'}</span><span>L:T:P credits: {profileData.credit_allocation.lecture}:{profileData.credit_allocation.tutorial}:{profileData.credit_allocation.practical}</span><span>Assessment: {profileData.assessment_format.replace(/_/g, ' ')}</span><span>CIE / SEE marks: {profileData.cie_marks ?? '—'} / {profileData.see_marks ?? '—'}</span><span>Components: {profileData.assessment_components.join(', ').replace(/_/g, ' ') || 'not detected'}</span></div>
+      {profileData.course_outcomes.length > 0 && <details className="profile-outcomes"><summary>{profileData.course_outcomes.length} extracted course outcome{profileData.course_outcomes.length === 1 ? '' : 's'}</summary><ul>{profileData.course_outcomes.map((outcome) => <li key={outcome}>{outcome}</li>)}</ul></details>}
+      {profileData.issues.length > 0 && <div className="profile-warning" role="status"><strong>Source checks requiring review</strong><ul>{profileData.issues.map((issue) => <li key={issue}>{issue}</li>)}</ul></div>}
+      <div className="form-grid">
+        <label>Activity model<select value={profileType} onChange={(event) => setProfileType(event.target.value)}>
+          {['theory', 'numerical_theory', 'theory_lab', 'programming', 'project', 'cad', 'language', 'objective_hss', 'health_practice', 'generic'].map((value) => <option key={value} value={value}>{value.replace(/_/g, ' ')}</option>)}
+        </select></label>
+        {(['lecture', 'tutorial', 'practical', 'experiential'] as const).map((modality) => <label key={modality}>{modality[0].toUpperCase() + modality.slice(1)} hours<input type="number" min="0" max="1000" step="0.5" value={profileHours[modality]} onChange={(event) => setProfileHours((current) => ({ ...current, [modality]: Number(event.target.value) }))} /></label>)}
+        <label className="full-field">Review notes<textarea rows={3} maxLength={2000} value={profileNotes} onChange={(event) => setProfileNotes(event.target.value)} placeholder="Record corrections or the source used to resolve discrepancies." /></label>
+      </div>
+      <div className="profile-unit-list">{profileData.units.map((unit) => <div key={`${unit.sequence}-${unit.label}`}><span>Unit {unit.label} · {unit.title || 'Untitled'}{unit.source_page ? ` · p.${unit.source_page}` : ''}</span><label>Hours<input aria-label={`Hours for unit ${unit.label}`} type="number" min="0" max="1000" step="0.5" value={profileUnitHours[unit.label] ?? unit.hours ?? 0} onChange={(event) => setProfileUnitHours((current) => ({ ...current, [unit.label]: Number(event.target.value) }))} /></label><label>Assessment<select aria-label={`Assessment scope for unit ${unit.label}`} value={profileScopes[unit.label] ?? unit.assessment_scope} onChange={(event) => setProfileScopes((current) => ({ ...current, [unit.label]: event.target.value as 'both' | 'cie_only' | 'see_only' }))}><option value="both">CIE and SEE</option><option value="cie_only">CIE only</option><option value="see_only">SEE only</option></select></label></div>)}</div>
+      <div className="action-row"><button className="primary" type="button" disabled={Boolean(busyId)} onClick={() => void reviewProfile('verified')}>Verify profile</button><button className="secondary" type="button" disabled={Boolean(busyId)} onClick={() => void reviewProfile('rejected')}>Reject profile</button></div>
+    </section>}
     {records.length > 0 && <section className="panel">
       <div className="panel-heading"><div><span className="section-kicker">Source-backed extraction</span><h2>{records.length} syllabus records</h2></div><span className="section-kicker">Versioned · page-linked</span></div>
       <div className="exam-frequency-list">{records.map((record) => <article className="roadmap-row" key={record.id}>

@@ -1,9 +1,9 @@
 # Deployment and Release Specification
 
 **Document ID:** ILR-REL-001
-**Version:** 2.1
+**Version:** 2.2
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-10-28
+**Last reviewed:** 2026-11-10
 
 ## 1. Supported deployment modes
 
@@ -26,7 +26,7 @@ The following checks are required before a release is approved:
 1. Backend tests, lint, type checks, and dependency audit pass.
 2. Frontend lockfile installation and production build pass.
 3. C++ tests pass using the supported compiler/toolchain.
-4. Database migrations apply cleanly to an empty database and are reversible or have a documented forward-only recovery plan; the Compose smoke workflow verifies service startup.
+4. Database migrations apply cleanly to an empty database and are reversible or have a documented forward-only recovery plan; backend and release workflows exercise the `0014` SQLite upgrade/downgrade/re-upgrade path, and the PostgreSQL integration/Compose workflows verify application and service startup.
 5. API authentication, ownership, upload validation, and rate limiting are tested.
 6. Container images are scanned and an SBOM is produced by the security workflow.
 7. Secrets, demo accounts, default credentials, and development fallbacks are removed or overridden.

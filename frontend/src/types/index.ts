@@ -23,6 +23,7 @@ export type Concept = {
   prerequisites: string[]
   suggested_prerequisites: string[]
   unit_label: string | null
+  unit_sequence: number | null
   source_page: number | null
   syllabus_version_id: string | null
   parent_concept_id: string | null
@@ -32,13 +33,54 @@ export type Concept = {
 
 export type RoadmapItem = {
   id: string
+  course_id: string
+  course_code: string
+  course_title: string
   concept_id: string
   concept_name: string
   scheduled_date: string
   minutes: number
-  status: string
+  status: 'planned' | 'completed' | 'skipped'
   reason: string
+  activity_type: string
+  modality: string
+  unit_label: string | null
+  source_page: number | null
+  assessment_scope: 'both' | 'cie_only' | 'see_only'
+  syllabus_version_id: string | null
   evidence_question_ids?: string[]
+}
+
+export type RoadmapProfileUnit = {
+  sequence: number
+  label: string
+  title: string
+  hours: number | null
+  source_page: number | null
+  assessment_scope: 'both' | 'cie_only' | 'see_only'
+}
+
+export type RoadmapProfile = {
+  course_codes: string[]
+  course_type: string
+  category: string | null
+  credit_allocation: Record<'lecture' | 'tutorial' | 'practical', number>
+  modality_hours: Record<'lecture' | 'tutorial' | 'practical' | 'experiential', number>
+  units: RoadmapProfileUnit[]
+  course_outcomes: string[]
+  assessment_components: string[]
+  assessment_format: string
+  cie_marks: string | null
+  see_marks: string | null
+  issues: string[]
+}
+
+export type SyllabusRoadmapProfile = {
+  available: boolean
+  syllabus_version_id: string | null
+  status: 'not_available' | 'pending_review' | 'verified' | 'rejected'
+  profile: RoadmapProfile | Record<string, never>
+  review_notes: string
 }
 
 export type Resource = {

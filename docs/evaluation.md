@@ -1,9 +1,9 @@
 # Evaluation and Acceptance Plan
 
 **Document ID:** ILR-EVAL-001
-**Version:** 2.3
+**Version:** 2.4
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-11-07
+**Last reviewed:** 2026-11-10
 
 ## 1. Learning quality
 
@@ -11,9 +11,10 @@
 |---|---|---|
 | Concept mapping | Precision, recall, F1, human validation | Labeled syllabus/concept set and review protocol |
 | Prerequisite graph | Cycle rate, ordering correctness, expert agreement | Curated dependency benchmark |
-| Roadmap quality | Completion rate, time-estimation error, deadline feasibility | Anonymized learner sessions and schedule outcomes |
+| Course-profile quality | Alias/category/L:T:P/L-T-P-EL/unit-hour/scope extraction precision, reviewer correction rate | Representative annotated RVCE syllabus tables across course types |
+| Roadmap quality | Completion rate, workload/time-estimation error, deadline feasibility, unit-order correctness, activity-type fit, semester balance, learner/instructor usefulness | De-identified learner sessions, source profiles, expected schedules, and reviewer outcomes |
 | Ranking quality | Hit rate, NDCG, instructor agreement | Instructor-selected relevance set |
-| Adaptation | Mastery change after quizzes and progress updates | Before/after learner state analysis |
+| Adaptation | Mastery change after completed sessions, time-allocation change, and false-completion/reopen rate | Before/after learner state and session analysis |
 
 ## 2. Product acceptance
 
@@ -40,3 +41,9 @@ The eight supplied matcher cases test specificity, generic labels, derived acron
 The 2026-11-07 implementation pass used two supplied PDFs as read-only layout checks. The combined 20-page CIE/scheme/SEE packet declares `21CS45`, yielded 64 questions (19 quiz and 45 main; 32 CIE/test and 32 SEE), and contributed no scheme/solution prompts. The selected `AI253IA` section of the separate supplied 96-page AI/ML scheme yielded 106 concepts (19 roots and 87 children) and no outcome, lab, rubric, or marks-distribution concepts. These files represent different courses and are intentionally rejected if an operator attempts to combine them under one course record.
 
 These counts are regression anchors for the current parser and the observed files. They do not supply expected-row annotations, precision/recall, topic-mapping agreement, source authorization, multi-year frequency validity, or expert approval. APP-01, APP-02, and EVAL-01 therefore remain open.
+
+## 7. Course-aware roadmap acceptance
+
+APP-04 shall sample at least one approved representative course from each course type used by the scheduler: theory, numerical theory, theory/lab, programming, project, CAD/graphics, language, objective HSS, and health/practice. Reviewers shall annotate the printed profile fields, identify CIE/SEE-only scope, compare extracted and corrected workload, inspect hard unit/dependency order, and rate whether each generated activity belongs to the course and assessment mode. Semester cases shall include realistic explicit course selections, unavailable days, infeasible capacity, and reserved revision.
+
+The acceptance report shall state profile-field precision, reviewer correction rate, absolute/percentage workload error, unit-order violations, inappropriate activity rate, capacity/deadline failures, and reviewer usefulness. Thresholds require an accountable academic/learning-quality decision before the benchmark is run. The deterministic factors and regression tests prevent software regressions but do not close APP-04 without that report.

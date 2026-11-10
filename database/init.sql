@@ -78,6 +78,9 @@ CREATE TABLE IF NOT EXISTS syllabus_versions (
   label TEXT NOT NULL,
   source_resource_id TEXT REFERENCES academic_resources(id),
   effective_from DATE,
+  roadmap_profile_json TEXT NOT NULL DEFAULT '{}',
+  roadmap_profile_status TEXT NOT NULL DEFAULT 'pending_review',
+  roadmap_profile_review_notes TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -88,6 +91,7 @@ CREATE TABLE IF NOT EXISTS concepts (
   difficulty INTEGER NOT NULL DEFAULT 1 CHECK (difficulty BETWEEN 1 AND 5),
   status TEXT NOT NULL DEFAULT 'not_started',
   unit_label TEXT,
+  unit_sequence INTEGER,
   source_page INTEGER,
   syllabus_version_id TEXT REFERENCES syllabus_versions(id),
   parent_concept_id TEXT REFERENCES concepts(id),
@@ -190,9 +194,17 @@ CREATE TABLE IF NOT EXISTS quiz_attempts (
 CREATE TABLE IF NOT EXISTS study_plans (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id),
-  course_id TEXT NOT NULL REFERENCES courses(id),
+  course_id TEXT REFERENCES courses(id),
+  scope_type TEXT NOT NULL DEFAULT 'course',
+  mode TEXT NOT NULL DEFAULT 'full_term',
+  start_date DATE NOT NULL,
   target_date DATE NOT NULL,
   daily_minutes INTEGER NOT NULL,
+  revision_minutes INTEGER NOT NULL DEFAULT 30,
+  unavailable_weekdays_json TEXT NOT NULL DEFAULT '[]',
+  program_code TEXT,
+  scheme_year INTEGER,
+  semester INTEGER,
   algorithm_version TEXT NOT NULL DEFAULT 'heuristic-v1',
   status TEXT NOT NULL DEFAULT 'active',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -202,9 +214,17 @@ CREATE TABLE IF NOT EXISTS study_plan_items (
   id TEXT PRIMARY KEY,
   plan_id TEXT NOT NULL REFERENCES study_plans(id),
   concept_id TEXT NOT NULL REFERENCES concepts(id),
+  course_id TEXT NOT NULL REFERENCES courses(id),
+  syllabus_version_id TEXT REFERENCES syllabus_versions(id),
   scheduled_date DATE NOT NULL,
   minutes INTEGER NOT NULL,
   sequence INTEGER NOT NULL,
+  activity_type TEXT NOT NULL DEFAULT 'learn',
+  modality TEXT NOT NULL DEFAULT 'self_study',
+  unit_label TEXT,
+  source_page INTEGER,
+  assessment_scope TEXT NOT NULL DEFAULT 'both',
+  evidence_question_ids_json TEXT NOT NULL DEFAULT '[]',
   status TEXT NOT NULL DEFAULT 'planned',
   explanation TEXT NOT NULL DEFAULT ''
 );
@@ -236,6 +256,7 @@ CREATE INDEX IF NOT EXISTS ix_concept_prerequisites_status ON concept_prerequisi
 CREATE INDEX IF NOT EXISTS ix_academic_resources_course_id ON academic_resources(course_id);
 CREATE INDEX IF NOT EXISTS ix_academic_resources_concept_id ON academic_resources(concept_id);
 CREATE INDEX IF NOT EXISTS ix_syllabus_versions_course_id ON syllabus_versions(course_id);
+CREATE INDEX IF NOT EXISTS ix_syllabus_versions_roadmap_profile_status ON syllabus_versions(roadmap_profile_status);
 CREATE INDEX IF NOT EXISTS ix_syllabus_records_course_id ON syllabus_records(course_id);
 CREATE INDEX IF NOT EXISTS ix_syllabus_records_syllabus_version_id ON syllabus_records(syllabus_version_id);
 CREATE INDEX IF NOT EXISTS ix_syllabus_records_source_resource_id ON syllabus_records(source_resource_id);
@@ -257,8 +278,10 @@ CREATE INDEX IF NOT EXISTS ix_quiz_attempts_user_id ON quiz_attempts(user_id);
 CREATE INDEX IF NOT EXISTS ix_quiz_attempts_concept_id ON quiz_attempts(concept_id);
 CREATE INDEX IF NOT EXISTS ix_study_plans_user_id ON study_plans(user_id);
 CREATE INDEX IF NOT EXISTS ix_study_plans_course_id ON study_plans(course_id);
+CREATE INDEX IF NOT EXISTS ix_study_plans_scope_type ON study_plans(scope_type);
 CREATE INDEX IF NOT EXISTS ix_study_plan_items_plan_id ON study_plan_items(plan_id);
 CREATE INDEX IF NOT EXISTS ix_study_plan_items_concept_id ON study_plan_items(concept_id);
+CREATE INDEX IF NOT EXISTS ix_study_plan_items_course_id ON study_plan_items(course_id);
 CREATE INDEX IF NOT EXISTS ix_study_plan_revisions_plan_id ON study_plan_revisions(plan_id);
 CREATE INDEX IF NOT EXISTS ix_audit_events_actor_id ON audit_events(actor_id);
 CREATE INDEX IF NOT EXISTS ix_audit_events_event_type ON audit_events(event_type);

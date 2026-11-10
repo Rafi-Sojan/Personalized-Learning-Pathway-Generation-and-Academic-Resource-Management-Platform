@@ -1,5 +1,7 @@
 from datetime import date, datetime
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class Concept(BaseModel):
@@ -12,6 +14,7 @@ class Concept(BaseModel):
     prerequisites: list[str] = []
     suggested_prerequisites: list[str] = []
     unit_label: str | None = None
+    unit_sequence: int | None = None
     source_page: int | None = None
     syllabus_version_id: str | None = None
     parent_concept_id: str | None = None
@@ -109,28 +112,109 @@ class ResourceMappingResponse(BaseModel):
 
 class RoadmapItem(BaseModel):
     id: str
+    course_id: str
+    course_code: str
+    course_title: str
     concept_id: str
     concept_name: str
     scheduled_date: date
     minutes: int = Field(gt=0)
     status: str
     reason: str
-    evidence_question_ids: list[str] = []
+    activity_type: str = "learn"
+    modality: str = "self_study"
+    unit_label: str | None = None
+    source_page: int | None = None
+    assessment_scope: str = "both"
+    syllabus_version_id: str | None = None
+    evidence_question_ids: list[str] = Field(default_factory=list)
 
 
 class RoadmapRequest(BaseModel):
     course_id: str
+    start_date: date | None = None
     target_date: date
     daily_minutes: int = Field(gt=0, le=1440)
-    revision_minutes: int = Field(default=30, ge=0, le=480)
+    revision_minutes: int = Field(default=30, ge=0, le=1440)
+    mode: Literal["full_term", "cie", "see", "revision"] = "full_term"
+    unavailable_weekdays: list[int] = Field(default_factory=list, max_length=7)
+
+    @field_validator("unavailable_weekdays")
+    @classmethod
+    def validate_unavailable_weekdays(cls, value: list[int]) -> list[int]:
+        """Require unique Python weekday numbers so capacity is deterministic."""
+        if any(day < 0 or day > 6 for day in value):
+            raise ValueError("unavailable_weekdays must contain values from 0 through 6")
+        return list(dict.fromkeys(value))
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "RoadmapRequest":
+        """Reject an explicit start date after the requested target."""
+        if self.start_date is not None and self.start_date > self.target_date:
+            raise ValueError("start_date must not be after target_date")
+        return self
+
+
+class SemesterRoadmapRequest(BaseModel):
+    course_ids: list[str] = Field(min_length=1, max_length=16)
+    start_date: date | None = None
+    target_date: date
+    daily_minutes: int = Field(gt=0, le=1440)
+    revision_minutes: int = Field(default=90, ge=0, le=1440)
+    mode: Literal["full_term", "cie", "see", "revision"] = "full_term"
+    unavailable_weekdays: list[int] = Field(default_factory=list, max_length=7)
+
+    @field_validator("course_ids")
+    @classmethod
+    def validate_course_ids(cls, value: list[str]) -> list[str]:
+        """Reject duplicate subject selections before ownership and scope checks."""
+        unique = list(dict.fromkeys(value))
+        if len(unique) != len(value):
+            raise ValueError("course_ids must not contain duplicates")
+        return unique
+
+    @field_validator("unavailable_weekdays")
+    @classmethod
+    def validate_semester_weekdays(cls, value: list[int]) -> list[int]:
+        """Validate weekday exclusions for semester-wide capacity calculations."""
+        if any(day < 0 or day > 6 for day in value):
+            raise ValueError("unavailable_weekdays must contain values from 0 through 6")
+        return list(dict.fromkeys(value))
+
+    @model_validator(mode="after")
+    def validate_semester_date_range(self) -> "SemesterRoadmapRequest":
+        """Reject an explicit semester-plan start date after its deadline."""
+        if self.start_date is not None and self.start_date > self.target_date:
+            raise ValueError("start_date must not be after target_date")
+        return self
 
 
 class StudyPlanResponse(BaseModel):
     id: str
-    course_id: str
+    scope_type: str = "course"
+    mode: str = "full_term"
+    course_id: str | None = None
+    program_code: str | None = None
+    scheme_year: int | None = None
+    semester: int | None = None
+    start_date: date
     target_date: date
     daily_minutes: int
+    revision_minutes: int = 0
+    unavailable_weekdays: list[int] = Field(default_factory=list)
     items: list[RoadmapItem]
+
+
+class RoadmapItemUpdate(BaseModel):
+    status: Literal["planned", "completed", "skipped"]
+    mastery_score: float | None = Field(default=None, ge=0, le=100)
+
+    @model_validator(mode="after")
+    def validate_mastery_status(self) -> "RoadmapItemUpdate":
+        """Accept mastery evidence only with a completed learning session."""
+        if self.mastery_score is not None and self.status != "completed":
+            raise ValueError("mastery_score may be supplied only when status is completed")
+        return self
 
 
 class StudyPlanRevisionResponse(BaseModel):

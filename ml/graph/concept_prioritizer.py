@@ -28,6 +28,7 @@ class ConceptPriorityInput:
     mastery_score: float | None = None
     source_page: int | None = None
     unit_label: str | None = None
+    unit_sequence: int | None = None
     evidence: tuple[QuestionEvidence, ...] = ()
 
 
@@ -96,11 +97,12 @@ def prioritize_with_dependencies(
     *,
     current_year: int,
 ) -> list[PriorityDecision]:
-    """Order concepts topologically, then rank each eligible layer by learning value.
+    """Order concepts by unit and prerequisites, then rank each eligible layer by learning value.
 
-    Accepted prerequisites are hard constraints. Within the currently eligible
-    concepts, the score combines reviewed historical evidence (38%), learner
-    mastery gap (30%), downstream unlock value (17%), and difficulty (15%).
+    Source unit order and accepted prerequisites are hard constraints. Within
+    the currently eligible unit, the score combines reviewed historical
+    evidence (38%), learner mastery gap (30%), downstream unlock value (17%),
+    and difficulty (15%).
     """
     by_id = {concept.concept_id: concept for concept in concepts}
     concept_ids = set(by_id)
@@ -142,13 +144,26 @@ def prioritize_with_dependencies(
     remaining = set(concept_ids)
     ordered: list[PriorityDecision] = []
     while remaining:
-        eligible = [
+        dependency_eligible = [
             concept_id
             for concept_id in remaining
             if not (set(filtered_prerequisites[concept_id]) & remaining)
         ]
-        if not eligible:
+        if not dependency_eligible:
             raise ValueError("dependency graph contains a cycle")
+        sequenced = [by_id[concept_id].unit_sequence for concept_id in remaining if by_id[concept_id].unit_sequence is not None]
+        if sequenced:
+            first_unit = min(sequenced)
+            eligible = [concept_id for concept_id in dependency_eligible if by_id[concept_id].unit_sequence == first_unit]
+            if not eligible:
+                # A legacy unsequenced prerequisite may legitimately unlock the
+                # first source unit; otherwise the reviewed dependency conflicts
+                # with the syllabus's hard teaching order.
+                eligible = [concept_id for concept_id in dependency_eligible if by_id[concept_id].unit_sequence is None]
+            if not eligible:
+                raise ValueError("dependency graph conflicts with syllabus unit order")
+        else:
+            eligible = dependency_eligible
         eligible.sort(
             key=lambda concept_id: (
                 -features[concept_id].score,

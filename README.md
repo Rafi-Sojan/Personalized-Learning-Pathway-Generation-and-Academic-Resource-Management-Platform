@@ -2,8 +2,8 @@
 
 **Project document:** ILR-DOC-001
 **Release status:** Development baseline verified locally; release acceptance open
-**Documentation version:** 3.0
-**Last reviewed:** 2026-11-07
+**Documentation version:** 3.1
+**Last reviewed:** 2026-11-10
 
 Intelligent Learning Roadmap is an RVCE-focused platform that turns stored syllabus copies into source-aware concept maps and study roadmaps, and identifies topic frequency in historical question papers. It combines a web dashboard, a typed API, explainable learning utilities, and a native scoring engine.
 
@@ -16,17 +16,20 @@ This repository provides an implementation-complete development baseline for an 
 - RVCE subject selection and review-gated syllabus concept maps with unit/page provenance and parent-child topic hierarchy.
 - Guided personal-subject onboarding with controlled RVCE branch/scheme/semester selection, optional immediate syllabus attachment, and visible personal-versus-verified provenance.
 - Syllabus topic extraction through a FastAPI endpoint.
-- Dated roadmap generation that splits full concept estimates across bounded daily study segments.
+- Reviewed course-planning profiles that retain printed aliases, L:T:P credits, L/T/P/EL workload, ordered units, assessment format, CIE/SEE scope, course outcomes, and source anomalies before those facts control a persisted plan.
+- Course and explicit semester roadmap generation with full-term, CIE, SEE, and revision modes; unavailable weekdays, daily capacity, reserved revision time, and infeasible deadlines are handled explicitly.
+- Typed activities for theory, numerical, programming, theory/lab, project, CAD, language, objective-HSS, and health-practice courses, with source unit order and accepted prerequisites enforced as hard constraints.
+- Dated roadmap generation that splits full concept estimates across bounded daily study segments and balances explicitly selected same-scope semester courses.
 - Stored syllabus PDFs processed into course concepts and roadmap inputs.
 - Page-aware past-paper parsing that excludes answer schemes and reports verified topic frequency by subject and year, including repeated prompts.
 - Versioned syllabus extraction with source document/page provenance, confidence, review state, and separate outcome/lab/assessment-policy facts.
 - Reviewable historical-paper questions with explicit assessment metadata, source-page references, marks where printed, manual concept correction, and verified-only frequency evidence.
 - Explicit syllabus prerequisite suggestions that require approval and cycle validation before they affect roadmap ordering.
-- Course-specific roadmap previews with prerequisite order, mastery gap, verified historical recurrence/recency/marks, and question evidence references.
+- Course-specific roadmap previews with hard source-unit order, prerequisite order, mastery gap, verified historical recurrence/recency/marks, separate Part A retrieval and Part B main-question evidence, and source references.
 - Section-aware paper parsing preserves printed parts and structural CIE/SEE headers; Part A quiz classification is applied only when the source/uploader establishes it, while verified, current-syllabus-mapped main questions drive historical frequency.
 - Quiz and progress backend contracts remain available; quizzes and progress are not exposed in the current learner UI.
 - Explainable hybrid concept matching with corpus rarity, phrases, derived acronyms, OCR-tolerant similarity, hierarchy context, conservative abstention, and review-visible alternatives.
-- Versioned dependency-safe roadmap prioritization using reviewed question evidence, mastery gap, downstream unlock value, and difficulty.
+- Versioned dependency-safe roadmap prioritization using reviewed question evidence, mastery gap, downstream unlock value, and difficulty, followed by activity scheduling version `rvce-activity-roadmap-v3`.
 - C++ scoring library and command-line demonstration for concept prioritization.
 - Historical exam question import, concept association, and frequency/difficulty ranking.
 - S3-compatible private storage option with durable audit-event retention and purge tooling.
@@ -90,6 +93,16 @@ The dashboard is available at `http://localhost:5173`. Interactive API documenta
 
 After signing in, open **My subjects** to create a private subject workspace. Select the RVCE branch, semester, and supported scheme, enter the subject code and title, and optionally attach the syllabus PDF in the same form. Open **RVCE syllabus** only when enrolling academically verified catalog rows; a personal workspace does not create or approve an institutional catalog record.
 
+### 5.1 Roadmap workflow
+
+1. Upload and process the owned subject's syllabus, then generate its source-aware concept map.
+2. On **Syllabus copies**, inspect the extracted roadmap profile. Resolve any workload warnings, confirm the course type and L/T/P/EL hours, set any unit-level CIE/SEE exclusions supported by the source, and mark the profile verified. A pending or rejected extracted profile cannot control a persisted plan.
+3. On **Study roadmap**, choose one course or explicitly select courses from one branch, scheme, and semester. The platform does not infer electives or option groups.
+4. Choose full-term, CIE, SEE, or revision mode, then set the inclusive date range, daily minutes, reserved revision minutes, and unavailable weekdays. The API rejects a plan that cannot fit the complete workload.
+5. Complete typed sessions and optionally record a mastery score. Future plans reduce or increase concept effort within bounded rules; reopening a session recalculates completion.
+
+Part A question evidence is used for retrieval-oriented activities. Verified Part B main questions influence priority and exam-practice evidence. A unit reviewed as CIE-only is excluded from both coverage and revision in SEE mode.
+
 For the full local stack, including PostgreSQL, Redis, private upload storage, the API worker, and the containerized frontend/backend, copy `.env.example` to `.env`, replace the development placeholders, and run:
 
 ```bash
@@ -140,7 +153,7 @@ python scripts/verify_release.py
 python scripts/load_test.py --url http://localhost:8000/health/ready --requests 100 --workers 10
 ```
 
-The 2026-11-07 learning-engine v2 verification recorded 55 passing Python tests and one skipped service-container integration test, a successful frontend production build with 20 JavaScript assets inside the bundle budget, passing Ruff and mypy checks, 65 controlled artifacts and 320 Python docstrings accepted by the release verifier, and a synchronized SQL reference snapshot covering 16 tables and 45 indexes. Migration `0013` passed fresh upgrade, downgrade/re-upgrade, and a copy-of-`0012` preservation check retaining all six historical-question rows. The eight computed synthetic matcher cases scored 1.0 for precision, recall/F1, accuracy, abstention/status accuracy, and MRR at 0.625 accepted-match coverage; this is regression evidence, not RVCE academic validation. The service integration workflow now supplies the backend import path, and the digest-pinned frontend nginx replacement reports zero fixed HIGH/CRITICAL findings under the same local Trivy policy that found 67 in the former image. GitHub reruns remain required before those checks are recorded as passing. Earlier, all seven Playwright scenarios reported `ok`; under the below-policy local Node 24.11.1/npm 11.6.2 toolchain, the full runner required termination after reporting. The declared Node 24.22.1/npm 11.21.1 CI run remains required for clean candidate evidence.
+The 2026-11-07 learning-engine v2 baseline recorded 55 passing Python tests and one skipped service-container integration test, passing Ruff and mypy checks, and the earlier matcher and parser results documented in `docs/testing.md`. The 2026-11-10 course-aware roadmap change passed Python bytecode compilation, the controlled release invariant checker, and the TypeScript/Vite production build with 20 JavaScript assets inside the bundle budget. Its expanded Python/API suite and migration `0014` lifecycle are checked by CI; they were not executed locally because this workstation's available MSYS Python cannot install the pinned binary dependencies. Do not report those pending checks as passed until a compatible Python 3.12 environment or the workflow records them. Migration `0014_course_aware_roadmaps` must be applied before running the updated API. The prior synthetic matcher scores remain regression evidence, not RVCE academic validation.
 
 RVCE course extraction reads the source PDFs in place, verifies their SHA-256 fingerprints, and writes pending-review candidates plus conflicts under `database/`. Set `RVCE_SYLLABUS_DIR` to the supplied syllabus directory and run `make extract-rvce` to regenerate and validate the files. After the backend is running and an administrator is logged in, submit candidates with `python scripts/import_rvce_candidates.py --token <admin-token>`. Imported candidates stay hidden from learners until an administrator approves them. First-year candidates are labeled `BE-UNMAPPED` and remain unavailable for branch enrollment until reviewed.
 
@@ -164,8 +177,13 @@ The API is mounted under `/api/v1`:
 | `POST` | `/syllabus/sources/upload?course_id={id}` | Store a course syllabus PDF copy |
 | `POST` | `/syllabus/sources/{id}/process` | Extract text from a stored syllabus copy |
 | `POST` | `/syllabus/sources/{id}/generate-map` | Create concepts from extracted syllabus topics with source provenance |
+| `GET` | `/syllabus/profile?course_id={id}` | Read the newest extracted course-planning profile and review state |
+| `POST` | `/syllabus/profile/{version_id}/review` | Verify or reject bounded workload, course-type, and unit-scope metadata |
 | `GET` | `/roadmap` | Preview a capacity-bounded, multi-day study plan |
-| `POST` | `/roadmap/generate` | Persist a full-effort plan from a processed syllabus-derived concept map |
+| `GET` | `/roadmap/active` | Reload the newest active owned plan and current session states |
+| `POST` | `/roadmap/generate` | Persist a reviewed, mode-aware course plan from a processed syllabus-derived concept map |
+| `POST` | `/roadmap/semester/generate` | Balance explicitly selected courses from one branch/scheme/semester scope |
+| `PATCH` | `/roadmap/items/{id}` | Complete, reopen, or skip an owned session and optionally record completion mastery |
 | `GET` | `/roadmap/history` | List roadmap revisions |
 | `GET`, `POST` | `/progress` | Read or record learner progress |
 | `GET` | `/quizzes/{concept_id}` | Retrieve a concept quiz |

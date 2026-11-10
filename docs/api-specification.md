@@ -1,9 +1,9 @@
 # API Specification
 
 **Document ID:** ILR-API-001
-**Version:** 3.0
+**Version:** 3.1
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-11-07
+**Last reviewed:** 2026-11-10
 
 ## 1. Contract conventions
 
@@ -26,16 +26,21 @@ Successful responses use the route-specific JSON schema. Validation and authoriz
 | GET | `/courses` | Yes | List owned subject workspaces with academic scope, origin, mapped-topic count, and latest syllabus status |
 | POST | `/courses` | Yes | Create a personal subject workspace in an optional validated RVCE branch/scheme/semester scope |
 | GET | `/concepts?course_id={id}&syllabus_only={bool}` | Yes | List owned concepts, hierarchy, review state, and prerequisites; syllabus-only output omits rejected current topics |
-| POST | `/syllabus/analyze` | Yes | Extract bounded topic names plus additive unit/page metadata when present |
+| POST | `/syllabus/analyze` | Yes | Extract bounded topic names, unit/page metadata, and an optional reviewable course-planning profile |
 | GET | `/syllabus/sources?course_id={id}` | Yes | List stored syllabus PDF copies for an owned course |
 | POST | `/syllabus/sources/upload?course_id={id}` | Yes, multipart | Store a private syllabus PDF copy |
 | POST | `/syllabus/sources/{id}/process` | Yes | Extract bounded text from a stored syllabus PDF |
 | POST | `/syllabus/sources/{id}/generate-map` | Yes | Create or reuse pending-review concepts with syllabus-version, hierarchy, unit, and source-page provenance; reject a multi-course source that lacks the selected course code |
+| GET | `/syllabus/profile?course_id={id}` | Yes | Read the newest extracted course-planning profile, issues, review state, and notes |
+| POST | `/syllabus/profile/{version_id}/review` | Yes | Verify, reject, or return a profile to review with bounded course-type, hour, and unit-scope corrections |
 | GET | `/syllabus/records?course_id={id}` | Yes | List versioned source-backed syllabus records with confidence and review state |
 | POST | `/syllabus/records/{id}/review?status=...` | Yes | Verify, reject, or return a parsed syllabus record to review |
 | GET | `/roadmap?course_id={id}&days={n}` | Yes | Preview a feasible 60-minute-per-day schedule for the explicitly selected owned course; full estimates are split into daily segments and the final concept may be shown partially when preview capacity expires |
-| POST | `/roadmap/generate` | Yes | Persist a deadline-aware full-effort plan with multi-day concept segments; requires a processed syllabus source and generated concept map |
+| GET | `/roadmap/active?course_id={id}` | Yes | Read the newest active owned plan and current session states, optionally including one owned course |
+| POST | `/roadmap/generate` | Yes | Persist a reviewed, mode-aware course plan with typed sessions; requires a processed syllabus source and generated concept map |
+| POST | `/roadmap/semester/generate` | Yes | Balance an explicit list of owned courses from one program/scheme/semester without inferring options |
 | GET | `/roadmap/history` | Yes | List generated roadmap revisions |
+| PATCH | `/roadmap/items/{id}` | Yes | Set an owned session to planned, completed, or skipped and optionally record mastery on completion |
 | GET | `/resources` | Yes | Legacy resource listing retained for compatibility; not part of the learner workflow |
 | POST | `/resources/upload`, `/resources/{id}/process` | Yes | Legacy generic PDF intake and processing retained for compatibility |
 | GET/POST | `/resources/{id}/mappings` | Yes | Legacy mapping review retained for compatibility; not part of the learner workflow |
@@ -82,7 +87,33 @@ Upload requests must identify a PDF and remain below the configured size limit. 
 
 Syllabus copies use the private PDF lifecycle and are labeled `syllabus_pdf`. Extracted text retains page markers. Versioned records preserve source wording, normalized text, page, confidence, source resource, hierarchy, and review state. Every newly extracted record begins pending review. Labeled outcomes, labs, assessment policy, rubrics, references, and course metadata remain facts or non-topic content and do not become concept nodes. Combined scheme documents are scoped to the selected course code. Prerequisite suggestions are created only from explicit supported language and exact topic matches; they remain proposed until accepted, and acceptance checks for cycles.
 
-New persisted roadmaps record `algorithm_version=rvce-evidence-priority-v2`. Accepted prerequisites remain hard constraints; eligible concepts are scored from reviewed historical evidence, mastery gap, downstream unlock value, and difficulty. Existing plans retain their stored algorithm version.
+### 4.1 Syllabus roadmap-profile contract
+
+Map generation persists an extracted profile when source evidence is available. The profile records course-code aliases, classified course type, category, L:T:P credits, L/T/P/EL modality hours, ordered units with source page/hour/scope, outcomes, assessment components/format, CIE/SEE marks, and extraction issues. `GET /syllabus/profile` returns:
+
+```json
+{
+  "available": true,
+  "syllabus_version_id": "...",
+  "status": "pending_review",
+  "profile": {"course_type": "programming", "units": []},
+  "review_notes": ""
+}
+```
+
+The review request requires `status` (`verified`, `rejected`, or `pending_review`). Optional corrections are `course_type`, `lecture_hours`, `tutorial_hours`, `practical_hours`, `experiential_hours`, `unit_hours`, `unit_assessment_scopes`, and `review_notes`. Hour values are finite and bounded from 0 to 1000. Unit-hour and scope keys must reference an extracted unit label; scope values are `both`, `cie_only`, or `see_only`. Ownership is resolved through the syllabus version's course. Verification recalculates concept estimates; it does not approve the RVCE catalog row or silently resolve a source warning.
+
+### 4.2 Roadmap generation contract
+
+`POST /roadmap/generate` accepts `course_id`, optional `start_date`, required `target_date`, `daily_minutes`, `revision_minutes`, `mode`, and `unavailable_weekdays`. Dates are inclusive and cannot be in the past; weekdays use Python numbering Monday `0` through Sunday `6`. Modes are `full_term`, `cie`, `see`, and `revision`. A persisted plan must fit all included activity demand and reserved revision time. When an extracted profile exists, it must be verified. Compatibility data with no extracted profile uses the generic activity fallback.
+
+`POST /roadmap/semester/generate` uses the same date/capacity fields and an explicit unique `course_ids` array of 1–16 owned courses. Every selected course must have a processed syllabus and verified current concepts. All courses must share non-null `program_code`, `scheme_year`, and `semester`; mixed or unscoped selections return `422`. The endpoint never chooses an elective or fills a semester automatically.
+
+Responses persist `algorithm_version=rvce-activity-roadmap-v3` and contain plan scope/mode/dates, daily/revision minutes, unavailable weekdays, and typed items. Each item identifies its course, concept, activity, modality, unit, source page, assessment scope, syllabus version, evidence-question IDs, date, minutes, status, and explanation. Accepted prerequisites and source unit order are hard constraints. Verified Part B/main questions affect evidence priority; Part A/quiz IDs support retrieval activities. A reviewed CIE-only unit is omitted from SEE coverage and revision. `GET /roadmap/active` restores this contract after navigation; without `course_id` it returns the newest active plan or `null`, and with `course_id` it also matches semester plans containing that owned course.
+
+`PATCH /roadmap/items/{id}` accepts `status` and optional `mastery_score` from 0–100. Mastery is valid only for `completed`. A concept is complete only after every session for that concept in the plan is complete; reopening or skipping a session recalculates progress and concept state. The update is owner-scoped through the parent plan.
+
+Existing plans retain their stored algorithm version.
 
 Historical-paper PDFs are retained as private `historical_exam_pdf` resources. The uploader supplies fallback assessment type, question format, and Part A quiz treatment. Strong printed CIE/SEE and Part headings override those fallbacks, while prompt wording is never used to infer assessment identity. Scheme, solution, answer-key, and model-answer page ranges are excluded. Imported question rows retain page, printed number, subpart, and marks where recognized and remain pending review. A printed course code that does not match the selected course causes a `422` response. Concept suggestions consider only verified concepts in the current syllabus version and are withheld when weak or ambiguous. Responses add `mapping_metadata`: decision status, matcher version, score margin, explanation, and bounded ranked candidates. `mapping_confidence` is a relevance score and may be present for an abstained row; it is not an approval or calibrated probability. Only verified, mapped main questions contribute to topic frequency and roadmap evidence. See `docs/syllabus-and-paper-ingestion.md` for workflow details and known extraction limits.
 

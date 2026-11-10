@@ -1,9 +1,9 @@
 # Operations and Runbook
 
 **Document ID:** ILR-OPS-001
-**Version:** 2.3
+**Version:** 2.4
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-11-07
+**Last reviewed:** 2026-11-10
 
 ## 1. Operational responsibility
 
@@ -82,6 +82,8 @@ Development startup creates missing tables automatically. No account or course i
 alembic -c backend/alembic.ini upgrade head
 ```
 
+The current application requires `0014_course_aware_roadmaps`. Back up an existing database before upgrading, record the prior and resulting Alembic revisions, and verify that legacy plans received a start date and each legacy plan item received its concept's course ID. The `0014` downgrade represents a semester plan by its first ordered course to restore the older non-null parent-course contract; do not use that downgrade as a production rollback without a reviewed backup/recovery decision.
+
 PostgreSQL remains authoritative. Redis may be flushed or unavailable without destroying progress, quiz, or roadmap records.
 
 Create and restore logical PostgreSQL backups with the repository scripts:
@@ -95,7 +97,7 @@ The restore script requires explicit `RESTORE` confirmation. Backup files are ig
 
 ## Health verification
 
-After startup, verify that the API responds, the interactive documentation loads, the frontend can reach the configured API origin, database migrations are current, and Redis connectivity is either healthy or intentionally operating in fallback mode. Perform an authenticated smoke test for learner registration/login, branch/scheme/semester subject creation, optional syllabus attachment, syllabus processing, concept-map generation, roadmap creation, and question-frequency access. Confirm that personal subjects are labeled personal and that verified catalog enrollment is unavailable when the selected scope has no approved rows. Progress and quiz endpoints remain compatibility APIs and are not part of the learner UI flow.
+After startup, verify that the API responds, the interactive documentation loads, the frontend can reach the configured API origin, database migrations are current, and Redis connectivity is either healthy or intentionally operating in fallback mode. Perform an authenticated smoke test for learner registration/login, branch/scheme/semester subject creation, optional syllabus attachment, syllabus processing, concept-map generation, course-profile review, course and explicit semester roadmap creation, typed session completion/mastery, and question-frequency access. Confirm that an unreviewed available profile blocks persistence, mixed semester scope is rejected, a reviewed CIE-only unit does not appear in an SEE plan, personal subjects are labeled personal, and verified catalog enrollment is unavailable when the selected scope has no approved rows. Progress and quiz endpoints remain compatibility APIs and are not part of the learner UI flow.
 
 The readiness endpoint is `GET /health/ready`; it confirms database connectivity and reports whether Redis is available or the process-local fallback is active. `GET /metrics` exposes normalized request/status and document-worker counters for an internal Prometheus scraper. Set `METRICS_AUTH_TOKEN` and enforce private network access before enabling production scraping; the endpoint must not be published directly to the internet. Authorized administrators can inspect queue counts and the oldest active job at `/api/v1/admin/processing`.
 

@@ -36,6 +36,13 @@ jobs:
         run: python -m ruff check backend ml tests conftest.py
       - name: Run mypy
         run: python -m mypy backend/app --ignore-missing-imports
+      - name: Verify migration 0014 lifecycle on SQLite
+        env:
+          DATABASE_URL: sqlite:////tmp/learning-roadmap-release-migrations.db
+        run: |
+          alembic -c backend/alembic.ini upgrade head
+          alembic -c backend/alembic.ini downgrade 0013_matcher_evidence
+          alembic -c backend/alembic.ini upgrade head
       - name: Audit Python dependencies
         run: |
           python -m pip install pip-audit

@@ -1,9 +1,9 @@
 # Requirements Traceability Matrix
 
 **Document ID:** ILR-REQ-001
-**Version:** 2.9
+**Version:** 3.0
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-11-07
+**Last reviewed:** 2026-11-10
 
 This document maps the attached project specification to the current implementation. Statuses are intentionally explicit so the repository does not imply production readiness where a development implementation remains.
 
@@ -21,15 +21,21 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Text-based syllabus analysis | Implemented | `POST /api/v1/syllabus/analyze` with bounded input |
 | Stored syllabus PDF copies | Implemented | Course-owned `/syllabus/sources/upload`, private storage, checksum, and source listing |
 | Syllabus-derived concepts | Implemented; content validation open | Course-scoped unit parsing creates review-gated root/child concepts with page evidence, excludes non-teaching tails, and uses unit/parent-aware identities so repeated labels do not collapse; candidate quality still requires RVCE reviewer evaluation |
+| Reviewed course-planning profiles | Implemented; academic validation open | Map generation extracts aliases, category, L:T:P, L/T/P/EL hours, ordered unit scope, outcomes, assessment format, CIE/SEE marks, and visible anomalies; owner review/corrections and audit are required before available profile metadata controls persistence |
 | PDF text extraction | Implemented | Bounded PyPDF/OCR processing records per-page markers in private processed text |
 | OCR for scanned PDFs | Implemented | Optional Tesseract/PyMuPDF provider is integrated for image-only PDFs, bounded by configured page/text limits, and packaged in `backend/Dockerfile.ocr` |
 | Manual resource catalog and mapping UI | Out of scope | Removed from learner navigation; legacy backend mapping contracts remain for compatibility |
 | AI-generated website links for concepts | Deferred | Provider/API key, link grounding, validation, and persistence are intentionally postponed |
 | Concept prerequisites | Implemented | Prerequisite table, API mutation, and cycle detection |
 | Concept graph visualization | Implemented | React Flow map uses stable unit columns, parent-child edges, accepted prerequisite edges, source-page labels, and pending/verified styling; rejected current topics are omitted |
-| Syllabus-driven deadline-aware roadmap generation | Implemented | Persisted plans require a processed syllabus copy and map; full concept estimates are split across daily-capacity segments rather than truncated |
-| Feasibility checks | Implemented | Scheduler rejects impossible full-effort capacity and cyclic graphs; previews label a partial final concept when capacity expires |
-| Roadmap explanations | Implemented | `rvce-evidence-priority-v2` records dependency-safe explanations for reviewed historical evidence, mastery gap, downstream unlock value, difficulty, and algorithm version |
+| Syllabus-driven deadline-aware roadmap generation | Implemented | Persisted plans require a processed syllabus copy and map; any available extracted profile must be verified; full concept/activity estimates are split across daily-capacity sessions rather than truncated |
+| Course-type activity planning | Implemented; academic validation open | `rvce-activity-roadmap-v3` emits typed activities/modalities for theory, numerical, theory/lab, programming, project, CAD, language, objective-HSS, and health-practice profiles |
+| Semester roadmap balancing | Implemented | Explicit unique owned course IDs from one non-null program/scheme/semester are round-robin scheduled while preserving each course's internal order; elective selection is never inferred |
+| Assessment-mode planning | Implemented | Full-term, CIE, SEE, and revision modes apply bounded effort factors; reviewed CIE-only/SEE-only scopes are excluded from the opposite plan and its revision blocks |
+| Feasibility checks | Implemented | Scheduler rejects impossible full-effort capacity, empty date availability, cyclic graphs, unit-order dependency conflicts, and mixed semester scope; previews label partial allocation when capacity expires |
+| Roadmap explanations | Implemented | Priority and activity sessions retain reviewed historical evidence, mastery gap, downstream unlock value, difficulty, source unit/page, assessment scope, typed modality, question IDs, and versioned rationale |
+| Roadmap mastery feedback | Implemented | Owned session completion optionally records bounded mastery, future estimates adapt within fixed factors, and concept completion is recalculated when sessions are completed or reopened |
+| Roadmap state restoration | Implemented | The newest active owned course or semester plan reloads with persisted session states, capacity settings, unavailable weekdays, source metadata, and explicit selected-course membership |
 | Quiz attempts | Backend retained; learner UI removed | Concept quiz endpoint and attempt submission remain available for compatibility |
 | Progress adaptation and study activity | Backend retained; learner UI removed | Quiz/progress APIs and persisted records remain, but have no learner navigation or screens |
 | Live learner dashboard | Implemented | Current date/greeting, subject and mapped-topic counts, roadmap focus, empty states, and navigation actions use live API data |
@@ -54,7 +60,7 @@ An item is marked **Implemented** only when the repository contains the behavior
 | Private file storage | Implemented | UUID filenames, non-public storage paths, checksum metadata, account cleanup, and compensating deletion for failed/duplicate paper imports |
 | Docker Compose | Implemented | Frontend, backend, worker, PostgreSQL, Redis, configurable storage, health checks, and corrected development mounts |
 | Non-root backend container | Implemented | Backend image runs as `appuser` |
-| Alembic migrations | Implemented | Configured environment plus lifecycle, resource mapping, exam, storage metadata, audit-event, ingestion provenance, course academic-scope, and matcher-evidence migrations |
+| Alembic migrations | Implemented | Configured environment plus lifecycle, resource mapping, exam, storage metadata, audit-event, ingestion provenance, course academic-scope, matcher-evidence, and course-aware-roadmap migrations; `0014` lifecycle checks are wired into backend/release CI |
 | CI tests and quality checks | Implemented | Release workflow includes Python API tests, Ruff, mypy, source and invariant validation, learning benchmark gates, frontend build/audit/E2E, native C++ tests, and Compose runtime/restore checks |
 | Container vulnerability scanning | Implemented | CI audits Python/npm dependencies, builds both images, scans high/critical findings, and publishes SPDX SBOM artifacts |
 | Role-based administration | Implemented | Server-side student, instructor, and admin roles; protected admin user-management endpoints; environment-backed initial admin provisioning |
@@ -89,6 +95,7 @@ An item is marked **Implemented** only when the repository contains the behavior
 - Historical exam ranking depends on the quality and concept coverage of imported question papers; the repository provides deterministic ingestion and ranking, not a licensed corpus.
 - Hybrid matcher scores are deterministic relevance values, not calibrated probabilities. The eight source-controlled cases prevent engineering regressions but cannot establish RVCE academic accuracy; EVAL-01 remains open.
 - Existing local databases created before the stricter course-scoping and review rules can retain legacy concepts or question mappings. Regenerate the map from the correctly coded syllabus and review records before treating local counts as current; no automatic destructive cleanup is performed.
+- Course-type mixes, workload allocation, mode factors, and mastery factors are transparent deterministic heuristics. APP-04 academic workload and usefulness validation remains open even though the implementation and regression gates exist.
 - Learner-created branch-scoped subjects are private workspaces, not institutional catalog approval. Official rows remain partial until RVCE academic review evidence closes the catalog targets.
 - Docker runtime validation is reproducible in `.github/workflows/compose-smoke.yml`; local Docker execution depends on the developer machine.
 - External penetration testing, production SLO approval, and privacy/legal approval remain operator or release-owner acceptance activities.

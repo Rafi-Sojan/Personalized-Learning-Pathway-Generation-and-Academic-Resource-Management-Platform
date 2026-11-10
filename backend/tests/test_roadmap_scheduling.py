@@ -3,10 +3,11 @@
 from datetime import date, timedelta
 from uuid import uuid4
 
-from app.api.v1.roadmap import generate_items
+from app.api.v1.roadmap import _preview_items, generate_items
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models import Concept, Course, Resource, SyllabusVersion, User
+from ml.scheduling.course_roadmap import ActivityDemand, ScheduledActivity
 
 
 def test_large_concept_is_split_across_daily_capacity() -> None:
@@ -61,3 +62,32 @@ def test_preview_reports_partial_segment_without_truncating_estimate() -> None:
         assert "preview schedules 120 of 150 minutes" in items[0].reason
     finally:
         db.close()
+
+
+def test_preview_discloses_fully_omitted_later_activities() -> None:
+    """Report total omitted work even when capacity ends exactly between activity demands."""
+    shared = {
+        "course_id": "course-1",
+        "course_code": "MAP3",
+        "course_title": "Preview Disclosure",
+        "syllabus_version_id": "version-1",
+        "unit_label": "I",
+        "source_page": 1,
+        "assessment_scope": "both",
+        "activity_type": "learn",
+        "modality": "lecture",
+        "minutes": 60,
+        "reason": "source ordered",
+        "evidence_question_ids": (),
+    }
+    first = ActivityDemand(demand_id="first", concept_id="concept-1", concept_name="First", **shared)
+    second = ActivityDemand(demand_id="second", concept_id="concept-2", concept_name="Second", **shared)
+    scheduled = ScheduledActivity(
+        demand_id="first",
+        concept_id="concept-1",
+        concept_name="First",
+        scheduled_date=date.today(),
+        **shared,
+    )
+    items = _preview_items([scheduled], [first, second])
+    assert "preview covers 60 of 120 total minutes" in items[-1].reason

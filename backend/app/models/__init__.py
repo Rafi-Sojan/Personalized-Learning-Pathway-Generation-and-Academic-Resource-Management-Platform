@@ -56,7 +56,24 @@ class SyllabusVersion(Base):
     label: Mapped[str] = mapped_column(String(120))
     source_resource_id: Mapped[Optional[str]] = mapped_column(ForeignKey("academic_resources.id"), nullable=True)
     effective_from: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    roadmap_profile_json: Mapped[str] = mapped_column(Text, default="{}")
+    roadmap_profile_status: Mapped[str] = mapped_column(String(24), default="pending_review", index=True)
+    roadmap_profile_review_notes: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    @property
+    def roadmap_profile(self) -> dict[str, object]:
+        """Expose the reviewed course-planning profile as a defensive JSON object."""
+        try:
+            value = json.loads(self.roadmap_profile_json or "{}")
+        except (TypeError, json.JSONDecodeError):
+            return {}
+        return value if isinstance(value, dict) else {}
+
+    @roadmap_profile.setter
+    def roadmap_profile(self, value: dict[str, object]) -> None:
+        """Persist a deterministic profile without storing source-document prose twice."""
+        self.roadmap_profile_json = json.dumps(value, sort_keys=True, separators=(",", ":"))
 
 
 class SyllabusRecord(Base):
@@ -108,6 +125,7 @@ class Concept(Base):
     difficulty: Mapped[int] = mapped_column(Integer, default=1)
     status: Mapped[str] = mapped_column(String(30), default="not_started")
     unit_label: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    unit_sequence: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     source_page: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     syllabus_version_id: Mapped[Optional[str]] = mapped_column(ForeignKey("syllabus_versions.id"), index=True, nullable=True)
     parent_concept_id: Mapped[Optional[str]] = mapped_column(ForeignKey("concepts.id"), nullable=True, index=True)
@@ -234,12 +252,37 @@ class StudyPlan(Base):
     __tablename__ = "study_plans"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
-    course_id: Mapped[str] = mapped_column(ForeignKey("courses.id"), index=True)
+    course_id: Mapped[Optional[str]] = mapped_column(ForeignKey("courses.id"), index=True, nullable=True)
+    scope_type: Mapped[str] = mapped_column(String(24), default="course", index=True)
+    mode: Mapped[str] = mapped_column(String(24), default="full_term")
+    start_date: Mapped[date] = mapped_column(Date, default=date.today)
     target_date: Mapped[date] = mapped_column(Date)
     daily_minutes: Mapped[int] = mapped_column(Integer)
+    revision_minutes: Mapped[int] = mapped_column(Integer, default=30)
+    unavailable_weekdays_json: Mapped[str] = mapped_column(Text, default="[]")
+    program_code: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    scheme_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    semester: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     algorithm_version: Mapped[str] = mapped_column(String(32), default="heuristic-v1")
     status: Mapped[str] = mapped_column(String(32), default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    @property
+    def unavailable_weekdays(self) -> list[int]:
+        """Return unique stored weekday exclusions after rejecting malformed JSON values."""
+        try:
+            value = json.loads(self.unavailable_weekdays_json or "[]")
+        except (TypeError, json.JSONDecodeError):
+            return []
+        if not isinstance(value, list):
+            return []
+        return list(dict.fromkeys(item for item in value if isinstance(item, int) and 0 <= item <= 6))
+
+    @unavailable_weekdays.setter
+    def unavailable_weekdays(self, value: list[int]) -> None:
+        """Persist validated weekday exclusions in deterministic order for plan restoration."""
+        bounded = {item for item in value if isinstance(item, int) and 0 <= item <= 6}
+        self.unavailable_weekdays_json = json.dumps(sorted(bounded), separators=(",", ":"))
 
 
 class StudyPlanItem(Base):
@@ -247,11 +290,33 @@ class StudyPlanItem(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     plan_id: Mapped[str] = mapped_column(ForeignKey("study_plans.id"), index=True)
     concept_id: Mapped[str] = mapped_column(ForeignKey("concepts.id"), index=True)
+    course_id: Mapped[str] = mapped_column(ForeignKey("courses.id"), index=True)
+    syllabus_version_id: Mapped[Optional[str]] = mapped_column(ForeignKey("syllabus_versions.id"), nullable=True)
     scheduled_date: Mapped[date] = mapped_column(Date)
     minutes: Mapped[int] = mapped_column(Integer)
     sequence: Mapped[int] = mapped_column(Integer)
+    activity_type: Mapped[str] = mapped_column(String(32), default="learn")
+    modality: Mapped[str] = mapped_column(String(32), default="self_study")
+    unit_label: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    source_page: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    assessment_scope: Mapped[str] = mapped_column(String(24), default="both")
+    evidence_question_ids_json: Mapped[str] = mapped_column(Text, default="[]")
     status: Mapped[str] = mapped_column(String(32), default="planned")
     explanation: Mapped[str] = mapped_column(Text, default="")
+
+    @property
+    def evidence_question_ids(self) -> list[str]:
+        """Return only string identifiers from the stored supporting-question list."""
+        try:
+            value = json.loads(self.evidence_question_ids_json or "[]")
+        except (TypeError, json.JSONDecodeError):
+            return []
+        return [item for item in value if isinstance(item, str)] if isinstance(value, list) else []
+
+    @evidence_question_ids.setter
+    def evidence_question_ids(self, value: list[str]) -> None:
+        """Persist supporting question identifiers in stable order for account export and UI links."""
+        self.evidence_question_ids_json = json.dumps(list(dict.fromkeys(value)), separators=(",", ":"))
 
 
 class StudyPlanRevision(Base):

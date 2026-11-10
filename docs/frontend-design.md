@@ -1,9 +1,9 @@
 # Frontend Design Specification
 
 **Document ID:** ILR-FE-001
-**Version:** 2.6
+**Version:** 2.7
 **Status:** Implementation-complete development baseline
-**Last reviewed:** 2026-11-07
+**Last reviewed:** 2026-11-10
 
 ## 1. Scope
 
@@ -31,10 +31,11 @@ The shared API client converts FastAPI string and validation-array `detail` resp
 4. In **My subjects**, the learner selects a manifest-backed RVCE branch, supported scheme, and semester, enters subject identity, and may attach a PDF immediately. The screen labels the result as personal unless it came from a verified catalog enrollment.
 5. In **RVCE syllabus**, the learner sees the exact approved rows available in a selected scope before enrolling them. An empty approved scope links back to personal subject setup without implying verification.
 6. The syllabus route accepts `course_id` in the URL, selects that owned subject, stores its syllabus PDF, and processes it into page-tagged text.
-7. The learner generates source-aware concepts and reviews unit/page provenance in the map.
-8. The learner generates a dated roadmap from syllabus-derived concepts.
-9. The learner uploads past-paper PDFs for parsing, searches question records, and filters subject/topic frequency by year. Part A is stored as quiz items; Part B is counted as main questions for topic-frequency analytics.
-10. Administrators can provision users with server-enforced roles and review RVCE syllabus candidates with their source provenance. A first-year `BE-UNMAPPED` candidate requires an RVCE program mapping before approval.
+7. The learner generates source-aware concepts, reviews unit/page provenance in the map, and verifies the extracted course-planning profile. The profile panel exposes course type, L/T/P/EL hours, ordered units, CIE/SEE scope, source warnings, and review notes.
+8. The learner generates a course plan or explicitly selects same-branch/scheme/semester subjects for a balanced semester plan. They choose full-term, CIE, SEE, or revision mode; date range; daily capacity; reserved revision time; and unavailable weekdays.
+9. Typed roadmap cards show subject, activity, modality, unit, assessment scope, source page, evidence count, duration, status, and rationale. The newest active plan and unavailable-day constraints reload after navigation. The learner can complete a session and optionally submit a mastery score.
+10. The learner uploads past-paper PDFs for parsing, searches question records, and filters subject/topic frequency by year. Part A is stored as quiz items; Part B is counted as main questions for topic-frequency analytics.
+11. Administrators can provision users with server-enforced roles and review RVCE syllabus candidates with their source provenance. A first-year `BE-UNMAPPED` candidate requires an RVCE program mapping before approval.
 
 ## 4. Client behavior requirements
 
@@ -50,6 +51,11 @@ The shared API client converts FastAPI string and validation-array `detail` resp
 - Dashboard counts shall be derived from authenticated API data; demo-only dates and activity values must not be presented as learner facts.
 - Concept map entries shall show the syllabus unit and source page when available. Missing provenance is represented as unavailable and must not be fabricated.
 - Roadmap generation shall use only syllabus-derived concepts and require a processed syllabus copy plus a generated concept map for the selected course.
+- A persisted roadmap shall not use an available extracted planning profile until the learner verifies it; source warnings shall remain visible during review.
+- Semester generation shall require explicit course selections from one branch, scheme, and semester. The client shall not infer electives or option groups.
+- Roadmap controls shall expose mode, inclusive date range, daily capacity, revision minutes, and unavailable weekdays, and shall display infeasibility or profile-review errors returned by the API.
+- Session controls shall support complete, skip, restore, and reopen states. Mastery shall be sent only with `completed`, and the UI shall explain that a concept closes only after all its sessions are complete.
+- SEE views shall not display a reviewed CIE-only unit returned by the backend. The client shall display backend assessment scope and never infer exclusions from labels.
 - Question-paper import shall accept bounded PDF files and associate extracted prompts with the selected course subject; topic frequency shall expose year counts and repeated prompt counts.
 - AI-generated website links are not part of this release. Their provider, credentials, grounding, link validation, and review behavior require a later approved design.
 

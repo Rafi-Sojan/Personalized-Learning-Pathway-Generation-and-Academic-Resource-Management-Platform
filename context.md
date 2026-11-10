@@ -1,13 +1,13 @@
 # Project Context for Model Handoffs
 
 **Document type:** Continuation brief  
-**Version:** 1.5
-**Last reviewed:** 2026-11-07  
+**Version:** 1.6
+**Last reviewed:** 2026-11-10
 **Use with:** [`AGENTS.md`](AGENTS.md) and [`plan.md`](plan.md)
 
 ## 1. Project in one page
 
-Intelligent Learning Roadmap is an RVCE-focused learning platform. Learners select subjects, upload and process syllabus copies, review source-aware concept maps, generate dated study roadmaps, and inspect question frequency from past papers. The platform is a development baseline; academic validation and production acceptance are still open.
+Intelligent Learning Roadmap is an RVCE-focused learning platform. Learners select subjects, upload and process syllabus copies, review source-aware concept maps and extracted workload profiles, generate typed course or semester study roadmaps, complete sessions with optional mastery feedback, and inspect question frequency from past papers. The platform is a development baseline; academic validation and production acceptance are still open.
 
 The product uses uploaded RVCE syllabus copies and question papers as its primary academic material. Learners may create a private subject workspace by selecting a validated RVCE branch, scheme, and semester, then attach its syllabus immediately or later. A personal workspace is not an academically verified RVCE catalog row; catalog publication still requires source provenance and authorized review. The learner UI does not manage a generic resource library. AI-generated links to learning websites are deferred by product decision. The user clarified that Part A is quiz material and Part B is the main questions. Quiz and Progress pages were removed from the learner interface; compatibility APIs may remain.
 
@@ -33,6 +33,10 @@ The system is a modular monolith: the browser calls FastAPI; the API enforces au
 - Only reviewed/verified question records contribute to historical evidence and frequency rankings.
 - Preserve printed assessment sections. Apply Part A/Part B classification only when source metadata or uploader input establishes it.
 - Prerequisite proposals require review and cycle checks before they influence roadmap ordering.
+- Printed unit sequence and accepted prerequisites are hard roadmap constraints. Frequency and mastery may prioritize only within the currently eligible unit.
+- An available extracted course-planning profile must be verified before it controls persistence. Preserve aliases, L:T:P, L/T/P/EL, unit scope, warnings, and reviewer notes; profile verification is not catalog approval.
+- Semester plans use only explicitly selected owned courses from one branch/scheme/semester. Never infer electives or option groups.
+- Part A supports retrieval activities; verified Part B main questions affect priority. A reviewed CIE-only unit is excluded from SEE coverage and revision.
 - Matcher suggestions are not academic decisions. Weak or ambiguous results remain unmapped; every imported row remains pending review, and relevance scores are not probabilities.
 - RVCE catalog candidates are not authoritative until reviewed. The formal register records 207 candidate rows, two quarantined title conflicts, and unresolved first-year branch mapping.
 - Branch choices for personal subjects come from the controlled catalog manifest. Do not add arbitrary institutional branches or represent a learner-created subject as catalog-verified.
@@ -72,7 +76,7 @@ For a local verification request, the documented Python command is `python -m py
 - `docs/remaining-targets.md` is the authoritative completion register. It says core implementation is present and requires Release gates verification; academic, source authorization, privacy/legal, security, accessibility, staging, and release-owner evidence remain open.
 - `docs/implementation-record.md` describes RVCE catalog ingestion, candidate review, enrollment, and the evidence recorded for the prior implementation.
 - `README.md` documents local startup, repository structure, capabilities, and formal docs.
-- The current working tree contains the uncommitted learning-engine v2 implementation across ML, backend/API/schema/migration, the question-review UI, CI, tests, SQL references, and controlled documentation. Inspect the diff and preserve unrelated work; do not reset or clean it.
+- The current working tree contains the uncommitted course-aware roadmap-v3 implementation across ML, backend/API/schema/migration, frontend, CI, tests, SQL references, and controlled documentation. Inspect the diff and preserve unrelated work; do not reset or clean it.
 - No project commit should be assumed. Confirm commit state from Git before referring to a change as committed.
 - The 2026-11-06 repository correction pass removed seed-data assumptions from tests, completed account export/deletion coverage, split full roadmap estimates across days, added failed-paper object cleanup, aligned Python/native scoring, replaced the demo leaderboard with a private learner summary, synchronized `database/init.sql`, normalized frontend API errors, and added frontend security headers.
 - Local evidence for that pass is 32 passed and one skipped Python test, passing Ruff/mypy/release verification, a passing frontend production build, a 16-table model/schema match, and a strict-warning native scorer test. Five browser scenarios reported `ok`, but the unsupported local Node 24.11.1 runner required termination after reporting; clean completion remains a pinned CI requirement.
@@ -80,8 +84,9 @@ For a local verification request, the documented Python command is `python -m py
 - The 2026-11-07 onboarding slice added learner-created branch/scheme/semester subject workspaces, optional syllabus attachment during creation, syllabus deep links, verified-catalog availability previews, course-origin provenance, and migration `0012_course_academic_scope`. The configured PDF ceiling is 200 pages so both inventoried first-year syllabus books fit within the bounded processor.
 - Read-only checks on the two supplied files produced 64 clean `21CS45` questions (19 quiz, 45 main; 32 CIE/test, 32 SEE) and 106 separate `AI253IA` concepts (19 roots, 87 children) without scheme/rubric contamination. These are different subjects and the API now prevents combining them. After the onboarding slice, the full local suite recorded 39 passed/1 skipped, with passing Ruff, mypy, release verification, frontend build/bundle checks, schema consistency, and migration lifecycle checks. Seven Playwright scenarios reported `ok`, but the below-policy Node/npm runner required termination after reporting; the targeted subject scenario exited cleanly, and the isolated live walkthrough succeeded. Pinned CI remains required. These are implementation checks, not academic acceptance.
 - The 2026-11-07 learning-engine v2 pass added `rvce-hybrid-lexical-v2` (corpus rarity, token-boundary phrases, derived acronyms, OCR-tolerant similarity, hierarchy context, bounded work, and conservative abstention), durable ranked matcher evidence, unit/parent-aware concept identities, and `rvce-evidence-priority-v2` roadmap scoring. The computed eight-case synthetic matcher fixture scored 1.0 on precision, recall/F1, accuracy, abstention/status accuracy, and MRR at 0.625 coverage. Local checks recorded 55 passed/1 skipped Python tests plus passing Ruff, mypy, frontend build/bundle, and migration `0013` fresh/downgrade/re-upgrade checks. These results prevent engineering regressions; APP-01, APP-02, and EVAL-01 remain open for authorized academic evaluation.
+- The 2026-11-10 roadmap-v3 pass added alias-aware course-profile extraction, visible workload anomalies, profile review/audit, hard unit ordering, reviewed CIE/SEE scope, course-type activity mixes, explicit revision time, unavailable weekdays, balanced explicit semester plans, typed source/evidence-bearing sessions, and completion/mastery feedback under migration `0014_course_aware_roadmaps`. Python compilation, direct parser/scheduler smoke checks, release invariant verification, and the frontend build passed. The expanded Python/API tests, Ruff, mypy, and migration lifecycle could not run in the available MSYS Python because the pinned binary dependencies do not support that environment; backend/release CI now runs the `0014` lifecycle. APP-04 and candidate verification remain open.
 - GitHub runs `42335747397` and `42335747431` failed only in service integration and the frontend image scan. The integration step omitted `PYTHONPATH=backend`; local reproduction confirmed `ModuleNotFoundError: app`, and the workflow now supplies the path. The former `nginx:1.29.2-alpine` runtime reproduced 67 fixed HIGH/CRITICAL Trivy findings; the exact pinned `nginx:1.30.6-alpine` replacement digest reported zero. Both GitHub jobs require a new-revision rerun before DEV-01 evidence can close.
-- The root local database was upgraded from `0012` to `0013_matcher_evidence` before the 2026-11-07 local application run. Verification found all six historical-question rows retained with non-null matcher metadata. It may still contain a legacy multi-course map created under an unrelated course code; do not delete it automatically. Regenerate from a correctly coded enrolled subject and review the new syllabus/question rows before treating UI counts as current.
+- The root local database is at `0013_matcher_evidence` as observed read-only on 2026-11-10. It has not been upgraded to `0014`; back it up and run the controlled migration before using the updated roadmap API. It may still contain a legacy multi-course map created under an unrelated course code; do not delete it automatically. Regenerate from a correctly coded enrolled subject and review the new syllabus/question rows before treating UI counts as current.
 
 ### Recent local runtime note
 
@@ -93,7 +98,7 @@ On 2026-11-06 no API or frontend service was running during the initial reposito
 
 On 2026-11-07, after fresh and legacy migration lifecycle checks passed, the root `learning.db` was copied to `learning.db.before-0012.bak` and upgraded from `0011_ingestion_provenance_review` to `0012_course_academic_scope`. The post-migration check reported head `0012`, retained the existing single course, and backfilled it with `origin=personal`. Both local servers used for the isolated live walkthrough were stopped afterward.
 
-Migration `0013_matcher_evidence` was validated on isolated SQLite databases during the learning-engine v2 pass. The root `learning.db` was not mutated in that pass and remains a historical `0012` development database until an operator intentionally runs `alembic -c backend/alembic.ini upgrade head` against the selected `DATABASE_URL`.
+Migration `0013_matcher_evidence` was validated on isolated SQLite databases during the learning-engine v2 pass and was later applied to the root database. Migration `0014_course_aware_roadmaps` is present but has not been applied to the root database. Its fresh/downgrade/re-upgrade and PostgreSQL checks are wired into CI and remain pending observation.
 
 ## 6. Source documents to consult
 

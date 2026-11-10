@@ -118,6 +118,31 @@ def test_priority_engine_rejects_cycles() -> None:
         prioritize_with_dependencies(concepts, {"a": ["b"], "b": ["a"]}, current_year=2026)
 
 
+def test_priority_engine_treats_syllabus_unit_order_as_a_hard_constraint() -> None:
+    """Keep a high-frequency later unit behind all concepts in an earlier source unit."""
+    concepts = [
+        ConceptPriorityInput("unit-one", "Foundations", unit_sequence=1),
+        ConceptPriorityInput(
+            "unit-two",
+            "Advanced Applications",
+            unit_sequence=2,
+            evidence=(QuestionEvidence(2026, 100), QuestionEvidence(2025, 100)),
+        ),
+    ]
+    decisions = prioritize_with_dependencies(concepts, {}, current_year=2026)
+    assert [item.concept_id for item in decisions] == ["unit-one", "unit-two"]
+
+
+def test_priority_engine_rejects_a_dependency_that_reverses_unit_order() -> None:
+    """Expose a reviewed graph conflict instead of silently teaching a later unit first."""
+    concepts = [
+        ConceptPriorityInput("unit-one", "Foundations", unit_sequence=1),
+        ConceptPriorityInput("unit-two", "Advanced Applications", unit_sequence=2),
+    ]
+    with pytest.raises(ValueError, match="conflicts with syllabus unit order"):
+        prioritize_with_dependencies(concepts, {"unit-one": ["unit-two"]}, current_year=2026)
+
+
 def test_matching_evaluator_computes_predictions_from_prompts() -> None:
     """Measure the engine itself instead of accepting pre-filled predictions."""
     result = evaluate_concept_matching([
