@@ -39,7 +39,7 @@ jobs:
         run: node -e "const r=require('./lighthouse-report.json'); const a=r.categories.accessibility.score; const p=r.categories.performance.score; if(a < .90 || p < .70) { console.error({accessibility:a,performance:p}); process.exit(1) } console.log({accessibility:a,performance:p})"
       - name: Upload audit artifacts
         if: always()
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v4.6.2
         with:
           name: frontend-a11y-performance
           path: |

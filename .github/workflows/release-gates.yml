@@ -57,7 +57,7 @@ jobs:
         run: python scripts/evaluate_learning.py ml/evaluation/benchmark.example.json --minimum mapping_f1=0.80 --minimum matcher_precision=0.90 --minimum matcher_f1=0.90 --minimum matcher_abstention_accuracy=0.90 --minimum ranking_ndcg=0.80 --minimum historical_ranking_ndcg=0.80
       - name: Publish Python test report
         if: always()
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v4.6.2
         with:
           name: release-python-test-results
           path: test-results.xml
