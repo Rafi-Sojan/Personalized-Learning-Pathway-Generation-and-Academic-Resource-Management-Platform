@@ -30,3 +30,57 @@ def run_pdf_ocr(path: str, max_chars: int) -> str:
         return "\n".join(chunks)
     finally:
         document.close()
+
+
+def run_pdf_ocr_pages(
+    path: str,
+    page_numbers: list[int],
+    max_chars: int,
+) -> dict[int, str]:
+    """OCR selected PDF pages using original 1-based page numbers."""
+
+    if max_chars <= 0 or not page_numbers:
+        return {}
+
+    try:
+        import fitz
+        import pytesseract
+        from PIL import Image
+    except ImportError as exc:
+        raise RuntimeError(
+            "OCR dependencies are missing"
+        ) from exc
+
+    results: dict[int, str] = {}
+    remaining = max_chars
+
+    with fitz.open(path) as document:
+        for page_number in sorted(set(page_numbers)):
+            if not 1 <= page_number <= len(document):
+                raise ValueError("Invalid OCR page number")
+
+            if remaining <= 0:
+                break
+
+            page = document[page_number - 1]
+
+            pixmap = page.get_pixmap(
+                matrix=fitz.Matrix(1.5, 1.5),
+                alpha=False,
+            )
+
+            image = Image.frombytes(
+                "RGB",
+                (pixmap.width, pixmap.height),
+                pixmap.samples,
+            )
+
+            text = normalize_ocr_text(
+                pytesseract.image_to_string(image)
+            )
+
+            text = text[:remaining]
+            results[page_number] = text
+            remaining -= len(text)
+
+    return results

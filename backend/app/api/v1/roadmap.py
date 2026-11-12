@@ -43,16 +43,45 @@ def _require_processed_syllabus(db: Session, course_id: str) -> None:
         raise HTTPException(status_code=409, detail="Upload and process a syllabus copy, then generate its concept map before creating a roadmap")
 
 
-def _current_concepts(db: Session, course_id: str) -> list[Concept]:
-    """Return incomplete current-version concepts backed by verified records when records exist."""
-    records_exist = exists(select(SyllabusRecord.id).where(SyllabusRecord.mapped_concept_id == Concept.id, SyllabusRecord.syllabus_version_id == Concept.syllabus_version_id))
-    records_verified = exists(select(SyllabusRecord.id).where(SyllabusRecord.mapped_concept_id == Concept.id, SyllabusRecord.syllabus_version_id == Concept.syllabus_version_id, SyllabusRecord.review_status == "verified"))
-    return list(db.scalars(select(Concept).where(
+
+def _current_concepts(
+    db: Session,
+    course_id: str,
+    *,
+    include_completed: bool = False,
+) -> list[Concept]:
+    """Load syllabus-backed concepts eligible for roadmap generation."""
+
+    records_exist = exists(
+        select(SyllabusRecord.id).where(
+            SyllabusRecord.mapped_concept_id == Concept.id,
+            SyllabusRecord.syllabus_version_id == Concept.syllabus_version_id,
+        )
+    )
+
+    records_verified = exists(
+        select(SyllabusRecord.id).where(
+            SyllabusRecord.mapped_concept_id == Concept.id,
+            SyllabusRecord.syllabus_version_id == Concept.syllabus_version_id,
+            SyllabusRecord.review_status == "verified",
+        )
+    )
+
+    conditions = [
         Concept.course_id == course_id,
-        Concept.status != "completed",
         Concept.syllabus_version_id.is_not(None),
         or_(~records_exist, records_verified),
-    )).all())
+    ]
+
+    if not include_completed:
+        conditions.append(Concept.status != "completed")
+
+    return list(
+        db.scalars(
+            select(Concept).where(*conditions)
+        ).all()
+    )
+
 
 
 def _reviewed_profile(db: Session, concepts: list[Concept], require_review: bool) -> tuple[dict[str, object], SyllabusVersion | None]:
@@ -124,37 +153,65 @@ def _revision_demands(
     profile: dict[str, object],
     version: SyllabusVersion | None,
     revision_minutes: int,
+    priority_scores: dict[str, float] | None = None,
 ) -> list[ActivityDemand]:
-    """Append explicit end-of-plan revision blocks across the highest-priority concepts."""
+    """Allocate revision to the highest-scoring concepts across units."""
+
     if revision_minutes <= 0 or not ordered:
         return []
+
+    scores = priority_scores or {}
+
+    # Revision does not require the initial teaching order.
+    # Stable sorting preserves original order when scores tie.
+    candidates = sorted(
+        ordered,
+        key=lambda concept: -scores.get(concept.id, 0.0),
+    )[: min(4, len(ordered))]
+
     demands: list[ActivityDemand] = []
     remaining = revision_minutes
     index = 0
-    candidates = ordered[: min(4, len(ordered))]
+
     while remaining > 0:
         concept = candidates[index % len(candidates)]
         minutes = min(45, remaining)
         questions = main_evidence.get(concept.id, [])
-        demands.append(ActivityDemand(
-            demand_id=f"{course.id}-revision-{index}",
-            course_id=course.id,
-            course_code=course.code,
-            course_title=course.title,
-            concept_id=concept.id,
-            concept_name=concept.name,
-            syllabus_version_id=version.id if version else concept.syllabus_version_id,
-            unit_label=concept.unit_label,
-            source_page=concept.source_page,
-            assessment_scope=_assessment_scope(profile, concept),
-            activity_type="final_revision",
-            modality="self_study",
-            minutes=minutes,
-            reason="Reserved end-of-plan revision after source-ordered coverage",
-            evidence_question_ids=tuple(question.id for question in questions),
-        ))
+
+        score = scores.get(concept.id, 0.0)
+
+        demands.append(
+            ActivityDemand(
+                demand_id=f"{course.id}-revision-{index}",
+                course_id=course.id,
+                course_code=course.code,
+                course_title=course.title,
+                concept_id=concept.id,
+                concept_name=concept.name,
+                syllabus_version_id=(
+                    version.id
+                    if version is not None
+                    else concept.syllabus_version_id
+                ),
+                unit_label=concept.unit_label,
+                source_page=concept.source_page,
+                assessment_scope=_assessment_scope(profile, concept),
+                activity_type="final_revision",
+                modality="self_study",
+                minutes=minutes,
+                reason=(
+                    "Reserved end-of-plan revision; "
+                    f"explainable priority score {score:.3f}"
+                ),
+                evidence_question_ids=tuple(
+                    question.id for question in questions
+                ),
+            )
+        )
+
         remaining -= minutes
         index += 1
+
     return demands
 
 
@@ -168,7 +225,11 @@ def _course_demands(
     require_profile_review: bool,
 ) -> list[ActivityDemand]:
     """Build dependency-safe, assessment-aware activity demands for one owned course."""
-    concepts = _current_concepts(db, course.id)
+    concepts = _current_concepts(
+    db,
+    course.id,
+    include_completed=(mode == "revision"),
+    )
     if not concepts:
         return []
     profile, version = _reviewed_profile(db, concepts, require_profile_review)
@@ -245,7 +306,21 @@ def _course_demands(
         if concept_demands:
             included_concepts.append(concept)
             demands.extend(concept_demands)
-    demands.extend(_revision_demands(course, included_concepts, main_evidence, profile, version, revision_minutes))
+        
+        demands.extend(
+    _revision_demands(
+        course,
+        included_concepts,
+        main_evidence,
+        profile,
+        version,
+        revision_minutes,
+        priority_scores={
+            decision.concept_id: decision.score
+            for decision in decisions
+        },
+    )
+)
     return demands
 
 
@@ -587,49 +662,138 @@ def roadmap_history(course_id: str | None = Query(default=None), current_user: U
     return [StudyPlanRevisionResponse(id=item.id, plan_id=item.plan_id, revision_number=item.revision_number, event=item.event, created_at=item.created_at.isoformat()) for item in revisions]
 
 
+
 @router.patch("/items/{item_id}")
-def update_roadmap_item(item_id: str, payload: RoadmapItemUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
-    """Update one owned session and feed optional completion mastery back into future plans."""
-    item = db.scalar(select(StudyPlanItem).join(StudyPlan, StudyPlan.id == StudyPlanItem.plan_id).where(StudyPlanItem.id == item_id, StudyPlan.user_id == current_user.id))
+def update_roadmap_item(
+    item_id: str,
+    payload: RoadmapItemUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Update an active roadmap session without corrupting prior progress."""
+
+    item = db.scalar(
+        select(StudyPlanItem)
+        .join(StudyPlan, StudyPlan.id == StudyPlanItem.plan_id)
+        .where(
+            StudyPlanItem.id == item_id,
+            StudyPlan.user_id == current_user.id,
+        )
+    )
+
     if item is None:
-        raise HTTPException(status_code=404, detail="Roadmap item not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Roadmap item not found",
+        )
+
+    plan = db.get(StudyPlan, item.plan_id)
+
+    if plan is None or plan.status != "active":
+        raise HTTPException(
+            status_code=409,
+            detail="Only active roadmap plans can be modified",
+        )
+
     item.status = payload.status
     db.flush()
-    remaining_session = db.scalar(select(StudyPlanItem.id).where(
-        StudyPlanItem.plan_id == item.plan_id,
-        StudyPlanItem.concept_id == item.concept_id,
-        StudyPlanItem.status != "completed",
-    ).limit(1))
-    completed_session = db.scalar(select(StudyPlanItem.id).where(
-        StudyPlanItem.plan_id == item.plan_id,
-        StudyPlanItem.concept_id == item.concept_id,
-        StudyPlanItem.status == "completed",
-    ).limit(1))
-    progress = db.scalar(select(TopicProgress).where(TopicProgress.user_id == current_user.id, TopicProgress.concept_id == item.concept_id))
-    if payload.status == "completed" or progress is not None:
-        if progress is None:
-            progress = TopicProgress(user_id=current_user.id, concept_id=item.concept_id)
-            db.add(progress)
-        progress.completed = remaining_session is None
-        if payload.mastery_score is not None:
-            progress.score = payload.mastery_score
-        if payload.status == "completed":
-            progress.last_studied_at = utc_now()
+
     concept = db.get(Concept, item.concept_id)
-    if concept is not None:
-        if remaining_session is None:
-            concept.status = "completed"
-        elif completed_session is not None:
-            concept.status = "in_progress"
-        else:
-            concept.status = "not_started"
-    record_event(db, "roadmap_item_updated", current_user.id, metadata={"plan_id": item.plan_id, "item_id": item.id, "status": payload.status})
+
+    progress = db.scalar(
+        select(TopicProgress).where(
+            TopicProgress.user_id == current_user.id,
+            TopicProgress.concept_id == item.concept_id,
+        )
+    )
+
+    if plan.mode == "revision":
+        # Revising a concept must not undo its learning completion.
+        if payload.status == "completed":
+            if progress is None:
+                progress = TopicProgress(
+                    user_id=current_user.id,
+                    concept_id=item.concept_id,
+                )
+                progress.completed = (
+                    concept is not None
+                    and concept.status == "completed"
+                )
+                db.add(progress)
+
+            if payload.mastery_score is not None:
+                progress.score = payload.mastery_score
+
+            progress.last_studied_at = utc_now()
+
+    else:
+        remaining_session = db.scalar(
+            select(StudyPlanItem.id).where(
+                StudyPlanItem.plan_id == item.plan_id,
+                StudyPlanItem.concept_id == item.concept_id,
+                StudyPlanItem.status != "completed",
+            ).limit(1)
+        )
+
+        completed_session = db.scalar(
+            select(StudyPlanItem.id).where(
+                StudyPlanItem.plan_id == item.plan_id,
+                StudyPlanItem.concept_id == item.concept_id,
+                StudyPlanItem.status == "completed",
+            ).limit(1)
+        )
+
+        if payload.status == "completed" or progress is not None:
+            if progress is None:
+                progress = TopicProgress(
+                    user_id=current_user.id,
+                    concept_id=item.concept_id,
+                )
+                db.add(progress)
+
+            progress.completed = remaining_session is None
+
+            if payload.mastery_score is not None:
+                progress.score = payload.mastery_score
+
+            if payload.status == "completed":
+                progress.last_studied_at = utc_now()
+
+        if concept is not None:
+            if remaining_session is None:
+                concept.status = "completed"
+            elif completed_session is not None:
+                concept.status = "in_progress"
+            else:
+                concept.status = "not_started"
+
+    record_event(
+        db,
+        "roadmap_item_updated",
+        current_user.id,
+        metadata={
+            "plan_id": item.plan_id,
+            "item_id": item.id,
+            "status": payload.status,
+        },
+    )
+
     db.commit()
+
     if item.course_id:
         redis_cache.delete(f"courses:{current_user.id}")
-        redis_cache.delete(f"concepts:{current_user.id}:{item.course_id}")
+        redis_cache.delete(
+            f"concepts:{current_user.id}:{item.course_id}"
+        )
+
     redis_cache.delete(f"concepts:{current_user.id}:all")
-    return {"id": item.id, "status": item.status, "concept_id": item.concept_id, "mastery_score": payload.mastery_score}
+
+    return {
+        "id": item.id,
+        "status": item.status,
+        "concept_id": item.concept_id,
+        "mastery_score": payload.mastery_score,
+    }
 
 
 def generate_items(

@@ -9,7 +9,7 @@ from sqlalchemy import or_, select, update
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models import Resource
-from ml.preprocessing.ocr_processor import run_pdf_ocr
+from ml.preprocessing.ocr_processor import run_pdf_ocr_pages
 from app.services.storage import storage
 from app.core.metrics import metrics
 
@@ -46,36 +46,93 @@ def recover_stale_resources() -> int:
         db.close()
 
 
+
 def process_pdf(upload_path: Path, processed_path: Path) -> int:
-    """Validate and extract a bounded amount of text from a private PDF."""
+    """Extract digital and scanned PDF pages with bounded output."""
+
     if not upload_path.is_file() or upload_path.suffix.lower() != ".pdf":
         raise ValueError("Uploaded document is not available")
+
     if upload_path.stat().st_size > settings.max_upload_bytes:
-        raise ValueError("Uploaded document exceeds the configured size limit")
+        raise ValueError("Uploaded document exceeds the size limit")
+
     with upload_path.open("rb") as handle:
         if handle.read(5) != b"%PDF-":
             raise ValueError("Uploaded document is not a valid PDF")
+
     reader = PdfReader(str(upload_path), strict=False)
-    if len(reader.pages) > settings.max_pdf_pages:
-        raise ValueError("PDF exceeds the configured page limit")
+
     if reader.is_encrypted:
         raise ValueError("Encrypted PDFs are not supported")
-    chunks: list[str] = []
-    total = 0
+
+    if len(reader.pages) > settings.max_pdf_pages:
+        raise ValueError("PDF exceeds the configured page limit")
+
+    page_texts: dict[int, str] = {}
+    ocr_candidates: list[int] = []
+
     for page_number, page in enumerate(reader.pages, start=1):
         text = page.extract_text() or ""
+        page_texts[page_number] = text[
+            :settings.max_extracted_text_chars
+        ]
+
+        if settings.ocr_enabled and len(text.strip()) < 20:
+            ocr_candidates.append(page_number)
+
+    # OCR only pages whose digital extraction was insufficient.
+    if ocr_candidates:
+        ocr_results = run_pdf_ocr_pages(
+            str(upload_path),
+            ocr_candidates,
+            settings.max_extracted_text_chars,
+        )
+
+        for page_number, ocr_text in ocr_results.items():
+            if ocr_text.strip():
+                page_texts[page_number] = ocr_text
+
+    chunks: list[str] = []
+    total = 0
+    max_chars = settings.max_extracted_text_chars
+
+    for page_number in sorted(page_texts):
         marker = f"[[PAGE {page_number}]]\n"
-        remaining = settings.max_extracted_text_chars - total - len(marker)
+
+        separator_length = 1 if chunks else 0
+
+        remaining = (
+            max_chars
+            - total
+            - len(marker)
+            - separator_length
+        )
+
         if remaining <= 0:
             break
-        page_text = text[:remaining]
-        chunks.append(f"{marker}{page_text}")
-        total += len(marker) + len(page_text)
+
+        text = page_texts[page_number][:remaining]
+
+        chunks.append(f"{marker}{text}")
+
+        total += (
+            len(marker)
+            + len(text)
+            + separator_length
+        )
+
     extracted = "\n".join(chunks)
-    if settings.ocr_enabled and len(extracted.strip()) < 20:
-        extracted = run_pdf_ocr(str(upload_path), settings.max_extracted_text_chars)
-    processed_path.parent.mkdir(parents=True, exist_ok=True)
-    processed_path.write_text(extracted, encoding="utf-8")
+
+    processed_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    processed_path.write_text(
+        extracted,
+        encoding="utf-8",
+    )
+
     return len(extracted)
 
 
