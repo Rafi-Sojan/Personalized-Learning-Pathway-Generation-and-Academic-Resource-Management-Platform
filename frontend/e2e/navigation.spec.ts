@@ -44,16 +44,20 @@ test('authenticated learner can open the syllabus intake workflow', async ({ pag
 })
 
 
+
 test('legacy resource route redirects to syllabus copies', async ({ page }) => {
   await prepareSyllabusWorkspace(page)
   await page.goto('/resources')
 
   await expect(page).toHaveURL(/\/syllabus(?:\?.*)?$/)
 
-  const url = new URL(page.url())
+  // Wait for asynchronous course selection.
+  await expect.poll(() => {
+    const url = new URL(page.url())
+    return url.searchParams.get('course_id')
+  }).toBe('course-1')
 
-  expect(url.pathname).toBe('/syllabus')
-  expect(url.searchParams.get('course_id')).toBe('course-1')
+  expect(new URL(page.url()).pathname).toBe('/syllabus')
 
   await expect(
     page.getByRole('heading', { name: 'Syllabus copies' })
