@@ -151,7 +151,13 @@ def prioritize_with_dependencies(
         ]
         if not dependency_eligible:
             raise ValueError("dependency graph contains a cycle")
-        sequenced = [by_id[concept_id].unit_sequence for concept_id in remaining if by_id[concept_id].unit_sequence is not None]
+        
+        sequenced: list[int] = []
+        for concept_id in remaining:
+            unit_sequence = by_id[concept_id].unit_sequence
+            if unit_sequence is not None:
+                sequenced.append(unit_sequence)
+                
         if sequenced:
             first_unit = min(sequenced)
             eligible = [concept_id for concept_id in dependency_eligible if by_id[concept_id].unit_sequence == first_unit]

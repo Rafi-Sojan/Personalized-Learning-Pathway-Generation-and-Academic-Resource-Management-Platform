@@ -7,11 +7,11 @@ def normalize_ocr_text(text: str) -> str:
 def run_pdf_ocr(path: str, max_chars: int) -> str:
     """OCR pages from a PDF while enforcing a total extracted-character limit."""
     try:
-        import fitz
-        import pytesseract
+        import fitz  # type: ignore[import-untyped]
+        import pytesseract  # type: ignore[import-not-found,import-untyped]
         from PIL import Image
     except ImportError as exc:
-        raise RuntimeError("OCR provider is not installed; install backend/requirements-ocr.txt") from exc
+        raise RuntimeError("OCR dependencies are missing") from exc
     document = fitz.open(path)
     try:
         chunks: list[str] = []

@@ -43,12 +43,23 @@ test('authenticated learner can open the syllabus intake workflow', async ({ pag
   await expect(page.getByLabel('PDF copy')).toBeVisible()
 })
 
+
 test('legacy resource route redirects to syllabus copies', async ({ page }) => {
   await prepareSyllabusWorkspace(page)
   await page.goto('/resources')
-  await expect(page).toHaveURL(/\/syllabus$/)
-  await expect(page.getByRole('heading', { name: 'Syllabus copies' })).toBeVisible()
+
+  await expect(page).toHaveURL(/\/syllabus(?:\?.*)?$/)
+
+  const url = new URL(page.url())
+
+  expect(url.pathname).toBe('/syllabus')
+  expect(url.searchParams.get('course_id')).toBe('course-1')
+
+  await expect(
+    page.getByRole('heading', { name: 'Syllabus copies' })
+  ).toBeVisible()
 })
+
 
 test('learner can create a branch-scoped personal subject', async ({ page }) => {
   await page.addInitScript(() => { localStorage.setItem('access_token', 'test-token'); localStorage.setItem('user', JSON.stringify({ id: 'student', email: 'student@example.com', name: 'Student', role: 'student' })) })

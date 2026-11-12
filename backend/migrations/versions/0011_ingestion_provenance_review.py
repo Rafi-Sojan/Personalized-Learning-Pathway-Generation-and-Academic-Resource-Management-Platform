@@ -1,5 +1,5 @@
 """Persist syllabus extraction and question-paper provenance and review state."""
-
+from typing import Any
 from alembic import op
 import sqlalchemy as sa
 
@@ -55,7 +55,7 @@ def upgrade() -> None:
     if "estimated_minutes" not in concept_columns:
         with op.batch_alter_table("concepts") as batch:
             batch.add_column(sa.Column("estimated_minutes", sa.Integer(), nullable=True))
-    columns = [
+    columns: list[sa.Column[Any]] = [
         sa.Column("source_resource_id", sa.String(36), nullable=True),
         sa.Column("source_document", sa.String(length=500), nullable=False, server_default=""),
         sa.Column("question_number", sa.String(32), nullable=True),
@@ -69,8 +69,8 @@ def upgrade() -> None:
     ]
     with op.batch_alter_table("historical_exam_questions") as batch:
         batch.alter_column("difficulty", existing_type=sa.Integer(), nullable=True)
-        for column in columns:
-            batch.add_column(column)
+        for column_definition in columns:
+            batch.add_column(column_definition)
         batch.create_foreign_key("fk_historical_exam_questions_source_resource_id", "academic_resources", ["source_resource_id"], ["id"])
         batch.create_index("ix_historical_exam_questions_source_resource_id", ["source_resource_id"])
         batch.create_index("ix_historical_exam_questions_assessment_type", ["assessment_type"])

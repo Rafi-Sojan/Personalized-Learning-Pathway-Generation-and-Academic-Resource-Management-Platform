@@ -2,12 +2,29 @@
 
 from datetime import date, timedelta
 from uuid import uuid4
-
+from typing import TypedDict
 from app.api.v1.roadmap import _preview_items, generate_items
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models import Concept, Course, Resource, SyllabusVersion, User
 from ml.scheduling.course_roadmap import ActivityDemand, ScheduledActivity
+
+
+class SharedActivityFields(TypedDict):
+    """Typed fields common to demands and scheduled activities."""
+
+    course_id: str
+    course_code: str
+    course_title: str
+    syllabus_version_id: str | None
+    unit_label: str | None
+    source_page: int | None
+    assessment_scope: str
+    activity_type: str
+    modality: str
+    minutes: int
+    reason: str
+    evidence_question_ids: tuple[str, ...]
 
 
 def test_large_concept_is_split_across_daily_capacity() -> None:
@@ -66,7 +83,7 @@ def test_preview_reports_partial_segment_without_truncating_estimate() -> None:
 
 def test_preview_discloses_fully_omitted_later_activities() -> None:
     """Report total omitted work even when capacity ends exactly between activity demands."""
-    shared = {
+    shared: SharedActivityFields = {
         "course_id": "course-1",
         "course_code": "MAP3",
         "course_title": "Preview Disclosure",

@@ -288,7 +288,13 @@ def test_reviewed_profile_controls_see_scope_activity_types_and_mastery() -> Non
         assert progress is not None
         assert progress.completed is False
         assert progress.score == 88
-        assert db.get(Concept, fixture["first_concept_id"]).status == "in_progress"
+        concept = db.get(
+            Concept,
+            fixture["first_concept_id"],
+        )
+        assert concept is not None
+        assert concept.status == "in_progress"
+
     finally:
         db.close()
     restored = client.patch(

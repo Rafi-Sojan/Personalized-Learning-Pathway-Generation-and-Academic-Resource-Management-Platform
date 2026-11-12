@@ -49,8 +49,23 @@ def downgrade() -> None:
         if "ix_concepts_syllabus_version_id" in indexes:
             batch.drop_index("ix_concepts_syllabus_version_id")
         if has_version_foreign_key:
-            constraint = next(key["name"] for key in foreign_keys if "syllabus_version_id" in key.get("constrained_columns", []))
-            batch.drop_constraint(constraint, type_="foreignkey")
+            constraint = next(
+                (
+                    key.get("name")
+                    for key in foreign_keys
+                    if "syllabus_version_id" in key.get("constrained_columns", [])
+                ),
+                None,
+            )
+            if not isinstance(constraint, str):
+                raise RuntimeError(
+                    "Cannot downgrade: syllabus version "
+                    "foreign key has no usable constraint name"
+                )
+            batch.drop_constraint(
+                constraint,
+                type_="foreignkey",
+            )
         for column in ("syllabus_version_id", "source_page", "unit_label"):
             if column in columns:
                 batch.drop_column(column)

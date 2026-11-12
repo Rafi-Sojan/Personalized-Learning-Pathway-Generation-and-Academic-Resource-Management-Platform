@@ -15,9 +15,20 @@ def _columns(table_name: str) -> set[str]:
     return {item["name"] for item in sa.inspect(op.get_bind()).get_columns(table_name)}
 
 
+
 def _indexes(table_name: str) -> set[str]:
-    """Return current named indexes before creating or removing migration-owned indexes."""
-    return {item["name"] for item in sa.inspect(op.get_bind()).get_indexes(table_name)}
+    """Return named indexes for a table."""
+
+    names: set[str] = set()
+
+    for item in sa.inspect(op.get_bind()).get_indexes(table_name):
+        name = item.get("name")
+
+        if isinstance(name, str):
+            names.add(name)
+
+    return names
+
 
 
 def _foreign_keys(table_name: str) -> set[str]:

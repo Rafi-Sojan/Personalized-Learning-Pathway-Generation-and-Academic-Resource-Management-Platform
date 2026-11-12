@@ -303,24 +303,27 @@ def _course_demands(
             main_question_ids=[question.id for question in main_questions],
             quiz_question_ids=[question.id for question in quiz_questions],
         )
+        
         if concept_demands:
             included_concepts.append(concept)
             demands.extend(concept_demands)
-        
-        demands.extend(
-    _revision_demands(
-        course,
-        included_concepts,
-        main_evidence,
-        profile,
-        version,
-        revision_minutes,
-        priority_scores={
-            decision.concept_id: decision.score
-            for decision in decisions
-        },
+
+    # Outside the concept loop: reserve revision time once.
+    demands.extend(
+        _revision_demands(
+            course,
+            included_concepts,
+            main_evidence,
+            profile,
+            version,
+            revision_minutes,
+            priority_scores={
+                decision.concept_id: decision.score
+                for decision in decisions
+            },
+        )
     )
-)
+
     return demands
 
 

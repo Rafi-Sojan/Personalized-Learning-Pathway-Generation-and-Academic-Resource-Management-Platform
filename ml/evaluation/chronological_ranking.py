@@ -27,9 +27,13 @@ def evaluate_chronological_frequency(
             continue
         raw_year = row.get(year_key)
         raw_concept = row.get(concept_key)
+        if isinstance(raw_year, bool) or not isinstance(
+            raw_year, (str, int, float)
+        ):
+            continue
         try:
-            year = int(raw_year)  # type: ignore[arg-type]
-        except (TypeError, ValueError):
+            year = int(raw_year)
+        except (TypeError, ValueError, OverflowError):
             continue
         if isinstance(raw_concept, str) and raw_concept.strip():
             by_year.setdefault(year, []).append(raw_concept.strip())
