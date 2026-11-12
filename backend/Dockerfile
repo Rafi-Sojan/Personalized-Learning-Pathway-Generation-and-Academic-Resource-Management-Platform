@@ -20,6 +20,16 @@ COPY database/rvce_catalog.json ./database/rvce_catalog.json
 COPY ml ./ml
 COPY scripts ./scripts
 RUN useradd --create-home --uid 10001 appuser && mkdir -p /app/storage/uploads /app/storage/processed && chown -R appuser:appuser /app
+
+# Add the startup script.
+COPY backend/entrypoint.sh /app/entrypoint.sh
+
+# Normalize Windows CRLF line endings.
+RUN sed -i 's/\r$//' /app/entrypoint.sh
+
 USER appuser
-EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+EXPOSE 10000
+
+CMD ["/bin/sh", "/app/entrypoint.sh"]
+
