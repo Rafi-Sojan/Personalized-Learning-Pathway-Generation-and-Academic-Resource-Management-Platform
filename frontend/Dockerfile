@@ -11,7 +11,7 @@ COPY . .
 RUN npm run build
 
 # Production Nginx image
-FROM nginx:1.30.6-alpine@sha256:583b7f2fce1cdb8da5ad5c39ebd3c33b98b87d493190e548bdee1fa8c619c311
+FROM nginx:1.31.9-alpine@sha256:fb4658584bd9a916ffb6f6e365f97c25cfdb2923801f551ea08356e695f14ff7
 
 # Upgrade vulnerable Alpine libxslt package
 RUN apk upgrade --no-cache libxslt
